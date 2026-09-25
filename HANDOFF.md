@@ -52,9 +52,10 @@ browser repo for rules and the prompt log.
   1 to 7 in TODO.md make up the first result.
 - Stack: Electron (current supported stable line, 44 as of 2026-09-24),
   TypeScript, Three.js, Lit, SQLite (node:sqlite, built into
-  Electron's Node), @ghostery/adblocker-electron, electron-vite,
-  electron-builder, Vitest, Playwright. Reasons in ARCHITECTURE.md
-  section 4.
+  Electron's Node), electron-vite, Vitest, Playwright; planned and not
+  yet installed: @ghostery/adblocker-electron (milestone 4) and
+  electron-builder (milestone 7). Reasons in ARCHITECTURE.md section 4.
+  Toolchain: Node 22.13 or newer, pnpm 12.4.1 pinned.
 - Focused page is a live Chromium view (an Electron `<webview>`) placed
   with CSS 3D transforms; background tabs are snapshot textures;
   offscreen rendering is the upgrade path, hidden behind a PagePanel
@@ -176,7 +177,9 @@ repo's PROMPTS.md.
 
 ## Things not yet done, on purpose
 
-- Milestones 2 onward are listed in TODO.md but not approved to build.
+- Milestones 1 and 2 are done; milestone 3 is built and awaits
+  acceptance; milestones 4 onward are listed in TODO.md but not approved
+  to build.
 - No code in the holoml repo yet.
 - Nothing owed from earlier milestones.
 - No SPEC.md in holoml (outline is part of milestone 7).

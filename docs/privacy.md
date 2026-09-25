@@ -41,7 +41,8 @@ Only these, all started by you:
 
 - The pages you open, including the images, scripts, and the favicon each
   page names (fetched through that page's own session, as a browser tab
-  does).
+  does; at most 256 KB, given up after 5 seconds, and cancelled when you
+  leave the page).
 - Searches typed in the address bar or start panel go to the search engine
   chosen in Settings (DuckDuckGo by default).
 - DNS lookups for the sites you open. Until milestone 4 these use your

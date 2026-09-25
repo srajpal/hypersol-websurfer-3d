@@ -121,13 +121,15 @@ Where tests live:
 - Test fixture pages in tests/fixtures, served from 127.0.0.1.
 - HoloML conformance fixtures in the holoml repo under conformance/.
 
-How to run (from the repo root; recorded 2026-09-24 on Windows 11 after
-they ran; macOS and Linux not checked yet):
-- Install: `pnpm install`
-- Unit: `pnpm test` (Vitest; 35 tests passed)
+How to run (from the repo root; first recorded 2026-09-24 on Windows 11
+after they ran; macOS and Linux not checked yet). Counts are as of the
+date given and grow with each milestone; TODO.md has the latest.
+- Toolchain: Node 22.13 or newer; pnpm 12.4.1, pinned in package.json.
+- Install: `pnpm install --frozen-lockfile`
+- Unit: `pnpm test` (Vitest; 119 tests passed on 2026-09-25)
 - Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
 - End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
-  against it (about two minutes; 72 checks). Needs openssl on PATH for
+  against it (about two and a half minutes; 82 checks on 2026-09-25). Needs openssl on PATH for
   the certificate-error check (Git for Windows includes one). Every
   host except 127.0.0.1 is blocked during the run, and the test windows
   ignore the real mouse, so a resting cursor cannot disturb results. See

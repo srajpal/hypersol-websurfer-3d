@@ -74,7 +74,7 @@ touchpad, no touch screen.
 | Background tabs in 3D | Snapshot textures on WebGL cards | Cheap; lit and occluded like real objects. |
 | Upgrade path | Offscreen rendering to GPU textures | Lets pages curve, bend, and receive lighting later; hidden behind the PagePanel interface. |
 | Page depth layering | Injected preload CSS on top-level sections and images | Interactive, no copying; also reports image positions for later 3D lifting. |
-| Ad/tracker blocking | @ghostery/adblocker-electron | Open source, uBlock-compatible lists, built for Electron sessions. |
+| Ad/tracker blocking | @ghostery/adblocker-electron (planned for milestone 4; not yet installed) | Open source, uBlock-compatible lists, built for Electron sessions. |
 | Filter-list updates | Fetched on a schedule through Electron's net.fetch (Chromium's network stack, so encrypted DNS applies), on by default, switchable in Settings | Keeps blocking current. Exact lists and URLs are named in docs/privacy.md in milestone 4. |
 | Encrypted DNS | Electron app.configureHostResolver after app ready, secureDnsMode "secure", resolver Quad9 (https://dns.quad9.net/dns-query) | Built into Chromium. The resolver sees every hostname, so it is a named third-party service: Quad9 is a non-profit with a no-logging policy. Owner may change it. Settings offers Secure (default) or Automatic (falls back to the network's DNS). |
 | Encrypted DNS failure | Error card "Encrypted DNS is blocked on this network" with "Use this network's DNS for now", which switches to Automatic for the session | Secure mode has no fallback, so captive portals and corporate networks would otherwise fail every lookup with no explanation. |
@@ -94,7 +94,8 @@ touchpad, no touch screen.
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
 | Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
-| Build | electron-vite (Vite) and electron-builder | Fast dev reload; installers for Windows, macOS, Linux. |
+| Build | electron-vite (Vite) now; electron-builder planned for milestone 7 (not yet installed) | Fast dev reload; installers for Windows, macOS, Linux. |
+| Toolchain | Node 22.13 or newer; pnpm 12.4.1 pinned in package.json (`packageManager`, with the pnpm version recorded in the lockfile); installs use `--frozen-lockfile` | Reproducible installs (GitHub issue #5). |
 | Tests | Vitest (unit), Playwright (Electron end-to-end) | Standard, cross-platform. |
 | Repos | hypersol-websurfer-3d (browser), holoml (language) | Each useful on its own; browser depends on holoml packages via npm. |
 | License | Apache 2.0 both; spec text also CC BY 4.0 | Per brief. |
@@ -153,7 +154,7 @@ hypersol-websurfer-3d/
                                address-or-search, error card wording
           themes/              applies @hypersol/themes values to CSS
                                variables and Three.js materials
-      resources/               icons, default filter list snapshot
+      resources/               (planned) icons, default filter list snapshot
   packages/
     scene-core/                @hypersol/scene-core: room layout math,
                                PagePanel interface, camera rig. No Electron
@@ -161,11 +162,11 @@ hypersol-websurfer-3d/
                                by HoloML rendering later.
     themes/                    @hypersol/themes: theme schema and the two
                                built-in themes
-    holoml-renderer/           @hypersol/holoml-renderer: maps HoloML nodes
-                               to Three.js objects. Skeleton only in the
-                               first result; real work in a later milestone.
+    holoml-renderer/           (planned) @hypersol/holoml-renderer: maps
+                               HoloML nodes to Three.js objects. Skeleton in
+                               milestone 7; real work in a later milestone.
   docs/
-    screens.md                 layout notes and states (from this document)
+    screens.md                 (planned) layout notes and states
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
@@ -203,9 +204,18 @@ package with one passing test. Language design itself is a later milestone.
 4. The main process sends the shell what only it sees: shortcut key
    presses, new-tab requests from pages, and favicons.
 5. Shortly after a page settles, and when switching away from it, the
-   shell asks the main process for a snapshot (the one request the
-   shell's bridge allows, and only for its own tabs) and paints it onto
-   the tab's card.
+   shell asks the main process for a snapshot (only of its own tabs) and
+   paints it onto the tab's card.
+
+The shell's bridge (preload/shell.ts) is its only way to reach the main
+process. It exposes read-only facts (platform, versions) and:
+- onCommand: messages from the main process (shortcuts, new tabs,
+  favicons, saved-data changes, prepare-close);
+- captureTab: a snapshot of one of the shell's own tabs;
+- data: saved-data requests (bookmarks, history, settings, open tabs,
+  clearing data), each checked in the main process by parseDataRequest
+  (shared/data.ts) and accepted only from the shell;
+- closeReady: the answer to prepare-close, once the open tabs are saved.
 6. From milestone 5, the page preload measures top-level sections and
    images and applies depth offsets; it reports image rectangles.
 7. The main process writes a history entry when a tab arrives at a web
@@ -326,8 +336,10 @@ fonts, sound design, VR.
 
 ## 11. Run and test
 
-Checked on Windows 11, 2026-09-24 (macOS and Linux not checked yet):
-- Install: `pnpm install`
+Checked on Windows 11, 2026-09-24 and since (macOS and Linux not
+checked yet):
+- Toolchain: Node 22.13 or newer; pnpm 12.4.1 (pinned)
+- Install: `pnpm install --frozen-lockfile`
 - Develop: `pnpm dev` (starts the Electron app with live reload, using a
   throwaway profile in the ignored `userData/dev` folder)
 - Build: `pnpm build` (output in apps/browser/out)
