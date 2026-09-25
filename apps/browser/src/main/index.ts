@@ -32,6 +32,12 @@ const PAGE_PRELOAD = join(__dirname, '../preload/page.js');
 const SHELL_PRELOAD = join(__dirname, '../preload/shell.js');
 
 let mainWindow: BrowserWindow | null = null;
+/**
+ * Set when the application is asked to quit (Quit, Cmd+Q, app.quit()),
+ * as opposed to one window closing. Holding a window open to save the
+ * tabs cancels that quit, so it is resumed afterwards (PR #7 review).
+ */
+let quitting = false;
 let testLog: TestLog | null = null;
 let storage: StorageService | null = null;
 
@@ -119,7 +125,10 @@ const CLOSE_FLUSH_MS = 2000;
  * Before the window closes, the shell saves the open tabs at once (its
  * usual save waits for changes to settle) and confirms; the window then
  * closes. If the shell does not answer within CLOSE_FLUSH_MS, or has
- * crashed, it closes anyway (GitHub issue #3).
+ * crashed, it closes anyway (GitHub issue #3). When the application was
+ * quitting, the quit is resumed rather than only closing the window, so
+ * on macOS, where closing the last window keeps the app running, Quit
+ * still quits.
  */
 function flushBeforeClose(win: BrowserWindow): void {
   let ready = false;
@@ -133,7 +142,9 @@ function flushBeforeClose(win: BrowserWindow): void {
       ipcMain.removeListener(CLOSE_READY_CHANNEL, onReady);
       clearTimeout(timer);
       ready = true;
-      if (!win.isDestroyed()) win.close();
+      waiting = false;
+      if (quitting) app.quit();
+      else if (!win.isDestroyed()) win.close();
     };
     const onReady = (e: Electron.IpcMainEvent) => {
       if (e.sender === win.webContents) finish();
@@ -227,8 +238,13 @@ if (!app.requestSingleInstanceLock()) {
     });
   });
 
+  app.on('before-quit', () => {
+    quitting = true;
+  });
+
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    // macOS keeps the app running with no windows; tests can ask for the same.
+    if (process.platform !== 'darwin' && !options.testKeepRunning) app.quit();
   });
 
   app.on('will-quit', () => storage?.close());

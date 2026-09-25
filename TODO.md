@@ -536,3 +536,21 @@ fixed with #1.
 
 Results on the branch (Windows 11, 2026-09-25): 119 unit tests; the full
 end-to-end suite, now 82 checks, passed 82 of 82 in three runs in a row.
+
+Pull request #7 review (prompt 26), two findings, both fixed:
+- Refused favicon downloads (declared too large, error status) kept
+  running while the next address was tried. Every attempt now has its
+  own cancel switch and refused bodies are cancelled. New unit tests and
+  a streaming-server check (D13) confirm each connection closes at once,
+  at most one is open, and under 256 KB is sent; both failed against the
+  previous code.
+- Holding the window open to save the tabs cancelled a quit, and only
+  the window was closed afterwards; on macOS the app would keep running
+  after Quit. The main process now remembers a requested quit and resumes
+  it. New checks (E6b) with the app kept alive after its last window
+  closes, as on macOS: Quit ends the app with the latest tabs saved;
+  closing the window saves them and leaves the app running; both still
+  finish when the shell never answers (after the 2 s wait). The Quit
+  checks failed with the resume switched off. Native macOS not tested.
+- Results after the fixes: 123 unit tests; 88 of 88 end-to-end checks in
+  two runs.

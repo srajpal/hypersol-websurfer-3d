@@ -50,6 +50,8 @@ export class App {
   readonly data: DataClient;
   /** True once saved settings and tabs have been loaded. */
   ready = false;
+  /** Test runs only: ignore prepare-close, to test the main process's timeout. */
+  testIgnorePrepareClose = false;
   private settings: Settings = { ...DEFAULT_SETTINGS };
   private readonly views = new Map<number, TabView>();
   private shownFocus = -1;
@@ -436,6 +438,7 @@ export class App {
         break;
       }
       case 'prepare-close':
+        if (this.testIgnorePrepareClose) break;
         void this.saveSessionNow().finally(() => this.options.bridge.closeReady());
         break;
       case 'data-changed':

@@ -18,6 +18,12 @@ export interface LaunchOptions {
    * not get in the way of whoever is using the computer.
    */
   testBackground: boolean;
+  /**
+   * Test mode only (HYPERSOL_TEST_KEEP_RUNNING=1): keep running when the
+   * last window closes, as the app does on macOS, to test quitting on any
+   * platform.
+   */
+  testKeepRunning: boolean;
 }
 
 function switchValue(argv: readonly string[], name: string): string | undefined {
@@ -55,5 +61,6 @@ export function parseLaunchOptions(
     testMode,
     ...(searchUrl ? { searchUrl } : {}),
     testBackground: testMode && env['HYPERSOL_TEST_BACKGROUND'] === '1',
+    testKeepRunning: testMode && env['HYPERSOL_TEST_KEEP_RUNNING'] === '1',
   };
 }

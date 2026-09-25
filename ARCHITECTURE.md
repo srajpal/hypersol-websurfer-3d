@@ -90,6 +90,7 @@ touchpad, no touch screen.
 | App menu | None on Windows and Linux; standard app, Edit, and Window menus on macOS | Clipboard shortcuts need the Edit roles on macOS. |
 | Saved-data requests | One checked request channel from the shell to the main process (shared/data.ts); only the shell may use it; every request is validated before anything is read or written | Keeps the database and files in the main process; the shell cannot reach the file system. |
 | History recording | The main process records a visit when a tab commits a navigation to a web address; the same address again in the same tab (a reload) adds nothing; the title follows when the page reports it | Failed loads are not recorded; titles are never taken from the previous page. |
+| Closing and quitting | Before the window closes, the shell saves the open tabs and confirms (at most 2 s); a requested quit is then resumed, while an ordinary window close stays a close | Keeps the latest tabs; Quit still quits on macOS, where closing the last window keeps the app running (GitHub issue #3, PR #7 review). |
 | Damaged saved data | A damaged settings.json is renamed aside and defaults are used; if the database cannot open, browsing continues and nothing is recorded | The app always starts. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
 | Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
@@ -361,6 +362,9 @@ Launch options, for development and tests: `--start-url=<address>`
 hooks and allows `--search-url=<address with %s>`;
 `HYPERSOL_TEST_BACKGROUND=1` (test mode only, set by the test harness
 unless HYPERSOL_TEST_SHOW=1) opens the window off screen, without focus
-or a taskbar button, and tells Chromium to keep drawing it. The tests
+or a taskbar button, and tells Chromium to keep drawing it;
+`HYPERSOL_TEST_KEEP_RUNNING=1` (test mode only) keeps the app running
+when its last window closes, as on macOS, so quitting can be tested on
+any platform. The tests
 also pass Chromium's `--host-resolver-rules` so that no name resolves
 except this machine.

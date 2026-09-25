@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { ChildProcess } from 'node:child_process';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright';
 
 // No trailing separator: on Windows a backslash before the closing quote
@@ -24,6 +25,8 @@ export interface Point {
 
 export interface Harness {
   app: ElectronApplication;
+  /** The app's process, kept from launch: Playwright's handle goes once the app exits. */
+  proc: ChildProcess;
   shell: Page;
   /** console.error output and uncaught errors from the shell and main process. */
   errors: string[];
@@ -39,6 +42,8 @@ export interface LaunchOptions {
    * the app. By default each launch gets a fresh folder that is deleted.
    */
   userDataDir?: string;
+  /** Keep running when the last window closes, as on macOS (test mode switch). */
+  keepRunning?: boolean;
 }
 
 /**
@@ -53,7 +58,7 @@ export const SHOW_WINDOWS = process.env['HYPERSOL_TEST_SHOW'] === '1';
  * variables (NODE_OPTIONS and friends) must not leak into Electron's main
  * process.
  */
-function cleanEnv(): Record<string, string> {
+function cleanEnv(keepRunning = false): Record<string, string> {
   const keep = [
     'PATH', 'Path', 'SystemRoot', 'SYSTEMROOT', 'windir', 'TEMP', 'TMP', 'TMPDIR',
     'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'HOME', 'USER', 'LANG',
@@ -61,6 +66,7 @@ function cleanEnv(): Record<string, string> {
   ];
   const env: Record<string, string> = { HYPERSOL_TEST: '1' };
   if (!SHOW_WINDOWS) env['HYPERSOL_TEST_BACKGROUND'] = '1';
+  if (keepRunning) env['HYPERSOL_TEST_KEEP_RUNNING'] = '1';
   for (const k of keep) {
     const v = process.env[k];
     if (v !== undefined) env[k] = v;
@@ -78,12 +84,13 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   const app = await electron.launch({
     executablePath: electronPath,
     args,
-    env: cleanEnv(),
+    env: cleanEnv(opts.keepRunning),
     timeout: 30_000,
   });
   const errors: string[] = [];
   const output: string[] = [];
-  app.process().stderr?.on('data', (d: Buffer) => output.push(d.toString()));
+  const proc = app.process();
+  proc.stderr?.on('data', (d: Buffer) => output.push(d.toString()));
   app.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`main: ${msg.text()}`);
   });
@@ -120,15 +127,32 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   }
   return {
     app,
+    proc,
     shell,
     errors,
     close: async () => {
-      await app.close();
+      // The app may already have quit on its own (quit checks).
+      if (proc.exitCode === null && proc.signalCode === null) await app.close();
       // Electron can hold a file for a moment after closing; a leftover
       // temporary folder is harmless, so cleanup does not fail the run.
       if (!keepProfile) await removeFolder(userDataDir);
     },
   };
+}
+
+/** Waits for the app's process to end; returns how long that took, in ms. */
+export async function waitForExit(h: Harness, timeoutMs: number): Promise<number> {
+  const start = Date.now();
+  const proc = h.proc;
+  if (proc.exitCode !== null || proc.signalCode !== null) return 0;
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`The app was still running after ${timeoutMs} ms`)), timeoutMs);
+    proc.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+  return Date.now() - start;
 }
 
 /** Deletes a temporary folder, retrying while Electron releases its files. */
@@ -140,6 +164,7 @@ export async function removeFolder(dir: string): Promise<void> {
 export interface ShellHooks {
   ready: boolean;
   openPanel(): 'library' | 'settings' | null;
+  ignorePrepareClose(): void;
   frames(): number;
   layout(): { panelWidth: number; panelHeight: number; cameraZ: number; viewportWidth: number; viewportHeight: number };
   cameraOffset(): Point;

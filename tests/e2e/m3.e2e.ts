@@ -3,7 +3,7 @@
  * the Library and Settings panels, the start panel's data, restarts,
  * clearing data, damaged saved data, and keyboard access.
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -18,8 +18,10 @@ import {
   removeFolder,
   settled,
   shellCall,
+  sleep,
   tabs,
   waitFor,
+  waitForExit,
   waitForPage,
   type Harness,
 } from './harness';
@@ -302,6 +304,98 @@ describe('E6 and E7: restarts', () => {
       await waitFor('history kept', () => libTitles(h), (t) => t.join() === 'Form,Link B,Link A');
       await openSettings(h);
       await waitFor('setting kept', () => h.shell.locator(SET('set-engine-bing')).isChecked(), (c) => c);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe('E6b quitting and closing keep the latest tabs (PR #7 review)', () => {
+  // These run with the app kept alive when its last window closes, as it
+  // is on macOS, so a quit that turned into a mere window close would show.
+  const lastTabs = JSON.stringify({ searchEngine: 'duckduckgo', onStartup: 'last-tabs' });
+
+  async function twoTabs(h: Harness): Promise<void> {
+    await waitForPage(h, 'link-a');
+    await pressInShell(h, 'T', ['control']);
+    await settled(h);
+    await navigateTo(h, server.url('link-b.html'));
+    await waitForPage(h, 'link-b');
+  }
+
+  function savedTabs(profile: string): string[] {
+    const text = readFileSync(join(profile, 'session.json'), 'utf8');
+    return (JSON.parse(text) as { tabs: string[] }).tabs;
+  }
+
+  it('Quit saves the tabs and ends the app, even where closing the last window does not', async () => {
+    const profile = newProfile();
+    writeFileSync(join(profile, 'settings.json'), lastTabs);
+    const h = await launch(server.url('link-a.html'), { userDataDir: profile, keepRunning: true });
+    try {
+      await twoTabs(h);
+      await h.app.evaluate(({ app }) => app.quit()); // straight after the last change
+      expect(await waitForExit(h, 5000)).toBeLessThan(5000);
+      expect(savedTabs(profile)).toEqual([server.url('link-a.html'), server.url('link-b.html')]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('closing the window saves the tabs and, where the app keeps running, leaves it running', async () => {
+    const profile = newProfile();
+    writeFileSync(join(profile, 'settings.json'), lastTabs);
+    const h = await launch(server.url('link-a.html'), { userDataDir: profile, keepRunning: true });
+    try {
+      await twoTabs(h);
+      await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+      await waitFor(
+        'the window to close',
+        () => h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length),
+        (n) => n === 0,
+        5000,
+      );
+      await sleep(1000);
+      expect(h.proc.exitCode).toBeNull(); // still running, like macOS
+      expect(savedTabs(profile)).toEqual([server.url('link-a.html'), server.url('link-b.html')]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('if the shell never answers, Quit still ends the app after the 2 s wait', async () => {
+    const h = await launch(server.url('link-a.html'), { userDataDir: newProfile(), keepRunning: true });
+    try {
+      await waitForPage(h, 'link-a');
+      await shellCall(h, 'ignorePrepareClose');
+      const start = Date.now();
+      await h.app.evaluate(({ app }) => app.quit());
+      await waitForExit(h, 8000);
+      const took = Date.now() - start;
+      expect(took).toBeGreaterThanOrEqual(1800);
+      expect(took).toBeLessThan(6000);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('if the shell never answers, closing the window still closes it after the 2 s wait', async () => {
+    const h = await launch(server.url('link-a.html'), { userDataDir: newProfile(), keepRunning: true });
+    try {
+      await waitForPage(h, 'link-a');
+      await shellCall(h, 'ignorePrepareClose');
+      const start = Date.now();
+      await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+      await waitFor(
+        'the window to close',
+        () => h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length),
+        (n) => n === 0,
+        8000,
+      );
+      const took = Date.now() - start;
+      expect(took).toBeGreaterThanOrEqual(1800);
+      expect(took).toBeLessThan(6000);
+      expect(h.proc.exitCode).toBeNull();
     } finally {
       await h.close();
     }
