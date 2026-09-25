@@ -55,6 +55,8 @@ export class App {
   private shownFocus = -1;
   private readonly snapshotTimers = new Map<number, number>();
   private sessionTimer: number | undefined;
+  /** Whether the Enter key is held down in the shell. */
+  private enterDown = false;
   private dataChangeTimer: number | undefined;
   /** Why the open tabs could not be saved last time, if they could not. */
   private sessionProblem = '';
@@ -74,6 +76,8 @@ export class App {
       },
     });
     this.store.subscribe(() => this.sync());
+    document.addEventListener('keydown', (e) => e.key === 'Enter' && (this.enterDown = true), true);
+    document.addEventListener('keyup', (e) => e.key === 'Enter' && (this.enterDown = false), true);
     this.wireToolbar();
     this.wirePanels();
     options.bridge.onCommand((command) => this.onCommand(command));
@@ -119,7 +123,31 @@ export class App {
     if (!result || !view) return;
     this.store.update(tabId, { url: result.url, state: 'loading', title: result.url });
     view.load(result.url);
-    if (tabId === this.store.focusedId) view.focusContent();
+    if (tabId === this.store.focusedId) this.focusPageAfterEnter(view);
+  }
+
+  /**
+   * Moves the keyboard into the page, but only once the Enter key that
+   * started the navigation has been released (or after half a second):
+   * otherwise the key's release lands in the page. That stray key-up also
+   * stalled the test tool, which waits for the shell to acknowledge it
+   * (found 2026-09-25).
+   */
+  private focusPageAfterEnter(view: TabView): void {
+    if (!this.enterDown) {
+      view.focusContent();
+      return;
+    }
+    const go = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('keyup', onUp, true);
+      if (this.focusedView === view) view.focusContent();
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') go();
+    };
+    const timer = window.setTimeout(go, 500);
+    document.addEventListener('keyup', onUp, true);
   }
 
   // ---- Tabs ---------------------------------------------------------------
