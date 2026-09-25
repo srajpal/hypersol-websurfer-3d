@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Favicon test</title>
+  </head>
+  <body>
+    <p>Names the favicon given in ?icon=..., or with ?churn=N changes it N times in quick succession.</p>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.append(link);
+      const churn = Number(params.get('churn') || 0);
+      if (churn > 0) {
+        let i = 0;
+        const next = () => {
+          link.href = 'icon.png?v=' + i;
+          if (++i < churn) setTimeout(next, 10);
+        };
+        next();
+      } else if (params.get('icon')) {
+        link.href = params.get('icon');
+      }
+    </script>
+  </body>
+</html>

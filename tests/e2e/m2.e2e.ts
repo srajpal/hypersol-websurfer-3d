@@ -554,3 +554,76 @@ interface MainLog {
   };
 }
 
+
+describe('D13 favicon limits (GitHub issue #1)', () => {
+  let h: Harness;
+  beforeAll(async () => {
+    h = await launch(server.url('link-a.html'));
+    await waitForPage(h, 'link-a');
+  });
+  afterAll(async () => h?.close());
+
+  const hitsFor = (prefix: string) =>
+    [...server.hits.entries()].filter(([k]) => k.startsWith(prefix)).reduce((n, [, v]) => n + v, 0);
+  const abortedFor = (key: string) => server.aborted.get(key) ?? 0;
+
+  async function openWithIcon(icon: string): Promise<void> {
+    await navigateTo(h, server.url(`favicon.html?icon=${encodeURIComponent(icon)}`));
+    await waitForPage(h, 'favicon.html');
+  }
+
+  async function expectNoFavicon(): Promise<void> {
+    await sleep(1500);
+    expect((await focusedTab(h)).hasFavicon).toBe(false);
+    expect(await h.shell.evaluate(() => 1 + 1)).toBe(2); // the app still answers
+  }
+
+  it('refuses a favicon over the size limit, declared or streamed', async () => {
+    await openWithIcon('/favicon/huge-bytes.png');
+    await expectNoFavicon();
+    expect(hitsFor('/favicon/huge-bytes.png')).toBeGreaterThan(0);
+    await openWithIcon('/favicon/huge-stream.png');
+    await expectNoFavicon();
+    expect(hitsFor('/favicon/huge-stream.png')).toBeGreaterThan(0);
+  });
+
+  it('refuses huge dimensions without decoding', async () => {
+    await openWithIcon('/favicon/huge-dims.png');
+    await expectNoFavicon();
+    expect(hitsFor('/favicon/huge-dims.png')).toBeGreaterThan(0);
+  });
+
+  it('refuses an oversized inline (data:) favicon', async () => {
+    await openWithIcon('');
+    await inPage(
+      h,
+      `document.querySelector('link[rel=icon]').href = 'data:image/png;base64,' + 'A'.repeat(400000)`,
+      'favicon.html',
+    );
+    await expectNoFavicon();
+  });
+
+  it('gives up on a slow favicon after the timeout', async () => {
+    const key = '/favicon/slow.png?ms=20000';
+    await openWithIcon(key);
+    await waitFor('the slow request to be cancelled', async () => abortedFor(key), (n) => n > 0, 9000);
+    expect((await focusedTab(h)).hasFavicon).toBe(false);
+  });
+
+  it('cancels a favicon fetch when the page navigates away', async () => {
+    const key = '/favicon/slow.png?ms=20001';
+    await openWithIcon(key);
+    await waitFor('the fetch to start', async () => server.hits.get(key) ?? 0, (n) => n > 0, 3000);
+    const start = Date.now();
+    await navigateTo(h, server.url('link-b.html'));
+    await waitFor('cancelled on navigation', async () => abortedFor(key), (n) => n > 0, 3000);
+    expect(Date.now() - start).toBeLessThan(3000); // well before the 5 s timeout
+  });
+
+  it('fetches only the last favicon of a page that keeps changing it', async () => {
+    await navigateTo(h, server.url('favicon.html?churn=30'));
+    await waitForPage(h, 'favicon.html');
+    await waitFor('the final favicon', () => focusedTab(h), (t) => t.hasFavicon, 5000);
+    expect(hitsFor('/icon.png?v=')).toBeLessThanOrEqual(3);
+  });
+});

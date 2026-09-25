@@ -435,7 +435,20 @@ export const ADDRESS = 'hs-toolbar [data-testid="address"]';
 /** Types into the address bar and presses Enter. */
 export async function navigateTo(h: Harness, text: string): Promise<void> {
   await h.shell.fill(ADDRESS, text);
-  await h.shell.press(ADDRESS, 'Enter');
+  try {
+    await h.shell.press(ADDRESS, 'Enter', { timeout: 10_000 });
+  } catch (e) {
+    // Rarely seen: the press waits and never happens. Record what still
+    // answers, to find the cause.
+    const within = <T>(p: Promise<T>) =>
+      Promise.race([p.then((v) => JSON.stringify(v)), sleep(3000).then(() => 'no answer in 3 s')]).catch(
+        (err: unknown) => `error: ${String(err)}`,
+      );
+    const shell = await within(h.shell.evaluate(() => [document.readyState, document.activeElement?.tagName ?? '']));
+    const main = await within(h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length));
+    const pages = await within(Promise.resolve(h.app.windows().map((w) => w.url().slice(0, 60))));
+    throw new Error(`${String(e)}\nShell answers: ${shell}\nMain answers: ${main}\nWindows: ${pages}`);
+  }
 }
 
 export function tabs(h: Harness): Promise<TabInfo[]> {

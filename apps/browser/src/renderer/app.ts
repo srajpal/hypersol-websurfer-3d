@@ -34,6 +34,11 @@ const SNAPSHOT_DELAY_MS = 400;
 const SESSION_SAVE_DELAY_MS = 400;
 const isWeb = (url: string) => /^https?:\/\//i.test(url);
 
+/** Same page apart from the #fragment (an in-page jump keeps the favicon). */
+function isSamePage(a: string, b: string): boolean {
+  return a.split('#')[0] === b.split('#')[0];
+}
+
 /**
  * The shell's controller: keeps the tab list, the pages, the room, the
  * top bar, and the panels in step, and acts on commands from the main
@@ -181,8 +186,11 @@ export class App {
     const view = this.views.get(tabId);
     if (!tab || !view) return;
     const state: TabState = view.isStart ? 'start' : status.state;
+    // A different page starts without the previous page's favicon.
+    const newPage = Boolean(status.url) && status.url !== tab.url && !isSamePage(status.url, tab.url);
     this.store.update(tabId, {
       state,
+      ...(newPage ? { favicon: undefined } : {}),
       ...(status.url ? { url: status.url } : {}),
       ...(status.title ? { title: status.title } : status.url && tab.title === tab.url ? { title: status.url } : {}),
     });

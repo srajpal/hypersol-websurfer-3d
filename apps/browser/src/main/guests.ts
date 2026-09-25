@@ -1,6 +1,7 @@
 import { clipboard, Menu, nativeImage, type MenuItemConstructorOptions, type WebContents } from 'electron';
 import type { ShellCommand } from '../shared/commands';
 import { contextMenuEntries, type MenuAction } from './context-menu';
+import { FaviconLoader } from './favicon';
 import { decidePopup, GESTURE_EVENTS } from './popups';
 import { isAllowedPageUrl } from './security';
 import { matchShortcut } from './shortcuts';
@@ -105,11 +106,24 @@ export function wireGuest(guest: WebContents, deps: GuestDeps): void {
     Menu.buildFromTemplate(template).popup();
   });
 
-  guest.on('page-favicon-updated', (_event, favicons) => {
-    void loadFavicon(guest, favicons).then((dataUrl) => {
-      if (dataUrl) deps.send({ type: 'favicon', webContentsId: guest.id, dataUrl });
+  // Favicons are untrusted input: bounded, one fetch at a time, cancelled
+  // when the page moves on (main/favicon.ts, GitHub issue #1).
+  const favicons = new FaviconLoader(
+    (url, init) => guest.session.fetch(url, init),
+    (bytes) => {
+      const image = nativeImage.createFromBuffer(bytes);
+      return image.isEmpty() ? null : image.resize({ width: 32, height: 32, quality: 'best' }).toDataURL();
+    },
+  );
+  guest.on('page-favicon-updated', (_event, urls) => {
+    favicons.request(urls, (dataUrl) => {
+      if (!guest.isDestroyed()) deps.send({ type: 'favicon', webContentsId: guest.id, dataUrl });
     });
   });
+  guest.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) favicons.cancel();
+  });
+  guest.once('destroyed', () => favicons.cancel());
 }
 
 function runMenuAction(guest: WebContents, action: MenuAction, linkURL: string, deps: GuestDeps): void {
@@ -142,30 +156,4 @@ function runMenuAction(guest: WebContents, action: MenuAction, linkURL: string, 
       guest.reload();
       break;
   }
-}
-
-/**
- * Fetches a page's favicon through the page's own session (the same
- * request a browser tab makes) and returns it as a small data: URL.
- */
-async function loadFavicon(guest: WebContents, urls: string[]): Promise<string | null> {
-  for (const url of urls.slice(0, 3)) {
-    try {
-      let image;
-      if (url.startsWith('data:image/')) {
-        image = nativeImage.createFromDataURL(url);
-      } else if (/^https?:\/\//i.test(url)) {
-        const response = await guest.session.fetch(url);
-        if (!response.ok) continue;
-        image = nativeImage.createFromBuffer(Buffer.from(await response.arrayBuffer()));
-      } else {
-        continue;
-      }
-      if (image.isEmpty()) continue;
-      return image.resize({ width: 32, height: 32, quality: 'best' }).toDataURL();
-    } catch {
-      // Try the next one.
-    }
-  }
-  return null;
 }
