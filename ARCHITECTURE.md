@@ -1,0 +1,237 @@
+# HyperSol WebSurfer 3D — Architecture
+
+Status: approved 2026-09-24. Run and test steps are marked "not checked yet"
+until they have actually been executed.
+
+## 1. Summary
+
+A desktop browser (Windows, macOS, Linux) built with Electron, TypeScript,
+and Three.js. The browser's interface is a 3D scene. The focused web page
+is a live Chromium view placed in that scene; other tabs float nearby as
+3D cards. Privacy features run inside Electron's main process. HoloML, the
+3D markup language, lives in a separate repository and plugs into the same
+Three.js scene through a renderer package.
+
+## 2. Terms used in this document
+
+- Electron: a framework that packages Chromium (Chrome's engine) and
+  Node.js into a desktop app.
+- Main process: the Node.js side of an Electron app. Owns windows, tabs,
+  network settings, and files on disk. Has full system access.
+- Renderer process: a Chromium page. Our 3D interface ("the shell") is
+  one renderer. Each web page a user opens runs in its own renderer.
+- Preload script: a small script Electron runs inside a page before the
+  page's own code. Used to expose a safe, narrow bridge to the main
+  process, and to inject our depth-layering behaviour into web pages.
+- IPC (inter-process communication): messages between main and renderer.
+- WebGL: the browser's built-in 3D graphics API. Three.js sits on top of it.
+- CSS 3D transforms: standard CSS that rotates and positions HTML elements
+  in 3D space, rendered by Chromium's compositor at full speed.
+- Offscreen rendering: Electron rendering a page to an image instead of
+  the screen, so we can paint it onto a 3D surface.
+- DoH (DNS over HTTPS): encrypted lookups of website addresses, so the
+  network cannot see or tamper with which sites you visit.
+- SQLite: a small single-file database. Chrome and Firefox store history
+  and bookmarks this way.
+- Monorepo: one git repository holding several packages that version and
+  build together.
+
+## 3. What was checked on this machine (2026-09-24)
+
+Available: Node 22.16, npm 10.9, pnpm 12.4, git 2.45, Python 3.13,
+.NET 9, CMake 3.28, VS Code.
+Not available: Rust, C++ compiler (cl, clang, gcc).
+Consequence: choose a TypeScript stack; native modules must ship prebuilt
+binaries. Electron 44 is the current stable line.
+
+## 4. Decisions and reasons
+
+| Decision | Choice | Why |
+|---|---|---|
+| App framework | Electron 44 | Bundles Chromium; one codebase for three desktop OSes; huge ecosystem; matches "embed an existing engine". |
+| Language | TypeScript everywhere | One language for shell, main process, HoloML parser; easiest for contributors. |
+| 3D library | Three.js | Most used open-source web 3D library; supports both WebGL objects and live DOM in one scene. |
+| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer) | Sharp text, native input, zero pixel copying. |
+| Background tabs in 3D | Snapshot textures on WebGL cards | Cheap; lit and occluded like real objects. |
+| Upgrade path | Offscreen rendering to GPU textures | Lets pages curve, bend, and receive lighting later; hidden behind the PagePanel interface. |
+| Page depth layering | Injected preload CSS on top-level sections and images | Interactive, no copying; also reports image positions for later 3D lifting. |
+| Ad/tracker blocking | @ghostery/adblocker-electron | Open source, uBlock-compatible lists, built for Electron sessions. |
+| Filter-list updates | Fetched on a schedule, on by default, switchable in Settings | Keeps blocking current; the only network call the browser makes on its own. |
+| Encrypted DNS | Electron app.configureHostResolver, secureDnsMode "secure" | Built into Chromium; no extra service. |
+| Default search engine | DuckDuckGo | Privacy-respecting default; changeable in Settings. |
+| Telemetry | None. No analytics, no crash reporter. | Brief requirement. |
+| Camera | Fixed desk view with subtle mouse parallax | Simple and predictable for the first result; free movement is a later milestone. |
+| Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
+| Bookmarks and history | SQLite (better-sqlite3, prebuilt binaries) | Fast search over thousands of rows; standard for browsers. |
+| UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
+| Build | electron-vite (Vite) and electron-builder | Fast dev reload; installers for Windows, macOS, Linux. |
+| Tests | Vitest (unit), Playwright (Electron end-to-end) | Standard, cross-platform. |
+| Repos | hypersol-websurfer-3d (browser), holoml (language) | Each useful on its own; browser depends on holoml packages via npm. |
+| License | Apache 2.0 both; spec text also CC BY 4.0 | Per brief. |
+
+## 5. Parts (browser repository)
+
+pnpm monorepo. Package names use the @hypersol scope.
+
+```
+hypersol-websurfer-3d/
+  BRIEF.md
+  ARCHITECTURE.md
+  LICENSE                      Apache 2.0
+  package.json, pnpm-workspace.yaml, tsconfig.base.json
+  apps/
+    browser/                   the Electron app
+      electron.vite.config.ts
+      src/
+        main/                  main process
+          index.ts             app start, single instance, window creation
+          tabs/                TabManager: create, close, focus, navigate, snapshot
+          privacy/             blocker setup, DoH setup, hardened session defaults
+          storage/             settings.json, SQLite history and bookmarks
+          ipc/                 typed message handlers (one file per topic)
+          menu/                keyboard shortcuts and app menu
+        preload/
+          shell.ts             safe bridge exposed to the 3D shell
+          page.ts              injected into every web page: depth layering,
+                               image and model discovery, no Node access
+        renderer/              the 3D shell (one Chromium page)
+          index.html
+          scene/               Three.js room, camera, lighting, PagePanel,
+                               TabCard, input mapping
+          hud/                 Lit components: address bar, tab strip,
+                               nav buttons, panels (library, settings, error)
+          state/               small store: tabs, focused tab, theme, status
+          themes/              theme definitions and CSS variables
+      resources/               icons, default filter list snapshot
+  packages/
+    scene-core/                @hypersol/scene-core: room layout math,
+                               PagePanel interface, camera rig. No Electron
+                               imports, so it can be unit tested and reused
+                               by HoloML rendering later.
+    themes/                    @hypersol/themes: theme schema and the two
+                               built-in themes
+    holoml-renderer/           @hypersol/holoml-renderer: maps HoloML nodes
+                               to Three.js objects. Skeleton only in the
+                               first result; real work in a later milestone.
+  docs/
+    screens.md                 layout notes and states (from this document)
+    privacy.md                 what is blocked, what is stored, what is fetched
+  tests/
+    e2e/                       Playwright: launch app, open a site, switch theme
+```
+
+## 6. Parts (HoloML repository, created alongside)
+
+```
+holoml/
+  SPEC.md                      the language, written like a small HTML spec
+  LICENSE, LICENSE-SPEC        Apache 2.0 and CC BY 4.0
+  packages/
+    parser/                    @holoml/parser: text to a node tree; zero deps
+    schema/                    @holoml/schema: element and attribute rules
+  examples/
+    showroom/                  the car showroom demo (later milestone)
+  conformance/                 sample files and expected trees for any renderer
+```
+
+First result scope for this repo: README, SPEC.md outline, empty parser
+package with one passing test. Language design itself is a later milestone.
+
+## 7. Data flow
+
+1. User types an address in the HUD. The shell sends "navigate" over IPC.
+2. TabManager in main tells the tab's Chromium view to load the URL.
+   The blocker inspects every request; DoH resolves the host name.
+3. Load events flow back to the shell, which updates the address bar,
+   progress strip, and title.
+4. The page preload measures top-level sections and images and applies
+   depth offsets; it reports image rectangles to main for later use.
+5. On tab switch, main captures a snapshot of the outgoing tab and the
+   shell paints it onto that tab's 3D card.
+6. Visited pages are written to SQLite history. Bookmarks are written on
+   user action. Settings are written on change.
+
+## 8. What is saved, and where
+
+| Data | Where | Notes |
+|---|---|---|
+| Settings, theme, window size | settings.json in the app data folder | Human readable |
+| History, bookmarks | hypersol.sqlite in the app data folder | Delete-able from the Library panel |
+| Cookies, cache, site storage | Chromium profile folder managed by Electron | Standard browser behaviour |
+| Filter lists | cached file in the app data folder | Refreshed on a schedule; switchable in Settings |
+
+Nothing leaves the machine except user-initiated page loads and
+filter-list refreshes.
+
+## 9. Screens and style
+
+### Layout for the first result (approved)
+
+The Room: one full-window 3D scene, seen from a fixed "desk" camera with a
+slight parallax that follows the mouse.
+
+- Centre: the focused page, a large upright panel, gently tilted toward
+  the viewer, with a soft glow edge in the theme's accent colour.
+- Left rail: tab cards, stacked in a shallow arc, each a snapshot with
+  title and favicon. Click to focus; the cards animate as the focused
+  page slides into the centre. Close on hover. "+" card at the end.
+- Top HUD (2D overlay, always sharp): back, forward, reload, address and
+  search bar, menu button. Loading progress is a thin strip under the bar.
+- Right side, on demand: a slide-in Library panel (bookmarks, history) or
+  Settings panel. Only one open at a time. Escape closes it.
+- Bottom-right: theme switch and privacy shield (count of blocked
+  requests on the current page).
+
+Movement: standard browser shortcuts (Ctrl/Cmd+T new tab, Ctrl/Cmd+W
+close, Ctrl/Cmd+L address bar, Ctrl/Cmd+Tab next tab). Mouse and touch:
+click or tap cards and buttons; scroll inside the page scrolls the page.
+No free camera movement in the first result.
+
+### States
+
+- Waiting: progress strip under the address bar; a new panel shows a soft
+  shimmer until first paint; tab cards show a spinner until a snapshot.
+- Empty: new tab shows a start panel with a search box, bookmarks grid,
+  and recent history. With no data: "Nothing saved yet" with a hint.
+  Library with no history or bookmarks: same wording.
+- Error: shown inside the panel as a card with a plain message, the
+  address, and Retry. Cases: address not found, connection failed,
+  blocked by the privacy shield (with "open anyway"), page crashed
+  ("This page went dark").
+- Privacy status: the shield icon shows a count; clicking opens a small
+  popover listing what was blocked.
+
+### Shared appearance
+
+- Two built-in themes: Nebula (dark, default) and Daylight (light).
+  Each theme defines: background gradient, panel glass colour, accent,
+  text colours, glow strength, and 3D room lighting.
+- Style: glass panels, thin luminous edges, restrained motion (200 to
+  300 ms), one accent colour per theme. Fonts: a system sans-serif stack
+  for the first result; a custom font is a later decision.
+- All colours are CSS variables in the HUD and matching values in the
+  Three.js materials, so a theme changes both at once.
+
+### Later screens and polish (not in the first result)
+
+Free camera and room navigation, HoloML page mode, image lift-to-3D,
+downloads panel, find in page, extensions, sync, theme editor, custom
+fonts, sound design, VR.
+
+## 10. Open questions
+
+1. Theme look: Nebula (dark) default and Daylight (light) are the working
+   proposal. Exact colours, accent, and any owner sketches are still to
+   be confirmed in the theme milestone.
+2. Live-panel input on a rotated page: confirmed in the first milestone
+   spike; fallback is the texture panel mode. Not checked yet.
+3. Prebuilt better-sqlite3 binaries for Electron 44 on all three OSes.
+   Not checked yet.
+
+## 11. Run and test (not checked yet)
+
+- Install: `pnpm install`
+- Develop: `pnpm dev` (starts the Electron app with live reload)
+- Unit tests: `pnpm test`
+- End-to-end: `pnpm test:e2e`
+- Package: `pnpm build` then `pnpm package` (installers per OS)
