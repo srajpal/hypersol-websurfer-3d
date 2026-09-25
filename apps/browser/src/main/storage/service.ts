@@ -105,8 +105,14 @@ export class StorageService {
 
   private async run(r: DataRequest): Promise<unknown> {
     switch (r.op) {
-      case 'status':
-        return this.store ? { available: true } : { available: false, message: UNAVAILABLE };
+      case 'status': {
+        const settingsProblem = this.settingsFile.problem;
+        return {
+          available: this.store !== null,
+          ...(this.store ? {} : { message: UNAVAILABLE }),
+          ...(settingsProblem ? { settingsProblem } : {}),
+        };
+      }
       case 'bookmarks.list':
         return this.needStore().listBookmarks();
       case 'bookmarks.has':

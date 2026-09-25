@@ -44,7 +44,8 @@ export type DataRequest =
   | { op: 'data.clear'; history: boolean; cookies: boolean; cache: boolean };
 
 export interface DataResults {
-  status: { available: boolean; message?: string };
+  /** message: why history and bookmarks are unavailable; settingsProblem: why saved settings are not in use. */
+  status: { available: boolean; message?: string; settingsProblem?: string };
   'bookmarks.list': Bookmark[];
   'bookmarks.has': boolean;
   'bookmarks.add': Bookmark | null;

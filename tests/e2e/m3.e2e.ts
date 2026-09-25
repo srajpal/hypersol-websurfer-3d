@@ -297,6 +297,33 @@ describe('E9 damaged or blocked saved data', () => {
     }
   });
 
+  it('unreadable settings: the app opens, explains, and a failed change changes nothing (GitHub issue #2)', async () => {
+    const profile = newProfile();
+    mkdirSync(join(profile, 'settings.json')); // a folder where the file should be
+    const h = await launch('', { userDataDir: profile, searchUrl: searchUrl() });
+    try {
+      await openSettings(h);
+      await waitFor(
+        'explanation',
+        () => h.shell.locator(SET('set-problem')).textContent(),
+        (t) => (t ?? '').includes("Your settings couldn't be read (EISDIR)"),
+      );
+      await h.shell.click(SET('set-engine-brave'));
+      await waitFor(
+        'failure message',
+        () => h.shell.locator(SET('set-message')).textContent(),
+        (t) => (t ?? '').includes("Couldn't save your settings"),
+      );
+      await waitFor('still DuckDuckGo', () => h.shell.locator(SET('set-engine-duckduckgo')).isChecked(), (c) => c);
+      expect(await h.shell.locator(SET('set-engine-brave')).isChecked()).toBe(false);
+      await h.shell.keyboard.press('Escape');
+      await navigateTo(h, 'still default');
+      await waitForPage(h, '/search'); // the local stand-in for DuckDuckGo, not Brave
+    } finally {
+      await h.close();
+    }
+  });
+
   it('a database that cannot be opened: plain message, browsing still works', async () => {
     const profile = newProfile();
     mkdirSync(join(profile, 'hypersol.sqlite')); // a folder where the database file should be
