@@ -207,6 +207,10 @@ if (!app.requestSingleInstanceLock()) {
       if (!mainWindow || event.sender !== mainWindow.webContents) {
         return { ok: false, error: 'Not allowed' };
       }
+      if (testLog && typeof request === 'object' && request !== null) {
+        const op = String((request as { op?: unknown }).op);
+        testLog.dataOps[op] = (testLog.dataOps[op] ?? 0) + 1;
+      }
       return storage!.handle(request);
     });
     storage.onChange((what) => {

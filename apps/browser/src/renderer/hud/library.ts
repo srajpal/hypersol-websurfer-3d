@@ -33,6 +33,10 @@ export class HsLibrary extends LitElement {
   declare confirming: boolean;
   client: DataClient | null = null;
   private request = 0;
+  /** A refresh is running; another was asked for meanwhile. */
+  private running = false;
+  private again = false;
+  private searchTimer: number | undefined;
 
   constructor() {
     super();
@@ -134,9 +138,31 @@ export class HsLibrary extends LitElement {
     this.dispatchEvent(new CustomEvent('hs-panel-closed', { bubbles: true, composed: true }));
   }
 
-  /** Reloads the current view (also called when saved data changes). */
+  /**
+   * Reloads the current view (also called when saved data changes).
+   * Requests made while one is running are merged into a single follow-up,
+   * and a reply that a newer request has overtaken is dropped (GitHub
+   * issue #4).
+   */
   async refresh(): Promise<void> {
     if (!this.open || !this.client) return;
+    if (this.running) {
+      this.again = true;
+      return;
+    }
+    this.running = true;
+    try {
+      do {
+        this.again = false;
+        await this.load();
+      } while (this.again && this.open);
+    } finally {
+      this.running = false;
+    }
+  }
+
+  private async load(): Promise<void> {
+    if (!this.client) return;
     const ticket = ++this.request;
     this.loading = true;
     try {
@@ -283,9 +309,12 @@ export class HsLibrary extends LitElement {
     return this.bookmarks.filter((b) => b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q));
   }
 
+  /** History searches wait until typing pauses for 200 ms. */
   private readonly onSearch = (e: Event) => {
     this.query = (e.target as HTMLInputElement).value;
-    if (this.view === 'history') void this.refresh();
+    if (this.view !== 'history') return;
+    window.clearTimeout(this.searchTimer);
+    this.searchTimer = window.setTimeout(() => void this.refresh(), 200);
   };
 
   private readonly onKey = (e: KeyboardEvent) => {

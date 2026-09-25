@@ -116,6 +116,22 @@ describe('E1 to E3: bookmarks, history, and the Library', () => {
     await waitFor('history empty', () => h.shell.locator(LIB('lib-empty')).textContent(), (t) => t === 'Nothing saved yet');
   });
 
+  it('E2 searches once typing pauses, not on every key (GitHub issue #4)', async () => {
+    await navigateTo(h, server.url('link-b.html'));
+    await waitForPage(h, 'link-b');
+    await openLibrary(h, 'history');
+    await waitFor('a visit listed', () => libTitles(h), (t) => t.length > 0);
+    const searches = () =>
+      h.app.evaluate(() => (globalThis as unknown as { __hypersolTest: { dataOps: Record<string, number> } }).__hypersolTest.dataOps['history.search'] ?? 0);
+    const before = await searches();
+    await h.shell.locator(LIB('lib-search')).pressSequentially('link b', { delay: 30 });
+    await waitFor('search result', () => libTitles(h), (t) => t.join() === 'Link B');
+    // Six keys typed quickly: one search after the pause, not six.
+    expect((await searches()) - before).toBeLessThanOrEqual(2);
+    await h.shell.fill(LIB('lib-search'), '');
+    await h.shell.keyboard.press('Escape');
+  });
+
   it('E3 opens a bookmark from the Library and removes it', async () => {
     await openLibrary(h, 'bookmarks');
     await waitFor('bookmark listed', () => libTitles(h), (t) => t.join() === 'Link A');

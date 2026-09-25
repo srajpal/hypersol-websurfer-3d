@@ -55,6 +55,7 @@ export class App {
   private shownFocus = -1;
   private readonly snapshotTimers = new Map<number, number>();
   private sessionTimer: number | undefined;
+  private dataChangeTimer: number | undefined;
   /** Why the open tabs could not be saved last time, if they could not. */
   private sessionProblem = '';
   private starUrl = '';
@@ -414,9 +415,13 @@ export class App {
           void this.data.get({ op: 'settings.get' }).then((s) => (this.settings = s)).catch(() => undefined);
           break;
         }
-        void this.refreshStartData();
-        void this.updateStar();
-        if (this.openPanelName === 'library') void this.options.library.refresh();
+        // Visits and title changes come in bursts; answer once per burst.
+        window.clearTimeout(this.dataChangeTimer);
+        this.dataChangeTimer = window.setTimeout(() => {
+          void this.refreshStartData();
+          void this.updateStar();
+          if (this.openPanelName === 'library') void this.options.library.refresh();
+        }, 100);
         break;
     }
   }
