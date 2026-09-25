@@ -170,3 +170,29 @@ Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Tokens: 97,340 at lo
 ```text
 approve to save and commit
 ```
+
+## 11 — 2026-09-24
+
+Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Tokens: 160,013 at logging
+
+```text
+<context>
+Read BRIEF.md, ARCHITECTURE.md, AGENTS.md, and any TODO.md or HANDOFF.md (all md docs).
+</context>
+
+<role>
+You are a senior technical lead reviewing this project from multiple stakeholder perspectives.
+</role>
+
+<goal>
+Review the documentation from four perspectives: technical, product/UX, operational, and business. For each, note strengths, risks, and gaps, and suggest improvements.
+</goal>
+
+<instructions>
+1. Analyze each perspective separately.
+2. Highlight contradictions or missing info across perspectives.
+3. Provide actionable recommendations for each.
+4. Keep each section under 200 words.
+5. Think step by step before answering.
+</instructions>
+```
