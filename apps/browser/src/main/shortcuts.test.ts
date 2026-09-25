@@ -24,6 +24,12 @@ describe('matchShortcut on Windows and Linux', () => {
     expect(m(key('PageDown', { control: true }))).toBe('next-tab');
     expect(m(key('PageUp', { control: true }))).toBe('prev-tab');
   });
+  it('maps bookmark, library, and settings', () => {
+    expect(m(key('d', { control: true }))).toBe('bookmark');
+    expect(m(key('O', { control: true, shift: true }))).toBe('library');
+    expect(m(key(',', { control: true }))).toBe('settings');
+    expect(m(key('o', { control: true }))).toBeNull();
+  });
   it('maps reload, back, and forward', () => {
     expect(m(key('r', { control: true }))).toBe('reload');
     expect(m(key('F5'))).toBe('reload');

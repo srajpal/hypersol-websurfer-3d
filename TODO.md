@@ -11,7 +11,7 @@ Plan approved 2026-09-24.
 |---|---|---|---|
 | 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Done (accepted 2026-09-25 with C2 as a known issue) |
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
-| 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Later |
+| 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Built; awaiting owner acceptance (E11) |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Later |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Later |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Later |
@@ -373,3 +373,126 @@ rail once they overflow; the tabs scroll above it.
 D1 to D11 and C1 to C11 pass (C2's known issue aside, unless fixed), the
 owner accepts D12, the docs are updated, and the owner approves the
 milestone.
+
+## Milestone 3 — Memory and Settings
+
+Status: Built 2026-09-25. Plan and build approved 2026-09-25 (prompts 21
+and 22). All tasks done; waiting for the owner's look-and-feel check
+(E11) and acceptance. Screenshots: docs/screenshots/m3/.
+
+Goal: the browser remembers bookmarks, history, and settings across
+restarts, with a Library panel, a Settings panel, and a start panel that
+shows your data. No new packages: SQLite through Node's built-in
+node:sqlite.
+
+### Decisions (2026-09-25, prompt 21)
+
+- Bookmarks: a star at the right end of the address bar, and Ctrl+D.
+  Filled when the page is saved; clicking again removes it. One flat
+  list, no folders.
+- History: kept until the user clears it. The Library groups it by day,
+  with search, delete per entry, and "Clear all history" behind a
+  confirmation.
+- Settings: search engine (DuckDuckGo default, Brave Search, Startpage,
+  Google, Bing); on startup (a new tab, or your tabs from last time);
+  clear browsing data (any of history, cookies and site data, cache).
+- Library (Ctrl+Shift+O) and Settings (Ctrl+,) slide in from the right,
+  one at a time; Escape closes them; both are also in the menu.
+- Stored in the app data folder: hypersol.sqlite (bookmarks, history),
+  settings.json, session.json (open tabs, only used when startup is set
+  to reopen them).
+- If saved data cannot be read: a damaged settings.json is set aside as a
+  backup and defaults are used; if the database cannot be opened, the
+  Library says "Couldn't open your saved data", nothing is recorded, and
+  browsing keeps working.
+
+### Tasks
+
+- [x] 1. Storage in the main process: database with a schema version,
+      settings.json, session.json, all written through a temporary file
+      then swapped in.
+- [x] 2. Typed requests from the shell for bookmarks, history, settings,
+      session, and clearing data; accepted only from the shell; every
+      input checked.
+- [x] 3. History recording for every page load, from the main process;
+      titles filled in when the page reports them.
+- [x] 4. Bookmark star and Ctrl+D.
+- [x] 5. Library panel (Lit): bookmarks and history views, search, day
+      groups, deletes, empty, waiting, and error states.
+- [x] 6. Settings panel (Lit): search engine, startup, clear browsing data.
+- [x] 7. Start panel with your data: bookmarks grid and recent history.
+- [x] 8. Reopen last tabs on startup when chosen.
+- [x] 9. Menu entries, shortcuts, keyboard access to the panels (focus
+      moves in on open and back on close).
+- [x] 10. docs/privacy.md: what is stored, where, and how to delete it.
+- [x] 11. Tests: unit (storage, settings checks, day grouping, search
+      engines, session); end-to-end E1 to E10; C1 to C11 and D1 to D11 as
+      regression.
+- [x] 12. Docs and screenshots (MILESTONE=m3 pnpm screenshots).
+
+### Checks
+
+| # | Check | Expected result |
+|---|---|---|
+| E1 | Bookmark star and Ctrl+D | Adds and removes a bookmark; the star shows the state |
+| E2 | History | Visited pages appear grouped by day; search finds them; single delete and "Clear all" (with confirmation) work |
+| E3 | Library bookmarks | Listed; clicking opens one; removing works |
+| E4 | Start panel | Shows your bookmarks and recent history |
+| E5 | Search engine setting | Searches go to the chosen engine (checked by address; nothing loads from the internet) |
+| E6 | Reopen last tabs | With that setting, the same tabs return after a restart |
+| E7 | Restart | Bookmarks, history, and settings intact after close and reopen with the same profile |
+| E8 | Clear browsing data | Cleared history is gone; a cookie set by a test page is gone |
+| E9 | Failures | Damaged settings.json gives defaults and a backup; a blocked database shows the message and browsing still works |
+| E10 | Keyboard | Shortcuts open the panels, focus moves in, Tab reaches the controls, Escape closes and returns focus |
+| E11 | Look and feel | Owner review; screenshots saved |
+| C1–C11, D1–D11 | Regression | Still pass |
+
+### Check results (Windows 11, 2026-09-25)
+
+Unit: 98 tests in 13 files pass (storage, settings checks, request
+checks, day grouping, session). Lint and type check clean.
+End-to-end (`pnpm test:e2e`, 71 checks: C1 to C11, D1 to D11 plus a new
+single-load check, E1 to E10): the last two full runs after the final
+test fix passed 71 of 71. One earlier run had a single failure not seen
+again (D1: pressing Enter in the address bar timed out waiting for the
+field; D1 then passed five times in a row alone).
+
+| # | Result |
+|---|---|
+| E1 | Pass |
+| E2 | Pass |
+| E3 | Pass |
+| E4 | Pass |
+| E5 | Pass: Brave Search address used; DuckDuckGo stand-in used after switching back |
+| E6 | Pass |
+| E7 | Pass |
+| E8 | Pass: history and a test cookie cleared |
+| E9 | Pass: damaged settings.json set aside with defaults; a blocked database shows "Couldn't open your saved data" and browsing works |
+| E10 | Pass |
+| E11 | Not checked yet (owner) |
+| C1–C11, D1–D11 | Pass |
+
+Found and fixed during the build:
+- Every new tab loaded its page twice (since milestone 2): pages were
+  put into the wrong element of the CSS 3D renderer, which then moved
+  them on its first frame, and a moved webview is destroyed and reloads.
+  New regression check in D2: a page is fetched once.
+- With the Library open, the menu opened underneath the panel; the top
+  bar now sits above the panels.
+- Start panel rows picked up the error-card button border.
+- The app had no product name, so a real install would have kept its
+  data in a folder named after the package; it is now "HyperSol
+  WebSurfer 3D".
+- Test harness: test windows now ignore the real mouse. A cursor resting
+  over the test window sent its own pointer events, which moved the
+  parallax (occasional C3 and D4 failures). The harness also asks for
+  window focus if Windows has not given it within 3 seconds, and
+  tolerates a temporary folder Electron is still releasing.
+- E10 originally expected Tab to stay inside the Library; the panel does
+  not trap focus (like Chrome's side panel), so the check now confirms
+  the panel's controls are reachable with Shift+Tab.
+
+### Done when
+
+E1 to E10, C1 to C11, and D1 to D11 pass, the owner accepts E11, the
+docs and screenshots are updated, and the owner approves the milestone.

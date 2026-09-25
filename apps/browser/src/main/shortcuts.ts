@@ -26,6 +26,9 @@ export function matchShortcut(input: KeyInput, platform: string): ShortcutName |
   if (mod && !input.alt && !input.shift && key === 'PageDown') return 'next-tab';
   if (mod && !input.alt && !input.shift && key === 'PageUp') return 'prev-tab';
   if (plainMod && key === 't') return 'new-tab';
+  if (plainMod && key === 'd') return 'bookmark';
+  if (plainMod && key === ',') return 'settings';
+  if (mod && input.shift && !input.alt && key === 'o') return 'library';
   if (plainMod && key === 'w') return 'close-tab';
   if (plainMod && key === 'l') return 'focus-address';
   if (!mac && input.alt && !input.control && !input.shift && key === 'd') return 'focus-address';

@@ -88,6 +88,9 @@ touchpad, no touch screen.
 | New windows | Always a tab: in front, or behind for Ctrl-click and middle-click; blocked unless the page had a click or key press in the last 5 seconds | Owner decision 2026-09-25 (prompt 19); 5 seconds matches Chromium's user-activation window. |
 | Right-click menu | Built in the main process from Chromium's context-menu data | Electron has none by default. |
 | App menu | None on Windows and Linux; standard app, Edit, and Window menus on macOS | Clipboard shortcuts need the Edit roles on macOS. |
+| Saved-data requests | One checked request channel from the shell to the main process (shared/data.ts); only the shell may use it; every request is validated before anything is read or written | Keeps the database and files in the main process; the shell cannot reach the file system. |
+| History recording | The main process records a visit when a tab commits a navigation to a web address; the same address again in the same tab (a reload) adds nothing; the title follows when the page reports it | Failed loads are not recorded; titles are never taken from the previous page. |
+| Damaged saved data | A damaged settings.json is renamed aside and defaults are used; if the database cannot open, browsing continues and nothing is recorded | The app always starts. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
 | Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
@@ -121,10 +124,15 @@ hypersol-websurfer-3d/
           launch-options.ts    command-line options
           test-hooks.ts        logs for the end-to-end tests (test runs only)
           privacy/             (milestone 4) blocker, DoH, session defaults
-          storage/             (milestone 3) settings.json, SQLite history
-                               and bookmarks
+          storage/             database.ts (node:sqlite bookmarks and
+                               history, schema version), settings-file.ts
+                               (settings.json, session.json), files.ts
+                               (write through a temporary file),
+                               service.ts (answers the shell's requests)
         shared/
           commands.ts          messages between main and the shell
+          data.ts              saved-data requests and their checks
+          settings.ts          settings, search engines, their checks
         preload/
           shell.ts             safe bridge exposed to the 3D shell
           page.ts              injected into every web page: depth layering,
@@ -137,7 +145,8 @@ hypersol-websurfer-3d/
                                shimmer, error cards), tab-card.ts,
                                start-panel.ts
           hud/                 Lit components: toolbar.ts (nav buttons,
-                               address bar, menu, loading strip), about.ts.
+                               address bar, bookmark star, menu, loading
+                               strip), library.ts, settings.ts, about.ts.
                                Tabs are 3D cards under scene/, not a 2D strip.
           state/               tabs.ts: the tab list and focus
           url.ts, load-errors.ts
@@ -160,8 +169,9 @@ hypersol-websurfer-3d/
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright drives the built app (m1, m2 checks)
+    e2e/                       Playwright drives the built app (m1 to m3 checks)
     fixtures/                  sample pages served from 127.0.0.1
+    screenshots/               progress screenshots (pnpm screenshots)
 ```
 
 ## 6. Parts (HoloML repository, created alongside)
@@ -198,15 +208,19 @@ package with one passing test. Language design itself is a later milestone.
    the tab's card.
 6. From milestone 5, the page preload measures top-level sections and
    images and applies depth offsets; it reports image rectangles.
-7. From milestone 3, visited pages are written to SQLite history.
-   Bookmarks are written on user action. Settings are written on change.
+7. The main process writes a history entry when a tab arrives at a web
+   page. Bookmarks and settings are written when the user acts, and the
+   open tabs shortly after they change. The main process tells the shell
+   when saved data changes, so the Library, start panels, and star stay
+   current.
 
 ## 8. What is saved, and where
 
 | Data | Where | Notes |
 |---|---|---|
 | Settings, theme, window size | settings.json in the app data folder | Human readable |
-| History, bookmarks | hypersol.sqlite in the app data folder | Delete-able from the Library panel |
+| History, bookmarks | hypersol.sqlite in the app data folder | Delete-able from the Library panel and Settings |
+| Open tabs | session.json in the app data folder | Used only when startup is set to reopen them |
 | Cookies, cache, site storage | Chromium profile folder managed by Electron | Standard browser behaviour |
 | Filter lists | cached file in the app data folder | Refreshed on a schedule; switchable in Settings |
 
@@ -260,6 +274,11 @@ No free camera movement in the first result.
 - Right-click menu on a page: back, forward, reload; on a link, open in
   new tab and copy link address; on selected text, copy; in a text
   field, cut, copy, paste, select all.
+- Library and Settings panels: waiting ("Loading…"), empty ("Nothing
+  saved yet" with a hint, or "Nothing found" for a search), and error
+  ("Couldn't open your saved data"). Destructive actions ask to confirm
+  in place. Focus moves into a panel when it opens and back when it
+  closes.
 - Motion: tab switches animate over 250 ms; with the system's reduced
   motion setting they are instant and the loading strip and shimmer
   stop moving.
@@ -314,7 +333,7 @@ Checked on Windows 11, 2026-09-24 (macOS and Linux not checked yet):
 - Build: `pnpm build` (output in apps/browser/out)
 - Unit tests: `pnpm test`
 - Lint and type check: `pnpm lint`, `pnpm typecheck`
-- End-to-end: `pnpm test:e2e` (milestone 1 and 2 checks, about 90
+- End-to-end: `pnpm test:e2e` (milestone 1 to 3 checks, about 120
   seconds; needs openssl on PATH for the certificate-error check, which
   Git for Windows provides)
 

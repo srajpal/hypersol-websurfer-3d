@@ -1,13 +1,29 @@
+import type { Bookmark, HistoryEntry } from '../../shared/data';
+
+export interface StartData {
+  bookmarks: Bookmark[];
+  recent: HistoryEntry[];
+  /** Set when saved data cannot be read. */
+  unavailable?: string;
+}
+
+const MAX_BOOKMARKS = 12;
+const MAX_RECENT = 8;
+
 /**
- * The new-tab start panel: a search box, then bookmarks and recent
- * history. Bookmarks and history arrive in milestone 3, so both show the
- * empty state for now.
+ * The new-tab start panel: a search box, then a grid of bookmarks and a
+ * list of recent history, each with an empty state.
  */
 export class StartPanel {
   readonly element: HTMLDivElement;
   private readonly input: HTMLInputElement;
+  private readonly bookmarks: HTMLElement;
+  private readonly recent: HTMLElement;
 
-  constructor(onSubmit: (text: string) => void) {
+  constructor(
+    onSubmit: (text: string) => void,
+    private readonly onOpen: (url: string) => void,
+  ) {
     this.element = document.createElement('div');
     this.element.className = 'hs-start';
     this.element.dataset['testid'] = 'start-panel';
@@ -32,30 +48,93 @@ export class StartPanel {
       if (text !== '') onSubmit(text);
     });
 
-    this.element.append(
-      title,
-      form,
-      section('Bookmarks', 'Pages you bookmark will show up here.'),
-      section('Recent', 'Pages you visit will show up here.'),
-    );
+    this.bookmarks = section('Bookmarks', 'start-bookmarks');
+    this.recent = section('Recent', 'start-recent');
+    this.element.append(title, form, this.bookmarks, this.recent);
+    this.setData({ bookmarks: [], recent: [] });
   }
 
   focus(): void {
     this.input.focus();
   }
+
+  setData(data: StartData): void {
+    const bookmarkBody = data.unavailable
+      ? [message(data.unavailable, 'Browsing still works; nothing new is saved for now.')]
+      : data.bookmarks.length === 0
+        ? [message('Nothing saved yet', 'Pages you bookmark will show up here.')]
+        : [this.grid(data.bookmarks.slice(0, MAX_BOOKMARKS))];
+    this.bookmarks.replaceChildren(this.bookmarks.firstElementChild!, ...bookmarkBody);
+
+    const recentBody = data.unavailable
+      ? []
+      : data.recent.length === 0
+        ? [message('Nothing saved yet', 'Pages you visit will show up here.')]
+        : [this.list(data.recent.slice(0, MAX_RECENT))];
+    this.recent.replaceChildren(this.recent.firstElementChild!, ...recentBody);
+    this.recent.hidden = Boolean(data.unavailable);
+  }
+
+  private grid(bookmarks: Bookmark[]): HTMLElement {
+    const grid = document.createElement('div');
+    grid.className = 'hs-start-grid';
+    for (const b of bookmarks) {
+      const tile = this.link(b.url, b.title, 'hs-start-tile');
+      const icon = document.createElement(b.favicon ? 'img' : 'span');
+      icon.className = 'hs-start-icon';
+      if (b.favicon) (icon as HTMLImageElement).src = b.favicon;
+      icon.setAttribute('aria-hidden', 'true');
+      if (!b.favicon) icon.textContent = (b.title.trim()[0] ?? '·').toUpperCase();
+      tile.prepend(icon);
+      grid.append(tile);
+    }
+    return grid;
+  }
+
+  private list(entries: HistoryEntry[]): HTMLElement {
+    const ul = document.createElement('ul');
+    ul.className = 'hs-start-list';
+    for (const h of entries) {
+      const li = document.createElement('li');
+      li.append(this.link(h.url, h.title, 'hs-start-row'));
+      ul.append(li);
+    }
+    return ul;
+  }
+
+  private link(url: string, title: string, className: string): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = className;
+    b.title = url;
+    b.dataset['url'] = url;
+    const label = document.createElement('span');
+    label.className = 'hs-start-label';
+    label.textContent = title || url;
+    b.append(label);
+    b.addEventListener('click', () => this.onOpen(url));
+    return b;
+  }
 }
 
-function section(name: string, hint: string): HTMLElement {
+function section(name: string, testId: string): HTMLElement {
   const el = document.createElement('section');
   el.className = 'hs-start-section';
+  el.dataset['testid'] = testId;
   const heading = document.createElement('h2');
   heading.textContent = name;
-  const empty = document.createElement('p');
-  empty.className = 'hs-empty';
-  empty.textContent = 'Nothing saved yet';
-  const hintEl = document.createElement('p');
-  hintEl.className = 'hs-empty-hint';
-  hintEl.textContent = hint;
-  el.append(heading, empty, hintEl);
+  el.append(heading);
   return el;
+}
+
+function message(text: string, hint: string): HTMLElement {
+  const box = document.createElement('div');
+  const main = document.createElement('p');
+  main.className = 'hs-empty';
+  main.textContent = text;
+  const small = document.createElement('p');
+  small.className = 'hs-empty-hint';
+  small.textContent = hint;
+  box.append(main, small);
+  return box;
 }

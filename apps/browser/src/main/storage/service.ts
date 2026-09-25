@@ -1,0 +1,163 @@
+import { join } from 'node:path';
+import { parseDataRequest, type DataOp, type DataReply, type DataRequest } from '../../shared/data';
+import { applySettingsPatch } from '../../shared/settings';
+import { Store } from './database';
+import { SessionFile, SettingsFile } from './settings-file';
+
+export type DataChange = 'bookmarks' | 'history' | 'settings';
+
+export interface SiteDataCleaner {
+  /** Cookies and site storage (local storage, IndexedDB, service workers, and so on). */
+  clearCookiesAndSiteData(): Promise<void>;
+  clearCache(): Promise<void>;
+}
+
+const UNAVAILABLE = "Couldn't open your saved data";
+
+/**
+ * Saved data for the app: bookmarks and history (hypersol.sqlite),
+ * settings.json, and session.json, all in one folder (the app data
+ * folder). No Electron imports, so it can be unit tested.
+ *
+ * If the database cannot be opened the app keeps working: history is
+ * not recorded and requests for bookmarks and history report the
+ * problem in plain words.
+ */
+export class StorageService {
+  private readonly store: Store | null;
+  private readonly storeError: string | null;
+  readonly settingsFile: SettingsFile;
+  private readonly sessionFile: SessionFile;
+  private readonly listeners = new Set<(what: DataChange) => void>();
+
+  constructor(
+    folder: string,
+    private readonly cleaner: SiteDataCleaner,
+  ) {
+    let store: Store | null = null;
+    let error: string | null = null;
+    try {
+      store = new Store(join(folder, 'hypersol.sqlite'));
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+    this.store = store;
+    this.storeError = error;
+    this.settingsFile = new SettingsFile(join(folder, 'settings.json'));
+    this.sessionFile = new SessionFile(join(folder, 'session.json'));
+  }
+
+  get available(): boolean {
+    return this.store !== null;
+  }
+
+  /** Why the database could not be opened, for logs. */
+  get problem(): string | null {
+    return this.storeError;
+  }
+
+  onChange(listener: (what: DataChange) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /** Records a page visit; returns its id, or null when history is unavailable. */
+  recordVisit(url: string, title: string): number | null {
+    if (!this.store || !/^https?:\/\//i.test(url)) return null;
+    try {
+      const id = this.store.recordVisit(url, title || url);
+      this.emit('history');
+      return id;
+    } catch {
+      return null;
+    }
+  }
+
+  updateVisitTitle(id: number, title: string): void {
+    if (!this.store || title === '') return;
+    try {
+      this.store.updateVisitTitle(id, title);
+      this.emit('history');
+    } catch {
+      // A missed title is not worth interrupting browsing for.
+    }
+  }
+
+  /** Answers one request from the shell. Never throws. */
+  async handle(raw: unknown): Promise<DataReply<DataOp>> {
+    const parsed = parseDataRequest(raw);
+    if ('error' in parsed) return { ok: false, error: parsed.error };
+    try {
+      return { ok: true, value: await this.run(parsed.request) } as DataReply<DataOp>;
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  close(): void {
+    this.store?.close();
+  }
+
+  private needStore(): Store {
+    if (!this.store) throw new Error(UNAVAILABLE);
+    return this.store;
+  }
+
+  private async run(r: DataRequest): Promise<unknown> {
+    switch (r.op) {
+      case 'status':
+        return this.store ? { available: true } : { available: false, message: UNAVAILABLE };
+      case 'bookmarks.list':
+        return this.needStore().listBookmarks();
+      case 'bookmarks.has':
+        return this.store ? this.store.hasBookmark(r.url) : false;
+      case 'bookmarks.add': {
+        const b = this.needStore().addBookmark(r.url, r.title || r.url, r.favicon);
+        this.emit('bookmarks');
+        return b;
+      }
+      case 'bookmarks.remove':
+        this.needStore().removeBookmark(r.url);
+        this.emit('bookmarks');
+        return null;
+      case 'history.search':
+        return this.needStore().searchHistory(r.query, r.limit);
+      case 'history.recent':
+        return this.needStore().recentHistory(r.limit);
+      case 'history.delete':
+        this.needStore().deleteVisit(r.id);
+        this.emit('history');
+        return null;
+      case 'history.clear':
+        this.needStore().clearHistory();
+        this.emit('history');
+        return null;
+      case 'settings.get':
+        return this.settingsFile.settings;
+      case 'settings.set': {
+        const result = applySettingsPatch(this.settingsFile.settings, r.patch);
+        if ('error' in result) throw new Error(result.error);
+        this.settingsFile.save(result.settings);
+        this.emit('settings');
+        return result.settings;
+      }
+      case 'session.save':
+        this.sessionFile.save({ tabs: r.tabs, focused: r.focused });
+        return null;
+      case 'startup':
+        return this.settingsFile.settings.onStartup === 'last-tabs' ? this.sessionFile.load() : null;
+      case 'data.clear':
+        if (r.history && this.store) {
+          this.store.clearHistory();
+          this.emit('history');
+        }
+        if (r.cookies) await this.cleaner.clearCookiesAndSiteData();
+        if (r.cache) await this.cleaner.clearCache();
+        return null;
+    }
+  }
+
+  private emit(what: DataChange): void {
+    for (const listener of this.listeners) listener(what);
+  }
+}

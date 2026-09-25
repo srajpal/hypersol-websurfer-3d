@@ -1,5 +1,6 @@
 {
   "name": "@hypersol/browser",
+  "productName": "HyperSol WebSurfer 3D",
   "version": "0.0.0",
   "private": true,
   "description": "HyperSol WebSurfer 3D, the Electron app.",

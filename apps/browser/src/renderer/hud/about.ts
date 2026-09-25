@@ -26,7 +26,7 @@ export class HsAbout extends LitElement {
     :host {
       position: fixed;
       inset: 0;
-      z-index: 20;
+      z-index: 30;
       display: none;
     }
     :host([open]) {

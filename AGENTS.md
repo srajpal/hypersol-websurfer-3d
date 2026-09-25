@@ -127,10 +127,11 @@ they ran; macOS and Linux not checked yet):
 - Unit: `pnpm test` (Vitest; 35 tests passed)
 - Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
 - End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
-  against it (about 90 seconds; 57 checks). Needs openssl on PATH for
+  against it (about two minutes; 71 checks). Needs openssl on PATH for
   the certificate-error check (Git for Windows includes one). Every
-  host except 127.0.0.1 is blocked during the run. See TODO.md for
-  results.
+  host except 127.0.0.1 is blocked during the run, and the test windows
+  ignore the real mouse, so a resting cursor cannot disturb results. See
+  TODO.md for results.
 - The end-to-end run opens app windows on screen; leave the machine
   alone while it runs.
 
@@ -144,8 +145,11 @@ milestone; the current milestone's checks are defined in TODO.md):
 - Milestone 2 checks D1 to D11 (same command): top bar, tabs, snapshots
   and favicons, many tabs, new-window rules, loading strip, error cards,
   right-click menu, start panel, shortcuts, About.
-- Later milestones add: bookmarks and history intact after restart (3),
-  a known tracker is blocked and DNS resolves over HTTPS (4), depth
+- Milestone 3 checks E1 to E10 (same command): bookmarks, history,
+  Library, start panel data, search engine setting, reopening tabs,
+  data intact after restart, clearing data, damaged or blocked saved
+  data, keyboard access to the panels.
+- Later milestones add: a known tracker is blocked and DNS resolves over HTTPS (4), depth
   layering (5), theme switch (6), per-OS installers (7).
 
 Rules for tests: a failing test is reported, not deleted. A test is

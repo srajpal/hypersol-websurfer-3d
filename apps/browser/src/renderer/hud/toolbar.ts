@@ -1,12 +1,15 @@
 import { LitElement, css, html, nothing, type PropertyValues } from 'lit';
 
-export type MenuAction = 'new-tab' | 'close-tab' | 'about';
+export type MenuAction = 'new-tab' | 'close-tab' | 'library' | 'settings' | 'about';
 
 const icon = {
   back: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>`,
   forward: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>`,
   reload: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" /></svg>`,
   menu: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6h.01M12 12h.01M12 18h.01" /></svg>`,
+  star: html`<svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.85L12 16.9l-5.25 2.75 1-5.85L3.5 9.7l5.9-.9z" />
+  </svg>`,
 };
 
 /**
@@ -15,7 +18,7 @@ const icon = {
  * controller does the work.
  *
  * Events (bubbling, composed): hs-navigate (detail: typed text), hs-back,
- * hs-forward, hs-reload, hs-menu (detail: MenuAction).
+ * hs-forward, hs-reload, hs-bookmark, hs-menu (detail: MenuAction).
  */
 export class HsToolbar extends LitElement {
   static override properties = {
@@ -24,6 +27,8 @@ export class HsToolbar extends LitElement {
     canGoForward: { type: Boolean },
     canReload: { type: Boolean },
     loading: { type: Boolean },
+    bookmarked: { type: Boolean },
+    canBookmark: { type: Boolean },
     menuOpen: { state: true },
     strip: { state: true },
   };
@@ -33,6 +38,8 @@ export class HsToolbar extends LitElement {
   declare canGoForward: boolean;
   declare canReload: boolean;
   declare loading: boolean;
+  declare bookmarked: boolean;
+  declare canBookmark: boolean;
   declare menuOpen: boolean;
   declare strip: 'idle' | 'loading' | 'done';
   private stripTimer: number | undefined;
@@ -44,6 +51,8 @@ export class HsToolbar extends LitElement {
     this.canGoForward = false;
     this.canReload = false;
     this.loading = false;
+    this.bookmarked = false;
+    this.canBookmark = false;
     this.menuOpen = false;
     this.strip = 'idle';
   }
@@ -54,7 +63,8 @@ export class HsToolbar extends LitElement {
       top: 12px;
       left: 24px;
       right: 24px;
-      z-index: 10;
+      /* Above the side panels, so the menu opens over them. */
+      z-index: 20;
       display: block;
       font-family: inherit;
     }
@@ -108,6 +118,12 @@ export class HsToolbar extends LitElement {
     }
     .menu-button svg {
       stroke-width: 3.2;
+    }
+    .star[aria-pressed='true'] {
+      color: var(--hs-accent);
+    }
+    .star[aria-pressed='true'] svg {
+      fill: currentColor;
     }
     input {
       flex: 1;
@@ -268,6 +284,17 @@ export class HsToolbar extends LitElement {
           @keydown=${this.onKey}
         />
         <button
+          class="star"
+          data-testid="star"
+          aria-label=${this.bookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+          title=${this.bookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+          aria-pressed=${this.bookmarked ? 'true' : 'false'}
+          ?disabled=${!this.canBookmark}
+          @click=${() => this.fire('hs-bookmark')}
+        >
+          ${icon.star}
+        </button>
+        <button
           class="menu-button"
           data-testid="menu"
           aria-label="Menu"
@@ -285,6 +312,12 @@ export class HsToolbar extends LitElement {
               </button>
               <button role="menuitem" data-testid="menu-close-tab" @click=${() => this.menu('close-tab')}>
                 Close tab <kbd>${mod}+W</kbd>
+              </button>
+              <button role="menuitem" data-testid="menu-library" @click=${() => this.menu('library')}>
+                Library <kbd>${mod}+Shift+O</kbd>
+              </button>
+              <button role="menuitem" data-testid="menu-settings" @click=${() => this.menu('settings')}>
+                Settings <kbd>${mod}+,</kbd>
               </button>
               <button role="menuitem" data-testid="menu-about" @click=${() => this.menu('about')}>
                 About HyperSol WebSurfer 3D

@@ -1,19 +1,21 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-25 (milestone 2 done, milestone 3 in planning).
+Last updated 2026-09-25 (milestone 3 built, awaiting acceptance).
 
 ## Where things stand
 
 Milestones 1 and 2 are done (accepted 2026-09-25): a usable browser in
 the 3D room with tabs as cards, top bar, shortcuts, start panel, error
 cards, right-click menu, and new-window rules; the "+" card is pinned.
-The shell owns the tabs (confirmed). node:sqlite replaces
-better-sqlite3. The Electron security check is done (44.4.5 is current,
-no security fixes pending). Milestone 3 (Memory and Settings) is being
-planned: its design questions need answers before the plan is final.
-Progress screenshots live in docs/screenshots/<milestone>/; capture them
-with `MILESTONE=mN pnpm screenshots` when a milestone is finished.
+The shell owns the tabs (confirmed). The Electron security check is
+done (44.4.5 is current, no security fixes pending). Milestone 3
+(Memory and Settings) is built: bookmarks and history in node:sqlite,
+Library and Settings panels, start panel with data, reopening tabs,
+clearing data, docs/privacy.md. All 71 end-to-end checks pass; waiting
+for the owner's look-and-feel check (E11) and acceptance. Progress
+screenshots live in docs/screenshots/<milestone>/; capture them with
+`MILESTONE=mN pnpm screenshots` when a milestone is finished.
 
 A four-perspective documentation review (technical, product/UX,
 operational, business) ran on 2026-09-24. Its doc fixes and rule updates
@@ -132,8 +134,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestone 3's plan awaits the
-   owner's answers and approval. Tick tasks and record check results in
+2. Do only what the prompt approves. Milestone 3 awaits acceptance;
+   milestone 4 (Private by default) has no plan yet. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

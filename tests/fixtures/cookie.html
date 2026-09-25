@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cookie</title>
+  </head>
+  <body>
+    <p>Sets a cookie when opened with ?set=1, and shows the cookies it can see.</p>
+    <p id="cookies"></p>
+    <script>
+      if (location.search.includes('set=1')) document.cookie = 'hs_test=1; max-age=3600; path=/';
+      document.getElementById('cookies').textContent = document.cookie;
+    </script>
+  </body>
+</html>

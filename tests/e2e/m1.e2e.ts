@@ -202,7 +202,17 @@ describe('C3 parallax does not shift targets', () => {
       await h.shell.mouse.move(p.x, p.y, { steps: 6 });
     }
     await sleep(400);
-    expect(await shellCall(h, 'cameraOffset')).toEqual(held);
+    const after = await shellCall(h, 'cameraOffset');
+    if (after.x !== held.x || after.y !== held.y) {
+      const quad = await shellCall(h, 'panelQuad');
+      throw new Error(
+        `Camera moved while the pointer was over the page: ${JSON.stringify(held)} -> ${JSON.stringify(after)}
+` +
+          `Page outline: ${JSON.stringify(quad.map((p) => [Math.round(p.x), Math.round(p.y)]))}
+` +
+          `Shell pointer log: ${JSON.stringify(await shellCall(h, 'pointerLog'))}`,
+      );
+    }
 
     expectGridHits(await clickGrid(h), 'after parallax');
     expect(await shellCall(h, 'cameraOffset')).toEqual(held);

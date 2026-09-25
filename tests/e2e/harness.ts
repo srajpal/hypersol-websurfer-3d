@@ -34,6 +34,11 @@ export interface LaunchOptions {
   tilt?: number;
   /** Search address with %s (a local stand-in for DuckDuckGo). */
   searchUrl?: string;
+  /**
+   * An existing profile folder to use and keep, for checks that restart
+   * the app. By default each launch gets a fresh folder that is deleted.
+   */
+  userDataDir?: string;
 }
 
 /**
@@ -56,7 +61,8 @@ function cleanEnv(): Record<string, string> {
 
 /** Launches the built app with a throwaway profile and test hooks on. An empty start address opens a start tab. */
 export async function launch(startUrl: string, opts: LaunchOptions = {}): Promise<Harness> {
-  const userDataDir = await mkdtemp(join(tmpdir(), 'hypersol-e2e-'));
+  const keepProfile = opts.userDataDir !== undefined;
+  const userDataDir = opts.userDataDir ?? (await mkdtemp(join(tmpdir(), 'hypersol-e2e-')));
   const args = [APP_DIR, `--start-url=${startUrl}`, `--hypersol-user-data=${userDataDir}`, OFFLINE_RULES];
   if (opts.tilt !== undefined) args.push(`--tilt=${opts.tilt}`);
   if (opts.searchUrl !== undefined) args.push(`--search-url=${opts.searchUrl}`);
@@ -80,32 +86,48 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   });
   shell.on('pageerror', (err) => errors.push(`shell: ${err.message}`));
   await shell.waitForFunction(() => (window as unknown as ShellWindow).__hypersolShellTest?.ready === true);
+  // The real mouse must not take part: a cursor resting over the test
+  // window sends its own pointer events, which move the parallax and the
+  // card hover (found 2026-09-25 as the cause of occasional C3 and D4
+  // failures). Test input comes in through Chromium and is unaffected.
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setIgnoreMouseEvents(true));
   // A person clicks into a window that is already in front: wait until the
-  // new window has finished activating before any input is sent.
-  await waitFor(
-    'the app window to have focus',
-    () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false),
-    (focused) => focused,
-    10_000,
-  );
+  // new window has finished activating before any input is sent. Windows
+  // occasionally keeps another window in front; then ask for focus.
+  const focused = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false);
+  try {
+    await waitFor('the app window to have focus', focused, (f) => f, 3000);
+  } catch {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.focus());
+    await waitFor('the app window to have focus', focused, (f) => f, 7000);
+  }
   return {
     app,
     shell,
     errors,
     close: async () => {
       await app.close();
-      await rm(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      // Electron can hold a file for a moment after closing; a leftover
+      // temporary folder is harmless, so cleanup does not fail the run.
+      if (!keepProfile) await removeFolder(userDataDir);
     },
   };
+}
+
+/** Deletes a temporary folder, retrying while Electron releases its files. */
+export async function removeFolder(dir: string): Promise<void> {
+  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }).catch(() => undefined);
 }
 
 /** The read-only hooks the shell exposes in test runs (renderer/main.ts). */
 export interface ShellHooks {
   ready: boolean;
+  openPanel(): 'library' | 'settings' | null;
   frames(): number;
   layout(): { panelWidth: number; panelHeight: number; cameraZ: number; viewportWidth: number; viewportHeight: number };
   cameraOffset(): Point;
   parallaxPaused(): boolean;
+  pointerLog(): { x: number; y: number; target: string; overPage: boolean }[];
   projectPagePoint(u: number, v: number): Point;
   panelQuad(): Point[];
   sceneColors(): Record<string, string>;

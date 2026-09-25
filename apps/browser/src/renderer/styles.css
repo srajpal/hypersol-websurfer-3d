@@ -128,8 +128,7 @@ body {
   margin-top: 16px;
 }
 
-.hs-error-actions button,
-.hs-start button {
+.hs-error-actions button {
   font: inherit;
   font-size: 14px;
   padding: 6px 18px;
@@ -222,4 +221,76 @@ body {
   .hs-shimmer {
     animation: none;
   }
+}
+
+/* Start panel: bookmarks grid and recent list (milestone 3). */
+.hs-start-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  max-width: 760px;
+}
+
+.hs-start-tile,
+.hs-start-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--hs-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--hs-panel-glass) 80%, transparent);
+  color: var(--hs-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hs-start-tile {
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px 10px;
+}
+
+.hs-start-row {
+  width: 100%;
+  max-width: 760px;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.hs-start-tile:hover,
+.hs-start-row:hover {
+  background: color-mix(in srgb, var(--hs-accent) 16%, transparent);
+}
+
+.hs-start-tile:focus-visible,
+.hs-start-row:focus-visible {
+  outline: 2px solid var(--hs-accent);
+  outline-offset: 1px;
+}
+
+.hs-start-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--hs-accent) 25%, transparent);
+}
+
+.hs-start-label {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hs-start-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }

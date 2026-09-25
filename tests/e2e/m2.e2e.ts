@@ -112,6 +112,15 @@ describe('D2 tabs', () => {
   });
   afterAll(async () => h?.close());
 
+  it('fetches each page once (found in milestone 3: every new tab loaded twice)', async () => {
+    const count = (url: string) =>
+      h.app.evaluate(
+        (_e, url) => (globalThis as unknown as { __hypersolTest: { requests: string[] } }).__hypersolTest.requests.filter((r) => r === url).length,
+        url,
+      );
+    expect(await count(server.url('link-a.html'))).toBe(1);
+  });
+
   it('the "+" card opens a start tab with the address field ready', async () => {
     await clickCard(h, 'plus');
     await tabCount(h, 2);

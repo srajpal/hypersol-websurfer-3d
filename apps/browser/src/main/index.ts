@@ -2,9 +2,11 @@ import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, Menu, session, webContents } from 'electron';
 import { defaultTheme } from '@hypersol/themes';
 import { CAPTURE_TAB_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
+import { DATA_CHANNEL } from '../shared/data';
 import { wireGuest, wireShortcuts } from './guests';
 import { parseLaunchOptions } from './launch-options';
 import { hardenShell } from './security';
+import { StorageService } from './storage/service';
 import { installTestHooks, type TestLog } from './test-hooks';
 
 const options = parseLaunchOptions(process.argv, process.env);
@@ -21,6 +23,7 @@ const SHELL_PRELOAD = join(__dirname, '../preload/shell.js');
 
 let mainWindow: BrowserWindow | null = null;
 let testLog: TestLog | null = null;
+let storage: StorageService | null = null;
 
 /**
  * Windows and Linux: no menu bar; shortcuts are handled per web contents
@@ -110,6 +113,8 @@ if (!app.requestSingleInstanceLock()) {
       get testLog() {
         return testLog;
       },
+      recordVisit: (url, title) => storage?.recordVisit(url, title) ?? null,
+      updateVisitTitle: (id, title) => storage?.updateVisitTitle(id, title),
     });
   });
 
@@ -138,6 +143,27 @@ if (!app.requestSingleInstanceLock()) {
       }
     });
 
+    // Saved data lives in the app data folder (a throwaway one in dev and tests).
+    storage = new StorageService(app.getPath('userData'), {
+      clearCookiesAndSiteData: () =>
+        ses.clearStorageData({
+          storages: ['cookies', 'localstorage', 'indexdb', 'serviceworkers', 'cachestorage', 'filesystem'],
+        }),
+      clearCache: () => ses.clearCache(),
+    });
+    if (storage.problem) console.warn(`Saved data unavailable: ${storage.problem}`);
+    ipcMain.handle(DATA_CHANNEL, (event, request: unknown) => {
+      if (!mainWindow || event.sender !== mainWindow.webContents) {
+        return { ok: false, error: 'Not allowed' };
+      }
+      return storage!.handle(request);
+    });
+    storage.onChange((what) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(SHELL_COMMAND_CHANNEL, { type: 'data-changed', what } satisfies ShellCommand);
+      }
+    });
+
     setAppMenu();
     createWindow();
 
@@ -149,4 +175,6 @@ if (!app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });
+
+  app.on('will-quit', () => storage?.close());
 }

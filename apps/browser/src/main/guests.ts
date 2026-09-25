@@ -11,6 +11,9 @@ export interface GuestDeps {
   send(command: ShellCommand): void;
   platform: string;
   testLog: TestLog | null;
+  /** Records a finished page load in history; returns its id, or null. */
+  recordVisit(url: string, title: string): number | null;
+  updateVisitTitle(id: number, title: string): void;
 }
 
 /**
@@ -43,6 +46,22 @@ export function wireGuest(guest: WebContents, deps: GuestDeps): void {
 
   guest.on('will-navigate', (event, url) => {
     if (!isAllowedPageUrl(url)) event.preventDefault();
+  });
+
+  // History: one entry per page the tab navigates to. did-navigate comes
+  // for committed main-frame navigations, not failed loads or in-page
+  // jumps. Arriving at the same address again in the same tab (a reload)
+  // adds no new entry. The title follows when the page reports it.
+  let visit: { id: number; url: string } | null = null;
+  guest.on('did-navigate', (_event, url) => {
+    if (visit && visit.url === url) return;
+    // The title at this moment can still be the previous page's; start with
+    // the address, and the page's own title replaces it when it arrives.
+    const id = deps.recordVisit(url, '');
+    visit = id === null ? null : { id, url };
+  });
+  guest.on('page-title-updated', (_event, title) => {
+    if (visit && guest.getURL() === visit.url) deps.updateVisitTitle(visit.id, title);
   });
 
   guest.setWindowOpenHandler(({ url, disposition }) => {

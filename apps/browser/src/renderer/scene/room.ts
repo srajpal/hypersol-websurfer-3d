@@ -113,6 +113,8 @@ export class Room {
   private framePending = false;
   private lastFrameTime = 0;
   private hoveredCard: TabCard | null = null;
+  /** The last few parallax decisions, for diagnosing test failures. */
+  readonly pointerLog: { x: number; y: number; target: string; overPage: boolean }[] = [];
   private readonly raycaster = new Raycaster();
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -129,7 +131,11 @@ export class Room {
     this.css = new CSS3DRenderer();
     this.css.domElement.classList.add('hs-css-layer');
     container.append(this.css.domElement);
-    this.cameraElement = this.css.domElement.firstElementChild as HTMLElement;
+    // CSS3DRenderer nests: domElement > view element > camera element. Pages
+    // go straight into the camera element, where the renderer keeps them;
+    // anywhere else it moves them on the first frame, and a moved webview
+    // is destroyed and loads its page again.
+    this.cameraElement = this.css.domElement.firstElementChild!.firstElementChild as HTMLElement;
 
     this.camera = new PerspectiveCamera(options.fovDeg ?? 40, 1, 1, 20000);
 
@@ -545,7 +551,16 @@ export class Room {
     };
 
     document.addEventListener('pointermove', (e) => {
-      if (overPage(e.clientX, e.clientY, e.target)) {
+      const over = overPage(e.clientX, e.clientY, e.target);
+      const t = e.target instanceof Element ? e.target : null;
+      this.pointerLog.push({
+        x: Math.round(e.clientX),
+        y: Math.round(e.clientY),
+        target: t ? `${t.tagName.toLowerCase()}${t.className && typeof t.className === 'string' ? `.${t.className}` : ''}` : String(e.target),
+        overPage: over,
+      });
+      if (this.pointerLog.length > 20) this.pointerLog.shift();
+      if (over) {
         this.parallax.setPaused(true);
         this.setHovered(null);
         return;

@@ -21,10 +21,12 @@ import {
   settled,
   sleep,
   tabs,
+  waitFor,
   waitForPage,
   type Harness,
 } from '../e2e/harness';
 
+const STAR = 'hs-toolbar [data-testid="star"]';
 const milestone = process.env['MILESTONE'];
 const outDir = fileURLToPath(new URL(`../../docs/screenshots/${milestone ?? 'unknown'}/`, import.meta.url));
 
@@ -55,6 +57,10 @@ it('captures the main screens', async () => {
     await sleep(800);
     await clickCard(h, (await tabs(h))[0]!.id);
     await waitForPage(h, 'link-a');
+    // Bookmark this page, so the star, start panel, and Library have data.
+    await waitFor('star ready', () => h.shell.locator(STAR).isDisabled(), (d) => !d);
+    await h.shell.click(STAR);
+    await waitFor('bookmarked', () => h.shell.locator(STAR).getAttribute('aria-pressed'), (p) => p === 'true');
     await capture(h, '1-tabs');
 
     await pressInShell(h, 'T', ['control']);
@@ -64,6 +70,12 @@ it('captures the main screens', async () => {
     await navigateTo(h, 'http://notfound.test/');
     await sleep(600);
     await capture(h, '3-error-card');
+
+    await pressInShell(h, 'O', ['control', 'shift']);
+    await h.shell.click('hs-library [data-testid="lib-tab-history"]');
+    await capture(h, '4-library-history');
+    await pressInShell(h, ',', ['control']);
+    await capture(h, '5-settings');
   } finally {
     await h.close();
     await server.close();

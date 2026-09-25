@@ -1,0 +1,46 @@
+import type { ShellBridge } from '../shared/commands';
+import type { DataOp, DataRequest, DataResults } from '../shared/data';
+
+/** Saved-data requests from the shell; errors arrive as thrown Errors with plain messages. */
+export class DataClient {
+  constructor(private readonly bridge: ShellBridge) {}
+
+  async get<K extends DataOp>(request: Extract<DataRequest, { op: K }>): Promise<DataResults[K]> {
+    const reply = await this.bridge.data(request);
+    if (!reply.ok) throw new Error(reply.error);
+    return reply.value as DataResults[K];
+  }
+}
+
+export interface DayGroup<T> {
+  label: string;
+  items: T[];
+}
+
+/**
+ * Groups history entries (newest first) by the day they were visited:
+ * "Today", "Yesterday", then the date, in the viewer's own time zone.
+ */
+export function groupByDay<T extends { visitedAt: number }>(
+  entries: readonly T[],
+  now: Date = new Date(),
+  locale?: string,
+): DayGroup<T>[] {
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const today = startOf(now);
+  const yesterday = startOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const groups: DayGroup<T>[] = [];
+  for (const entry of entries) {
+    const day = startOf(new Date(entry.visitedAt));
+    const label =
+      day === today
+        ? 'Today'
+        : day === yesterday
+          ? 'Yesterday'
+          : new Date(day).toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(entry);
+    else groups.push({ label, items: [entry] });
+  }
+  return groups;
+}

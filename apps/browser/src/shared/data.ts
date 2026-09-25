@@ -1,0 +1,134 @@
+/**
+ * Requests the shell may make for saved data, answered by the main
+ * process (main/storage/service.ts). Every request is checked there with
+ * parseDataRequest before anything is read or written.
+ */
+import type { Settings } from './settings';
+
+export const DATA_CHANNEL = 'hypersol:data';
+
+export interface Bookmark {
+  id: number;
+  url: string;
+  title: string;
+  favicon: string | null;
+  createdAt: number;
+}
+
+export interface HistoryEntry {
+  id: number;
+  url: string;
+  title: string;
+  visitedAt: number;
+}
+
+export interface SavedSession {
+  tabs: string[];
+  focused: number;
+}
+
+export type DataRequest =
+  | { op: 'status' }
+  | { op: 'bookmarks.list' }
+  | { op: 'bookmarks.has'; url: string }
+  | { op: 'bookmarks.add'; url: string; title: string; favicon: string | null }
+  | { op: 'bookmarks.remove'; url: string }
+  | { op: 'history.search'; query: string; limit: number }
+  | { op: 'history.recent'; limit: number }
+  | { op: 'history.delete'; id: number }
+  | { op: 'history.clear' }
+  | { op: 'settings.get' }
+  | { op: 'settings.set'; patch: Partial<Settings> }
+  | { op: 'session.save'; tabs: string[]; focused: number }
+  | { op: 'startup' }
+  | { op: 'data.clear'; history: boolean; cookies: boolean; cache: boolean };
+
+export interface DataResults {
+  status: { available: boolean; message?: string };
+  'bookmarks.list': Bookmark[];
+  'bookmarks.has': boolean;
+  'bookmarks.add': Bookmark | null;
+  'bookmarks.remove': null;
+  'history.search': HistoryEntry[];
+  'history.recent': HistoryEntry[];
+  'history.delete': null;
+  'history.clear': null;
+  'settings.get': Settings;
+  'settings.set': Settings;
+  'session.save': null;
+  /** Tabs to reopen, when the startup setting asks for them. */
+  startup: SavedSession | null;
+  'data.clear': null;
+}
+
+export type DataOp = DataRequest['op'];
+
+/** Every reply is either a value or a plain-language error. */
+export type DataReply<K extends DataOp> = { ok: true; value: DataResults[K] } | { ok: false; error: string };
+
+const MAX_URL = 8192;
+const MAX_TEXT = 1024;
+const MAX_FAVICON = 64 * 1024;
+const MAX_TABS = 500;
+
+const isWebUrl = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= MAX_URL && /^https?:\/\//i.test(v);
+const isText = (v: unknown, max = MAX_TEXT): v is string => typeof v === 'string' && v.length <= max;
+const isCount = (v: unknown, max: number): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= max;
+const isFlag = (v: unknown): v is boolean => typeof v === 'boolean';
+
+/** Checks a request from the shell. Returns the request, or why it was refused. */
+export function parseDataRequest(raw: unknown): { request: DataRequest } | { error: string } {
+  if (typeof raw !== 'object' || raw === null) return { error: 'Not a request' };
+  const r = raw as Record<string, unknown>;
+  const bad = (why: string) => ({ error: `${String(r['op'])}: ${why}` });
+  switch (r['op']) {
+    case 'status':
+    case 'bookmarks.list':
+    case 'history.clear':
+    case 'settings.get':
+    case 'startup':
+      return { request: { op: r['op'] } };
+    case 'bookmarks.has':
+    case 'bookmarks.remove':
+      if (!isWebUrl(r['url'])) return bad('url must be a web address');
+      return { request: { op: r['op'], url: r['url'] } };
+    case 'bookmarks.add': {
+      if (!isWebUrl(r['url'])) return bad('url must be a web address');
+      if (!isText(r['title'])) return bad('title must be text');
+      const favicon = r['favicon'];
+      if (favicon !== null && !(isText(favicon, MAX_FAVICON) && favicon.startsWith('data:image/'))) {
+        return bad('favicon must be an image data address or null');
+      }
+      return { request: { op: 'bookmarks.add', url: r['url'], title: r['title'], favicon } };
+    }
+    case 'history.search':
+      if (!isText(r['query'])) return bad('query must be text');
+      if (!isCount(r['limit'], 1000)) return bad('limit must be 0 to 1000');
+      return { request: { op: 'history.search', query: r['query'], limit: r['limit'] } };
+    case 'history.recent':
+      if (!isCount(r['limit'], 1000)) return bad('limit must be 0 to 1000');
+      return { request: { op: 'history.recent', limit: r['limit'] } };
+    case 'history.delete':
+      if (!isCount(r['id'], Number.MAX_SAFE_INTEGER)) return bad('id must be a whole number');
+      return { request: { op: 'history.delete', id: r['id'] } };
+    case 'settings.set':
+      if (typeof r['patch'] !== 'object' || r['patch'] === null) return bad('patch must be an object');
+      return { request: { op: 'settings.set', patch: r['patch'] as Partial<Settings> } };
+    case 'session.save': {
+      const tabs = r['tabs'];
+      if (!Array.isArray(tabs) || tabs.length > MAX_TABS || !tabs.every(isWebUrl)) {
+        return bad('tabs must be a list of web addresses');
+      }
+      if (!Number.isInteger(r['focused']) || (r['focused'] as number) < -1 || (r['focused'] as number) >= tabs.length) {
+        return bad('focused must point at one of the tabs, or be -1');
+      }
+      return { request: { op: 'session.save', tabs, focused: r['focused'] as number } };
+    }
+    case 'data.clear':
+      if (!isFlag(r['history']) || !isFlag(r['cookies']) || !isFlag(r['cache'])) return bad('choices must be true or false');
+      return { request: { op: 'data.clear', history: r['history'], cookies: r['cookies'], cache: r['cache'] } };
+    default:
+      return { error: `Unknown request: ${String(r['op'])}` };
+  }
+}

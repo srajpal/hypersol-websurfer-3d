@@ -7,11 +7,12 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestone 2 done; milestone 3 (bookmarks, history, settings)
-in planning.** A usable browser in a 3D room: tabs as cards on an arc, a
-top bar with address and search, keyboard shortcuts, a start panel,
-error cards, and a right-click menu. See [Progress](#progress), TODO.md,
-and [Project documents](#project-documents).
+**Status: milestone 3 built, awaiting review.** A browser in a 3D room
+that remembers: tabs as cards on an arc, a top bar with address, search,
+and a bookmark star, bookmarks and history in a Library panel, a
+Settings panel, a start panel with your data, error cards, and a
+right-click menu. See [Progress](#progress), TODO.md, and
+[Project documents](#project-documents).
 
 ## The story
 
@@ -97,6 +98,15 @@ the start panel, and error cards.
 
 ![The "We couldn't find that site" error card](docs/screenshots/m2/3-error-card.png)
 
+**Milestone 3: memory and settings.** Bookmarks and history, the Library
+and Settings panels, and a start panel with your data.
+
+![The start panel showing a bookmark and recent history](docs/screenshots/m3/2-start-panel.png)
+
+![The Library panel showing today's history](docs/screenshots/m3/4-library-history.png)
+
+![The Settings panel: search engine, startup, clear browsing data](docs/screenshots/m3/5-settings.png)
+
 ## HoloML
 
 HoloML is the 3D markup language developed alongside the browser, in its
@@ -135,12 +145,14 @@ pnpm dev
 
 `pnpm dev` opens the app on a start tab. Type an address or a search
 in the top bar; Ctrl+T opens a tab, Ctrl+W closes one, Ctrl+Tab moves
-between them, and the cards on the left switch tabs. Development runs use a
+between them, and the cards on the left switch tabs. Ctrl+D bookmarks a
+page, Ctrl+Shift+O opens the Library, and Ctrl+, opens Settings. What
+the browser stores and sends is listed in [docs/privacy.md](docs/privacy.md). Development runs use a
 throwaway profile in the `userData/` folder, never your normal browser
 data.
 
 Tests: `pnpm test` (unit), `pnpm lint`, `pnpm typecheck`, and
-`pnpm test:e2e` (builds the app and drives it for about 90 seconds;
+`pnpm test:e2e` (builds the app and drives it for about two minutes;
 opens windows while it runs, and needs openssl on PATH, which Git for
 Windows provides). Current results are in TODO.md.
 

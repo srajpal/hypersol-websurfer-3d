@@ -1,7 +1,7 @@
 import type { PagePanel, PageState, PageStatus } from '@hypersol/scene-core';
 import type { WebviewTag } from 'electron';
 import { CRASHED_CARD, describeLoadError, type LoadErrorCard } from '../load-errors';
-import { StartPanel } from './start-panel';
+import { StartPanel, type StartData } from './start-panel';
 
 /** Chromium's code for a load that was cancelled by a newer one. */
 const ERR_ABORTED = -3;
@@ -13,6 +13,8 @@ export interface TabViewEvents {
   onSettled(): void;
   /** Text submitted in the start panel's search box. */
   onStartSubmit(text: string): void;
+  /** A bookmark or history entry chosen on the start panel. */
+  onStartOpen(url: string): void;
 }
 
 /**
@@ -53,7 +55,10 @@ export class TabView implements PagePanel {
     this.errorCard.dataset['testid'] = 'page-overlay';
 
     if (url === '') {
-      this.start = new StartPanel((text) => this.events.onStartSubmit(text));
+      this.start = new StartPanel(
+        (text) => this.events.onStartSubmit(text),
+        (address) => this.events.onStartOpen(address),
+      );
       this.element.append(this.start.element);
       this.currentStatus = { state: 'loaded', url: '' };
     } else {
@@ -92,6 +97,11 @@ export class TabView implements PagePanel {
     } catch {
       return null;
     }
+  }
+
+  /** Bookmarks and recent history for the start panel, if this tab shows it. */
+  setStartData(data: StartData): void {
+    this.start?.setData(data);
   }
 
   focusContent(): void {

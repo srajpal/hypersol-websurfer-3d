@@ -1,13 +1,14 @@
 import './styles.css';
 import './hud/toolbar';
 import './hud/about';
+import './hud/library';
+import './hud/settings';
 import { DEFAULT_TILT_DEG, clampTilt } from '@hypersol/scene-core';
 import { defaultTheme } from '@hypersol/themes';
 import type { ShellBridge } from '../shared/commands';
 import { App } from './app';
 import type { CardPart } from './scene/tab-card';
 import { applyThemeCss } from './themes/apply';
-import { DEFAULT_SEARCH_URL } from './url';
 
 const params = new URLSearchParams(location.search);
 const tiltParam = params.get('tilt');
@@ -25,25 +26,32 @@ about.addEventListener('hs-about-closed', () => app.focusedView?.focusContent())
 const app = new App({
   startUrl: params.get('startUrl') ?? '',
   tiltDeg: tiltParam === null ? DEFAULT_TILT_DEG : clampTilt(Number(tiltParam)),
-  searchUrl: params.get('searchUrl') ?? DEFAULT_SEARCH_URL,
+  ...(params.get('searchUrl') ? { searchUrlOverride: params.get('searchUrl')! } : {}),
   theme: defaultTheme,
   bridge,
   roomElement: document.getElementById('room') as HTMLElement,
   toolbar,
   about,
+  library: document.querySelector('hs-library')!,
+  settingsPanel: document.querySelector('hs-settings')!,
   tabList: document.getElementById('tab-list') as HTMLElement,
 });
+void app.start();
 
 // Read-only hooks for the end-to-end tests; present only in test runs.
 if (params.get('test') === '1') {
   const { room, store } = app;
   Object.assign(window, {
     __hypersolShellTest: {
-      ready: true,
+      get ready() {
+        return app.ready;
+      },
+      openPanel: () => app.openPanel,
       frames: () => room.frames,
       layout: () => room.layoutInfo,
       cameraOffset: () => room.parallax.offset,
       parallaxPaused: () => room.parallax.paused,
+      pointerLog: () => room.pointerLog,
       projectPagePoint: (u: number, v: number) => room.projectPagePoint(u, v),
       panelQuad: () => room.screenQuad(),
       sceneColors: () => room.sceneColors(),
