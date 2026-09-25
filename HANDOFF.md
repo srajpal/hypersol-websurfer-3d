@@ -12,7 +12,8 @@ The shell owns the tabs (confirmed). The Electron security check is
 done (44.4.5 is current, no security fixes pending). Milestone 3
 (Memory and Settings) is built: bookmarks and history in node:sqlite,
 Library and Settings panels, start panel with data, reopening tabs,
-clearing data, docs/privacy.md. All 71 end-to-end checks pass; waiting
+clearing data, docs/privacy.md. All 72 end-to-end checks pass (test
+windows now run off screen, out of the owner's way); waiting
 for the owner's look-and-feel check (E11) and acceptance. Progress
 screenshots live in docs/screenshots/<milestone>/; capture them with
 `MILESTONE=mN pnpm screenshots` when a milestone is finished.

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, session, webContents } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, screen, session, webContents } from 'electron';
 import { defaultTheme } from '@hypersol/themes';
 import { CAPTURE_TAB_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
@@ -16,6 +16,16 @@ if (options.userDataDir) {
   app.setPath('userData', options.userDataDir);
 } else if (!app.isPackaged) {
   app.setPath('userData', join(app.getAppPath(), '..', '..', 'userData', 'dev'));
+}
+
+if (options.testBackground) {
+  // Test windows sit off screen, behind everything. Chromium normally stops
+  // drawing windows nobody can see; these switches keep it drawing, so the
+  // checks see the same frames as a visible window.
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
 }
 
 const PAGE_PRELOAD = join(__dirname, '../preload/page.js');
@@ -40,10 +50,17 @@ function setAppMenu(): void {
   );
 }
 
+/** A spot to the right of every display, for background test windows. */
+function offScreenPosition(): { x: number; y: number } {
+  const right = Math.max(...screen.getAllDisplays().map((d) => d.bounds.x + d.bounds.width));
+  return { x: right + 200, y: 0 };
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    ...(options.testBackground ? { ...offScreenPosition(), skipTaskbar: true } : {}),
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -72,7 +89,8 @@ function createWindow(): void {
       if (input.type === 'keyDown' && input.key === 'F12') win.webContents.toggleDevTools();
     });
   }
-  win.once('ready-to-show', () => win.show());
+  // Background test windows appear without taking focus.
+  win.once('ready-to-show', () => (options.testBackground ? win.showInactive() : win.show()));
   win.on('closed', () => {
     mainWindow = null;
   });

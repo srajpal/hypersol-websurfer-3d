@@ -42,8 +42,16 @@ export interface LaunchOptions {
 }
 
 /**
- * Only the OS basics plus the test switch. The test runner's own variables
- * (NODE_OPTIONS and friends) must not leak into Electron's main process.
+ * Test windows stay in the background (off screen, never taking focus or
+ * a taskbar button) so a run does not get in the way (owner request,
+ * prompt 24). Set HYPERSOL_TEST_SHOW=1 to watch a run in normal windows.
+ */
+export const SHOW_WINDOWS = process.env['HYPERSOL_TEST_SHOW'] === '1';
+
+/**
+ * Only the OS basics plus the test switches. The test runner's own
+ * variables (NODE_OPTIONS and friends) must not leak into Electron's main
+ * process.
  */
 function cleanEnv(): Record<string, string> {
   const keep = [
@@ -52,6 +60,7 @@ function cleanEnv(): Record<string, string> {
     'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR',
   ];
   const env: Record<string, string> = { HYPERSOL_TEST: '1' };
+  if (!SHOW_WINDOWS) env['HYPERSOL_TEST_BACKGROUND'] = '1';
   for (const k of keep) {
     const v = process.env[k];
     if (v !== undefined) env[k] = v;
@@ -91,15 +100,23 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   // card hover (found 2026-09-25 as the cause of occasional C3 and D4
   // failures). Test input comes in through Chromium and is unaffected.
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setIgnoreMouseEvents(true));
-  // A person clicks into a window that is already in front: wait until the
-  // new window has finished activating before any input is sent. Windows
-  // occasionally keeps another window in front; then ask for focus.
-  const focused = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false);
-  try {
-    await waitFor('the app window to have focus', focused, (f) => f, 3000);
-  } catch {
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.focus());
-    await waitFor('the app window to have focus', focused, (f) => f, 7000);
+  // The window must be showing before input is sent. In the background it
+  // never takes focus (test input does not need it); when shown for
+  // watching, wait for it to come to the front as a person's would.
+  await waitFor(
+    'the app window to show',
+    () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible() ?? false),
+    (v) => v,
+    10_000,
+  );
+  if (SHOW_WINDOWS) {
+    const focused = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false);
+    try {
+      await waitFor('the app window to have focus', focused, (f) => f, 3000);
+    } catch {
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.focus());
+      await waitFor('the app window to have focus', focused, (f) => f, 7000);
+    }
   }
   return {
     app,
@@ -301,15 +318,21 @@ export async function clickAt(h: Harness, p: Point, options: { button?: 'left' |
 
 /** Resizes the window's content area and waits for the page to follow. */
 export async function setContentSize(h: Harness, width: number, height: number): Promise<void> {
-  await h.app.evaluate(
-    ({ BrowserWindow }, [w, ht]) => BrowserWindow.getAllWindows()[0]!.setContentSize(w!, ht!),
-    [width, height],
-  );
-  await waitFor(
-    `window ${width}x${height}`,
-    () => h.shell.evaluate(() => [window.innerWidth, window.innerHeight]),
-    ([w, ht]) => w === width && ht === height,
-  );
+  // Adjust the outer size until the inside is right: off screen, Electron's
+  // setContentSize and the frame size it assumes are unreliable (1280x800
+  // came out 1296x839), so correct by the measured difference.
+  const inner = () => h.shell.evaluate(() => [window.innerWidth, window.innerHeight]);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const [iw, ih] = await inner();
+    if (iw === width && ih === height) break;
+    const outer = await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getBounds());
+    await h.app.evaluate(
+      ({ BrowserWindow }, [w, ht]) => BrowserWindow.getAllWindows()[0]!.setSize(w!, ht!),
+      [outer.width + (width - iw!), outer.height + (height - ih!)],
+    );
+    await waitFor('the window to resize', inner, ([w2, h2]) => w2 !== iw || h2 !== ih, 2000).catch(() => undefined);
+  }
+  await waitFor(`window ${width}x${height}`, inner, ([w, ht]) => w === width && ht === height);
   // The room lays out again on the resize event, a frame after the size changes.
   const layout = await waitFor(
     'the room to lay out for the new size',

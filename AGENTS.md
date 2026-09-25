@@ -127,13 +127,18 @@ they ran; macOS and Linux not checked yet):
 - Unit: `pnpm test` (Vitest; 35 tests passed)
 - Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
 - End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
-  against it (about two minutes; 71 checks). Needs openssl on PATH for
+  against it (about two minutes; 72 checks). Needs openssl on PATH for
   the certificate-error check (Git for Windows includes one). Every
   host except 127.0.0.1 is blocked during the run, and the test windows
   ignore the real mouse, so a resting cursor cannot disturb results. See
   TODO.md for results.
-- The end-to-end run opens app windows on screen; leave the machine
-  alone while it runs.
+- Test windows stay out of the way (owner request, 2026-09-25): they
+  open off screen, never take focus, and have no taskbar button, so the
+  computer can be used during a run; `pnpm screenshots` works the same
+  way. To watch a run in normal windows, set HYPERSOL_TEST_SHOW=1 (for
+  example `HYPERSOL_TEST_SHOW=1 pnpm test:e2e`); then leave the machine
+  alone while it runs. Check C1 confirms background windows are off
+  every display and unfocused.
 
 What to recheck after any change (regression list; grows with each
 milestone; the current milestone's checks are defined in TODO.md):

@@ -492,6 +492,14 @@ Found and fixed during the build:
   not trap focus (like Chrome's side panel), so the check now confirms
   the panel's controls are reachable with Shift+Tab.
 
+Changed after the build (owner, prompt 24): test windows no longer come
+to the front. They open off screen, never take focus, and have no
+taskbar button; Chromium is told to keep drawing them. HYPERSOL_TEST_SHOW=1
+shows them for watching. Resizing now corrects the window's outer size
+step by step, since Electron's content-size call is unreliable off
+screen. New check in C1: background windows are off every display and
+unfocused. Two full runs after the change: 72 of 72; unit tests 99.
+
 ### Done when
 
 E1 to E10, C1 to C11, and D1 to D11 pass, the owner accepts E11, the

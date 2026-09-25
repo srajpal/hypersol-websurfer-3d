@@ -282,3 +282,11 @@ Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b
 ```text
 commit and push
 ```
+
+## 24 — 2026-09-25
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b35 · Tokens: not captured
+
+```text
+update your docs for the following, when you run tests make sure the window is not above everything else. it gets in the way. can you continue to do tests but the windows are not on top?
+```

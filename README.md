@@ -153,8 +153,10 @@ data.
 
 Tests: `pnpm test` (unit), `pnpm lint`, `pnpm typecheck`, and
 `pnpm test:e2e` (builds the app and drives it for about two minutes;
-opens windows while it runs, and needs openssl on PATH, which Git for
-Windows provides). Current results are in TODO.md.
+needs openssl on PATH, which Git for Windows provides). Its windows stay
+off screen and never take focus, so you can keep working; set
+`HYPERSOL_TEST_SHOW=1` to watch instead. Current results are in
+TODO.md.
 
 ## Contributing
 

@@ -8,6 +8,7 @@ describe('parseLaunchOptions', () => {
       startUrl: '',
       tiltDeg: 10,
       testMode: false,
+      testBackground: false,
     });
   });
 
@@ -21,7 +22,13 @@ describe('parseLaunchOptions', () => {
       tiltDeg: 20,
       userDataDir: 'C:\\tmp\\x',
       testMode: true,
+      testBackground: false,
     });
+  });
+
+  it('keeps test windows in the background only in test mode', () => {
+    expect(parseLaunchOptions([], { HYPERSOL_TEST_BACKGROUND: '1' }).testBackground).toBe(false);
+    expect(parseLaunchOptions([], { HYPERSOL_TEST: '1', HYPERSOL_TEST_BACKGROUND: '1' }).testBackground).toBe(true);
   });
 
   it('clamps tilt and refuses non-web start addresses', () => {

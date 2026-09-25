@@ -346,6 +346,9 @@ Not checked yet: `pnpm package` (installers per OS, milestone 7).
 Launch options, for development and tests: `--start-url=<address>`
 (default: a start tab), `--tilt=<0 to 20>`,
 `--hypersol-user-data=<folder>`; `HYPERSOL_TEST=1` turns on the test
-hooks and allows `--search-url=<address with %s>`. The tests also pass
-Chromium's `--host-resolver-rules` so that no name resolves except this
-machine.
+hooks and allows `--search-url=<address with %s>`;
+`HYPERSOL_TEST_BACKGROUND=1` (test mode only, set by the test harness
+unless HYPERSOL_TEST_SHOW=1) opens the window off screen, without focus
+or a taskbar button, and tells Chromium to keep drawing it. The tests
+also pass Chromium's `--host-resolver-rules` so that no name resolves
+except this machine.
