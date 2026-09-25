@@ -627,3 +627,38 @@ describe('D13 favicon limits (GitHub issue #1)', () => {
     expect(hitsFor('/icon.png?v=')).toBeLessThanOrEqual(3);
   });
 });
+
+describe('D13 favicon downloads are cancelled when refused (PR #7 review)', () => {
+  let h: Harness;
+  beforeAll(async () => {
+    h = await launch(server.url('link-a.html'));
+    await waitForPage(h, 'link-a');
+  });
+  afterAll(async () => h?.close());
+
+  it('drops each refused 10 MB download at once, one at a time', async () => {
+    const keys = [1, 2, 3].map((n) => `/favicon/declared-huge.png?n=${n}`);
+    await navigateTo(h, server.url(`favicon.html?icons=${encodeURIComponent(keys.join(','))}`));
+    await waitForPage(h, 'favicon.html');
+    // The server sees every connection closed well before the 5 s timeout.
+    await waitFor(
+      'all three downloads dropped',
+      async () => keys.map((k) => server.aborted.get(k) ?? 0),
+      (n) => n.every((x) => x > 0),
+      3000,
+    );
+    expect(server.maxOpen.get('/favicon/declared-huge.png')).toBe(1);
+    expect(server.openNow.get('/favicon/declared-huge.png') ?? 0).toBe(0);
+    for (const k of keys) expect(server.sent.get(k) ?? 0).toBeLessThan(256 * 1024);
+    expect((await focusedTab(h)).hasFavicon).toBe(false);
+  });
+
+  it('drops a download answered with an error status', async () => {
+    const key = '/favicon/error-body.png';
+    await navigateTo(h, server.url(`favicon.html?icon=${encodeURIComponent(key)}`));
+    await waitForPage(h, 'favicon.html');
+    await waitFor('error download dropped', async () => server.aborted.get(key) ?? 0, (n) => n > 0, 3000);
+    expect(server.openNow.get(key) ?? 0).toBe(0);
+    expect(server.sent.get(key) ?? 0).toBeLessThan(256 * 1024);
+  });
+});

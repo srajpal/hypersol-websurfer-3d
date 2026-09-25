@@ -173,3 +173,56 @@ describe('FaviconLoader', () => {
     expect(results).toEqual([]);
   });
 });
+
+describe('FaviconLoader cancels what it refuses (PR #7 review)', () => {
+  /**
+   * A fake server connection: a body that never finishes, and a record of
+   * whether it is still open (a cancelled body or an aborted request closes it).
+   */
+  function endless(status: number, declared: number | null, log: { open: number; maxOpen: number; closed: number }) {
+    return (_url: string, init: { signal: AbortSignal }) => {
+      log.open += 1;
+      log.maxOpen = Math.max(log.maxOpen, log.open);
+      let closed = false;
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        log.open -= 1;
+        log.closed += 1;
+      };
+      init.signal.addEventListener('abort', close);
+      const body = new ReadableStream<Uint8Array>({
+        pull: (c) => new Promise<void>((r) => setTimeout(() => (c.enqueue(new Uint8Array(1024)), r()), 5)),
+        cancel: close,
+      });
+      const headers: Record<string, string> = declared === null ? {} : { 'content-length': String(declared) };
+      return Promise.resolve(new Response(body, { status, headers }));
+    };
+  }
+
+  it('closes each download refused for its declared size before trying the next', async () => {
+    const log = { open: 0, maxOpen: 0, closed: 0 };
+    const loader = new FaviconLoader(endless(200, 10 * 1024 * 1024, log), () => 'never', { ...fast, timeoutMs: 5000 });
+    const urls = ['https://a.example/1.png', 'https://a.example/2.png', 'https://a.example/3.png'];
+    expect(await loader.load(urls, new AbortController().signal)).toBeNull();
+    expect(log.closed).toBe(3);
+    expect(log.open).toBe(0);
+    expect(log.maxOpen).toBe(1); // never two at once
+  });
+
+  it('closes a download answered with an error status', async () => {
+    const log = { open: 0, maxOpen: 0, closed: 0 };
+    const loader = new FaviconLoader(endless(500, null, log), () => 'never', { ...fast, timeoutMs: 5000 });
+    expect(await loader.load(['https://a.example/1.png', 'https://a.example/2.png'], new AbortController().signal)).toBeNull();
+    expect(log.closed).toBe(2);
+    expect(log.maxOpen).toBe(1);
+  });
+
+  it('closes a download that streams past the size limit without declaring it', async () => {
+    const log = { open: 0, maxOpen: 0, closed: 0 };
+    const loader = new FaviconLoader(endless(200, null, log), () => 'never', { ...fast, maxBytes: 8 * 1024, timeoutMs: 5000 });
+    expect(await loader.load(['https://a.example/1.png'], new AbortController().signal)).toBeNull();
+    expect(log.closed).toBe(1);
+    expect(log.open).toBe(0);
+  });
+});

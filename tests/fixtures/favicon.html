@@ -5,7 +5,7 @@
     <title>Favicon test</title>
   </head>
   <body>
-    <p>Names the favicon given in ?icon=..., or with ?churn=N changes it N times in quick succession.</p>
+    <p>Names the favicon in ?icon=..., several in ?icons=a,b,c, or with ?churn=N changes it N times in quick succession.</p>
     <script>
       const params = new URLSearchParams(location.search);
       const link = document.createElement('link');
@@ -21,6 +21,16 @@
         next();
       } else if (params.get('icon')) {
         link.href = params.get('icon');
+      } else if (params.get('icons')) {
+        // Several favicons, tried in order: ?icons=a.png,b.png
+        const [first, ...rest] = params.get('icons').split(',');
+        link.href = first;
+        for (const href of rest) {
+          const extra = document.createElement('link');
+          extra.rel = 'icon';
+          extra.href = href;
+          document.head.append(extra);
+        }
       }
     </script>
   </body>

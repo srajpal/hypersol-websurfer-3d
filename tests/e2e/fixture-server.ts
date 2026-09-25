@@ -54,6 +54,12 @@ export interface FixtureServer {
   hits: Map<string, number>;
   /** Requests the client cancelled before the answer was sent, by path and query. */
   aborted: Map<string, number>;
+  /** Most connections open at once, by path (without query). */
+  maxOpen: Map<string, number>;
+  /** Connections open now, by path (without query). */
+  openNow: Map<string, number>;
+  /** Body bytes written, by path and query (streaming favicon routes). */
+  sent: Map<string, number>;
 }
 
 /** A PNG header claiming a size, for the favicon dimension limit (not decodable). */
@@ -85,15 +91,37 @@ function page(title: string, body: string): string {
  *   /favicon/huge-stream.png   2 MB, sent in pieces without a declared length
  *   /favicon/huge-dims.png     a tiny file claiming 20000x20000 pixels
  *   /favicon/slow.png?ms=...   answers late (favicon timeout and cancelling)
+ *   /favicon/declared-huge.png declares 10 MB, then trickles data forever
+ *   /favicon/error-body.png    status 500 with a body that never ends
  */
-function handler(req: IncomingMessage, res: ServerResponse, hits: Map<string, number>, aborted: Map<string, number>): void {
+function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
   const url = new URL(req.url ?? '/', 'http://x');
   const path = decodeURIComponent(url.pathname);
   const key = `${url.pathname}${url.search}`;
-  hits.set(key, (hits.get(key) ?? 0) + 1);
+  c.hits.set(key, (c.hits.get(key) ?? 0) + 1);
+  const now = (c.openNow.get(url.pathname) ?? 0) + 1;
+  c.openNow.set(url.pathname, now);
+  c.maxOpen.set(url.pathname, Math.max(c.maxOpen.get(url.pathname) ?? 0, now));
   res.on('close', () => {
-    if (!res.writableFinished) aborted.set(key, (aborted.get(key) ?? 0) + 1);
+    c.openNow.set(url.pathname, (c.openNow.get(url.pathname) ?? 1) - 1);
+    if (!res.writableFinished) c.aborted.set(key, (c.aborted.get(key) ?? 0) + 1);
   });
+  if (path === '/favicon/declared-huge.png' || path === '/favicon/error-body.png') {
+    const declared = path === '/favicon/declared-huge.png';
+    res.writeHead(declared ? 200 : 500, {
+      'content-type': 'image/png',
+      'cache-control': 'no-store',
+      ...(declared ? { 'content-length': String(10 * 1024 * 1024) } : {}),
+    });
+    const piece = Buffer.alloc(16 * 1024);
+    const timer = setInterval(() => {
+      if (res.destroyed) return;
+      res.write(piece);
+      c.sent.set(key, (c.sent.get(key) ?? 0) + piece.length);
+    }, 20);
+    res.on('close', () => clearInterval(timer));
+    return;
+  }
   if (path === '/favicon/huge-bytes.png') {
     const body = Buffer.concat([ICON_PNG, Buffer.alloc(2 * 1024 * 1024)]);
     res.writeHead(200, { 'content-type': 'image/png', 'content-length': String(body.length), 'cache-control': 'no-store' });
@@ -163,10 +191,18 @@ function handler(req: IncomingMessage, res: ServerResponse, hits: Map<string, nu
   );
 }
 
+interface Counters {
+  hits: Map<string, number>;
+  aborted: Map<string, number>;
+  maxOpen: Map<string, number>;
+  openNow: Map<string, number>;
+  sent: Map<string, number>;
+}
+
 async function listen(
   server: Server,
   scheme: 'http' | 'https',
-  counters: { hits: Map<string, number>; aborted: Map<string, number> },
+  counters: Counters,
   cleanup?: () => void,
   requestedPort = 0,
 ): Promise<FixtureServer> {
@@ -193,13 +229,13 @@ async function listen(
 }
 
 /** Serves the fixtures on 127.0.0.1, at a random free port unless one is given. */
-function counters() {
-  return { hits: new Map<string, number>(), aborted: new Map<string, number>() };
+function counters(): Counters {
+  return { hits: new Map(), aborted: new Map(), maxOpen: new Map(), openNow: new Map(), sent: new Map() };
 }
 
 export function startFixtureServer(port = 0): Promise<FixtureServer> {
   const c = counters();
-  return listen(createServer((req, res) => handler(req, res, c.hits, c.aborted)), 'http', c, undefined, port);
+  return listen(createServer((req, res) => handler(req, res, c)), 'http', c, undefined, port);
 }
 
 function findOpenssl(): string {
@@ -236,7 +272,7 @@ export function startHttpsFixtureServer(): Promise<FixtureServer> {
   if (!existsSync(cert)) throw new Error('openssl did not produce a certificate');
   const c = counters();
   const server = createHttpsServer({ key: readFileSync(key), cert: readFileSync(cert) }, (req, res) =>
-    handler(req, res, c.hits, c.aborted),
+    handler(req, res, c),
   );
   return listen(server as unknown as Server, 'https', c, () => rmSync(dir, { recursive: true, force: true }));
 }
