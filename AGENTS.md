@@ -103,6 +103,10 @@ the correction.
   Do not change this file silently.
 - Unfamiliar terms get a one-line explanation the first time they appear
   in a document.
+- At the end of each milestone, save screenshots of the main screens to
+  docs/screenshots/<milestone>/ with `MILESTONE=mN pnpm screenshots`, and
+  add them to the README's Progress section. (Added 2026-09-25, prompt
+  21.)
 - Owner-only automation (Remote Control at session start, the prompt-log
   reminder) lives in CLAUDE.local.md, which is gitignored, so
   contributors' sessions never inherit it. HANDOFF.md holds a copy for
