@@ -10,7 +10,7 @@ Plan approved 2026-09-24.
 | # | Milestone | Useful result | Status |
 |---|---|---|---|
 | 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Done (accepted 2026-09-25 with C2 as a known issue) |
-| 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Built; awaiting owner acceptance (D12) |
+| 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Later |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Later |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Later |
@@ -205,9 +205,10 @@ milestone.
 
 ## Milestone 2 — Browsing basics
 
-Status: Built 2026-09-25. Plan and build approved 2026-09-25 (prompt
-19). All tasks done and all automated checks pass; waiting for the
-owner's look-and-feel check (D12) and acceptance.
+Status: Done. Plan and build approved 2026-09-25 (prompt 19); built
+2026-09-25; look and feel (D12) and the milestone approved by the owner
+2026-09-25 (prompt 20), with one change: the "+" card is pinned (below).
+Screenshots: docs/screenshots/m2/.
 
 Goal: a browser you can use day to day in the 3D room: several tabs,
 a real top bar, keyboard shortcuts, a new-tab start panel, clear error
@@ -304,7 +305,7 @@ the machine; `notfound.test` exercises "address not found".
 | D1 | Top bar | Automated | Address shows the page; Enter on an address loads it; Enter on words searches; back, forward, reload work and are disabled when they cannot act |
 | D2 | Tabs | Automated | "+" card and Ctrl+T open a start tab; clicking a card focuses it; Ctrl+Tab and Ctrl+Shift+Tab cycle; switching keeps each page's state without reloading; hover close and Ctrl+W close; closing the last tab leaves a start tab |
 | D3 | Snapshots | Automated | Background cards show a snapshot; spinner only until then |
-| D4 | Many tabs | Automated: 12 tabs | Arc scrolls with the wheel; cards keep full size; focused card in view |
+| D4 | Many tabs | Automated: 12 tabs | Arc scrolls with the wheel; cards keep full size; focused card in view; the "+" card stays in view at any scroll (owner, prompt 20) |
 | D5 | New-window links | Automated | target=_blank opens a tab in front; Ctrl-click opens one behind; window.open without a click is blocked |
 | D6 | Loading | Automated: slow page | Loading strip shows while loading and hides after |
 | D7 | Error cards | Automated | Not found, connection failed, certificate error (no proceed), crash ("This page went dark"), each with the address; Retry recovers where it applies |
@@ -337,7 +338,7 @@ before the room had updated), which was then fixed.
 | D9 | Pass |
 | D10 | Pass |
 | D11 | Pass |
-| D12 | Not checked yet (owner) |
+| D12 | Pass: owner, 2026-09-25 ("look and feel are good, approved") |
 | C1–C11 | Pass. C9 measured 139 to 145 frames per second during parallax on these runs: the display was at 144 Hz; the rate follows the display. |
 
 Found and fixed during the build:
@@ -363,10 +364,9 @@ Test-method notes (the requirements are unchanged):
   2026-09-25); Electron's capture of the same moment is correct. Use
   Electron captures when judging looks.
 
-Open for the owner:
-- The "+" card sits after the last tab, so with more tabs than fit it
-  scrolls out of view when the rail is at the top (Ctrl+T and the menu
-  still open tabs). Keep, or pin "+" at the bottom of the rail?
+Changed after review (owner, prompt 20): the "+" card is pinned. It
+follows the last tab while the tabs fit, and stays at the bottom of the
+rail once they overflow; the tabs scroll above it.
 
 ### Done when
 

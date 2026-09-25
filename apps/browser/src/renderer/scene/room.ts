@@ -329,6 +329,8 @@ export class Room {
       gap: RAIL.gap,
       count: Math.max(1, this.order.length),
       scroll: this.railScroll,
+      // The "+" card (always last) stays in view (owner, prompt 20).
+      pinLast: true,
     };
   }
 

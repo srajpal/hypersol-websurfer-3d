@@ -221,6 +221,7 @@ describe('D4 many tabs', () => {
     expect(rail.scroll).toBeGreaterThan(0); // scrolled down to the newest (focused) tab
     const focused = await focusedTab(h);
     expect(await shellCall(h, 'cardPoint', focused.id, 'body')).not.toBeNull();
+    expect(await shellCall(h, 'cardPoint', 'plus', 'body')).not.toBeNull(); // "+" pinned in view
 
     // Wheel up over the rail brings the first cards back.
     const inRail = (await shellCall(h, 'cardPoint', focused.id, 'body'))!;
@@ -232,6 +233,9 @@ describe('D4 many tabs', () => {
     const qb = (await shellCall(h, 'cardPoint', all[1]!.id, 'body'))!;
     expect(Math.abs(Math.hypot(qb.x - qa.x, qb.y - qa.y) - spacing)).toBeLessThan(1.5);
     expect(await shellCall(h, 'cardPoint', all[11]!.id, 'body')).toBeNull(); // scrolled out of view
+    expect(await shellCall(h, 'cardPoint', 'plus', 'body')).not.toBeNull(); // still in view at the top
+    await clickCard(h, 'plus');
+    await tabCount(h, 13);
   });
 });
 

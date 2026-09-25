@@ -250,3 +250,11 @@ Your other assumptions are good
 Continue with next milestone, test as appropriate 
 Commit and push at the end
 ```
+
+## 20 — 2026-09-25
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b35 · Tokens: 576,324 at logging
+
+```text
+look and feel are good, approved, pin the + card , keep some screenshots from every milestone to show progress, do the electron check, use node:sqlite, continue with milestone 3
+```

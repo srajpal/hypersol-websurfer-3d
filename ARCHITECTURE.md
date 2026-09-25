@@ -49,8 +49,14 @@ Electron 44.4.5 was installed on 2026-09-24 (milestone 1), resolved by
 pnpm as the newest 44.x release (Node 24.21.0, Chromium 152.0.7977.130
 inside it). The AGENTS.md rule 13 check of Electron's release notes for
 security releases was not done at the start of milestone 1: the registry
-lookup was blocked by the session's permission check. It is still
-owed.
+lookup was blocked by the session's permission check.
+
+Rule 13 check, 2026-09-25 (before milestone 3, at the owner's request):
+44.4.5 is the newest stable release (npm "latest", published
+2026-09-23); the supported lines are 44, 43 (43.7.5), and 42 (42.11.8);
+45 is in alpha. Its release notes list no security fixes, only
+"backported fixes from upstream ANGLE, Chromium, Dawn, PDFium and V8".
+No upgrade needed.
 
 Graphics on the build machine: NVIDIA GeForce RTX 4050 Laptop GPU and
 AMD Radeon integrated graphics; one 1920×1080 display at 100% scaling;
@@ -77,13 +83,13 @@ touchpad, no touch screen.
 | Telemetry | None. No analytics, no crash reporter. | Brief requirement. |
 | Camera | Fixed desk view with subtle mouse parallax; parallax pauses while the pointer is over the page | Simple and predictable; targets never move under the cursor. Free movement is a later milestone. |
 | Window frame | Standard OS title bar | Reliable on all three OSes; a custom frame is considered in the theme milestone. |
-| Tab ownership | The shell owns the tabs: each tab is a `<webview>` the shell creates once and keeps in its page | Follows from the milestone 1 decision to show pages as webviews in the shell: a webview lives in the shell's page and reloads if moved, so the shell must own it. The main process keeps the jobs only it can do: shortcuts, new-window rules, the right-click menu, favicons, snapshots. Changed in milestone 2 from "TabManager in the main process"; owner to confirm. |
+| Tab ownership | The shell owns the tabs: each tab is a `<webview>` the shell creates once and keeps in its page | Follows from the milestone 1 decision to show pages as webviews in the shell: a webview lives in the shell's page and reloads if moved, so the shell must own it. The main process keeps the jobs only it can do: shortcuts, new-window rules, the right-click menu, favicons, snapshots. Changed in milestone 2 from "TabManager in the main process"; confirmed with the milestone 2 approval (prompt 20). |
 | Keyboard shortcuts | Handled in the main process (before-input-event) for the shell and every page | Work wherever the keyboard focus is, including inside a page; the page never sees the shortcut keys. |
 | New windows | Always a tab: in front, or behind for Ctrl-click and middle-click; blocked unless the page had a click or key press in the last 5 seconds | Owner decision 2026-09-25 (prompt 19); 5 seconds matches Chromium's user-activation window. |
 | Right-click menu | Built in the main process from Chromium's context-menu data | Electron has none by default. |
 | App menu | None on Windows and Linux; standard app, Edit, and Window menus on macOS | Clipboard shortcuts need the Edit roles on macOS. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
-| Bookmarks and history | SQLite (better-sqlite3, prebuilt binaries; node:sqlite proposed instead, see open question 3) | Fast search over thousands of rows; standard for browsers. |
+| Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
 | Build | electron-vite (Vite) and electron-builder | Fast dev reload; installers for Windows, macOS, Linux. |
 | Tests | Vitest (unit), Playwright (Electron end-to-end) | Standard, cross-platform. |
@@ -151,6 +157,7 @@ hypersol-websurfer-3d/
                                first result; real work in a later milestone.
   docs/
     screens.md                 layout notes and states (from this document)
+    screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
     e2e/                       Playwright drives the built app (m1, m2 checks)
@@ -295,8 +302,8 @@ fonts, sound design, VR.
    three OSes. Check first whether Electron's bundled Node provides
    node:sqlite, which would remove the only native module. Checked
    2026-09-24 on Windows: node:sqlite works in Electron 44.4.5 (Node
-   24.21.0, SQLite 3.53.4). Proposed: use node:sqlite and drop
-   better-sqlite3. Needs owner approval; macOS and Linux not checked.
+   24.21.0, SQLite 3.53.4). Decided 2026-09-25 (prompt 20): use
+   node:sqlite; better-sqlite3 is dropped. macOS and Linux not checked.
 
 ## 11. Run and test
 
@@ -310,6 +317,10 @@ Checked on Windows 11, 2026-09-24 (macOS and Linux not checked yet):
 - End-to-end: `pnpm test:e2e` (milestone 1 and 2 checks, about 90
   seconds; needs openssl on PATH for the certificate-error check, which
   Git for Windows provides)
+
+Progress screenshots: `MILESTONE=m3 pnpm screenshots` builds the app and
+saves its main screens to docs/screenshots/m3/ (Electron's own capture,
+local test pages only).
 
 Not checked yet: `pnpm package` (installers per OS, milestone 7).
 

@@ -1,18 +1,19 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-25 (milestone 2 built, awaiting acceptance).
+Last updated 2026-09-25 (milestone 2 done, milestone 3 in planning).
 
 ## Where things stand
 
-Milestone 1 is done (accepted 2026-09-25). Milestone 2 (Browsing
-basics) is built: tabs as cards on an arc, top bar, shortcuts, start
-panel, error cards, right-click menu, new-window rules. Unit tests (73),
-lint, type check, and all 57 end-to-end checks pass; the intermittent
-C2 was traced to input sent in the same instant a page changes (details
-in TODO.md). Waiting for the owner's look-and-feel check (D12) and
-acceptance, and for confirmation of one architecture change: the shell,
-not the main process, owns the tabs (ARCHITECTURE.md section 4).
+Milestones 1 and 2 are done (accepted 2026-09-25): a usable browser in
+the 3D room with tabs as cards, top bar, shortcuts, start panel, error
+cards, right-click menu, and new-window rules; the "+" card is pinned.
+The shell owns the tabs (confirmed). node:sqlite replaces
+better-sqlite3. The Electron security check is done (44.4.5 is current,
+no security fixes pending). Milestone 3 (Memory and Settings) is being
+planned: its design questions need answers before the plan is final.
+Progress screenshots live in docs/screenshots/<milestone>/; capture them
+with `MILESTONE=mN pnpm screenshots` when a milestone is finished.
 
 A four-perspective documentation review (technical, product/UX,
 operational, business) ran on 2026-09-24. Its doc fixes and rule updates
@@ -47,8 +48,8 @@ browser repo for rules and the prompt log.
   privacy on by default. Desktop only. Mouse, keyboard, touch. Milestones
   1 to 7 in TODO.md make up the first result.
 - Stack: Electron (current supported stable line, 44 as of 2026-09-24),
-  TypeScript, Three.js, Lit, SQLite (better-sqlite3, unless node:sqlite
-  proves available), @ghostery/adblocker-electron, electron-vite,
+  TypeScript, Three.js, Lit, SQLite (node:sqlite, built into
+  Electron's Node), @ghostery/adblocker-electron, electron-vite,
   electron-builder, Vitest, Playwright. Reasons in ARCHITECTURE.md
   section 4.
 - Focused page is a live Chromium view (an Electron `<webview>`) placed
@@ -80,9 +81,8 @@ browser repo for rules and the prompt log.
 2. Whether clicks land correctly on a live page rotated in 3D. Answered
    by the milestone 1 spike (TODO.md task 8). Fallback is a flat,
    face-on live page; texture mode stays the later upgrade path.
-3. node:sqlite works in Electron 44.4.5 on Windows (checked
-   2026-09-24). Proposed: use it instead of better-sqlite3; needs owner
-   approval before milestone 3.
+3. Resolved: node:sqlite (works in Electron 44.4.5 on Windows; owner
+   decision 2026-09-25).
 
 ## Open items from the review (need an owner decision)
 
@@ -132,9 +132,10 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestone 2 awaits acceptance;
-   milestone 3 has no plan yet. Tick tasks and record check results in
-   TODO.md as they actually run.
+2. Do only what the prompt approves. Milestone 3's plan awaits the
+   owner's answers and approval. Tick tasks and record check results in
+   TODO.md as they actually run. At the end of each milestone, save
+   screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The
    installed set and versions are listed in TODO.md, milestone 1.
 4. Update README.md, ARCHITECTURE.md, TODO.md, and this file whenever a
@@ -174,9 +175,7 @@ repo's PROMPTS.md.
 
 - Milestones 2 onward are listed in TODO.md but not approved to build.
 - No code in the holoml repo yet.
-- The Electron release-notes security check (AGENTS.md rule 13) is
-  still owed for milestone 1; the lookup was blocked by a permission
-  check in the session.
+- Nothing owed from earlier milestones.
 - No SPEC.md in holoml (outline is part of milestone 7).
 - No git tags, branches, CI, issue templates, SECURITY.md, CONTRIBUTING.md,
   or GitHub settings.

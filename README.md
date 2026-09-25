@@ -7,10 +7,11 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestone 2 built, awaiting review.** A usable browser in a
-3D room: tabs as cards on an arc, a top bar with address and search,
-keyboard shortcuts, a start panel, error cards, and a right-click menu.
-See TODO.md and [Project documents](#project-documents).
+**Status: milestone 2 done; milestone 3 (bookmarks, history, settings)
+in planning.** A usable browser in a 3D room: tabs as cards on an arc, a
+top bar with address and search, keyboard shortcuts, a start panel,
+error cards, and a right-click menu. See [Progress](#progress), TODO.md,
+and [Project documents](#project-documents).
 
 ## The story
 
@@ -76,6 +77,25 @@ First useful result (see BRIEF.md):
 
 Later: HoloML page mode with a car showroom demo, images and 3D models
 lifted out of ordinary pages, free camera movement, mobile, VR, and more.
+
+## Progress
+
+Screenshots from each finished milestone, kept in
+[docs/screenshots](docs/screenshots).
+
+**Milestone 1: a live page in the 3D room.** A real website on a tilted
+panel, clicks and typing working.
+
+![Wikipedia on the tilted panel in the 3D room](docs/screenshots/m1/1-wikipedia-tilted.png)
+
+**Milestone 2: browsing basics.** Tabs as cards on an arc, the top bar,
+the start panel, and error cards.
+
+![Three tabs as cards on the left, a page tilted in the centre](docs/screenshots/m2/1-tabs.png)
+
+![The new-tab start panel with the "Nothing saved yet" empty state](docs/screenshots/m2/2-start-panel.png)
+
+![The "We couldn't find that site" error card](docs/screenshots/m2/3-error-card.png)
 
 ## HoloML
 

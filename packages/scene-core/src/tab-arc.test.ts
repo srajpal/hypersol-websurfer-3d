@@ -79,3 +79,41 @@ describe('scrolling', () => {
     expect(scrollToShow({ ...many, scroll: mid }, 3)).toBe(mid);
   });
 });
+
+describe('pinned "+" card', () => {
+  const pinned = { ...base, pinLast: true };
+
+  it('follows the last tab while the tabs fit', () => {
+    const { cards, maxScroll: max } = computeTabArc({ ...pinned, count: 3 });
+    expect(max).toBe(0);
+    expect(cards[1]!.position.y - cards[2]!.position.y).toBeCloseTo(156, 9);
+  });
+
+  it('stays at the bottom of the rail, in view, whatever the scroll', () => {
+    const many = { ...pinned, count: 13 }; // 12 tabs and the "+" card
+    for (const scroll of [0, 300, 1e6]) {
+      const { cards } = computeTabArc({ ...many, scroll });
+      const plus = cards[12]!;
+      expect(plus.opacity).toBe(1);
+      // Its centre is half a card above the rail bottom: world y = 400 - 702.
+      expect(plus.position.y).toBeCloseTo(-302, 9);
+    }
+  });
+
+  it('scrolls the tabs in the space above it', () => {
+    const many = { ...pinned, count: 13 };
+    // Tab area: 80..616 (the last slot of 156 is kept for "+").
+    expect(maxScroll(many)).toBe(12 * 140 + 11 * 16 - (616 - 80));
+    const end = computeTabArc({ ...many, scroll: 1e6 });
+    // The last tab ends just above the "+" card's slot.
+    expect(400 - end.cards[11]!.position.y + 70).toBeCloseTo(616, 9);
+    expect(end.cards[11]!.opacity).toBe(1);
+    expect(end.fits).toBe(3);
+  });
+
+  it('scrollToShow brings a tab above the "+" card', () => {
+    const many = { ...pinned, count: 13 };
+    expect(scrollToShow(many, 11)).toBe(maxScroll(many));
+    expect(scrollToShow(many, 12)).toBe(0); // the pinned card needs no scroll
+  });
+});
