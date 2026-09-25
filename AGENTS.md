@@ -11,12 +11,20 @@ plus HoloML, a 3D markup language kept in its own repository.
 - Brief: BRIEF.md (user, problem, idea, first result, later features)
 - Architecture: ARCHITECTURE.md (parts, files, decisions, screens, open questions)
 - Prompt log: PROMPTS.md (every prompt the owner gives, verbatim)
+- Handoff: HANDOFF.md (current state and how to resume; keep it current)
 - Browser repo: https://github.com/srajpal/hypersol-websurfer-3d
 - Language repo: https://github.com/srajpal/holoml
 - Local layout: two sibling folders, `hypersol-websurfer-3d/` (this repo)
   and `holoml/`, side by side under the same parent. Never nest one in
   the other. PROMPTS.md in this repo is the single prompt log for both.
 - License: Apache 2.0 (both repos); HoloML spec text also CC BY 4.0
+
+## Naming conventions
+
+- The company is "HyperSol", with no "LLC" or "Inc." after it.
+- The founders are named without job titles.
+- The browser is "HyperSol WebSurfer 3D"; the original 2001 product is
+  "HyperSol WebSurfer". The language is "HoloML", file extension `.holo`.
 
 ## Rules
 
@@ -44,8 +52,10 @@ plus HoloML, a 3D markup language kept in its own repository.
    the same change.
 10. Mark run and test steps "not checked yet" until they have actually
     been executed in this project. Record commands only after they ran.
-11. Do not commit or push without being asked. Never rewrite published
-    history.
+11. Commit after each completed, approved change, with a clear message
+    that says what changed and why. Do not push unless asked. When five
+    or more commits are waiting to be pushed, remind the owner at the end
+    of the reply. Never rewrite published history.
 
 ## Prompt log
 

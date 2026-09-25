@@ -114,3 +114,38 @@ make two folders one for each project so things do not get mixed up, use your be
 
 initialize git and do the first commit and push.
 ```
+
+## 9 — 2026-09-24
+
+Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Tokens: 140,177 at logging
+
+```text
+it all looks good. You can just use HyperSol without the LLC or Inc to refer to it in the future. leave the founder titles off of it.  update your docs. and write a handoff.
+```
+
+## 10 — 2026-09-24
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Tokens: 78,266 at logging
+
+```text
+Read BRIEF.md, ARCHITECTURE.md, AGENTS.MD, and any TODO.md or HANDOFF.md.
+
+If TODO.md does not exist, propose a roadmap for the full idea, with a useful result for each milestone. Otherwise preserve its names, completed work, and results. When creating or changing the roadmap, explain where screen layout, navigation, shared style, and later polish belong, and why. Recommend tasks within feature milestones or a separate design milestone when useful, not a fixed order for every app.
+
+Recommend the next unfinished target whose prerequisites are ready. Deal with an unresolved failure first. For a small requested change, keep the roadmap and plan only that change. Name the target and why it comes next.
+
+Before finalizing a target that changes screens or style, review our notes and ask specific questions about the decisions still needed. Cover relevant actions, navigation, content, layout, colors, text style, and waiting, empty, or error states. Ask up to three questions at a time, wait for answers, and offer simple choices when I am unsure. Do not repeat settled questions or add every sketched screen to this build.
+
+Break only this target into manageable tasks. Propose checks for agreed behavior, design choices, relevant failures, and earlier working features. Explain the expected results and plan any tests or sample inputs needed; I do not need to supply test files.
+
+Show the plan. After approval, save it in TODO.md, including design tasks and checks. Propose any needed brief, design, or rules update before changing it. Keep later work listed but not approved to build. Do not write app code. Wait for separate build approval.
+```
+
+## 10 — 2026-09-24
+
+Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Tokens: 146,235 at logging
+
+```text
+add a rule to commit after changes, if there are a bunch of commits remind me for a push.
+when a new session is started and CLAUDE.md is read make the session a remote control session. keeps this in CLAUDE.md so it only works in claude code. if there is an issue with that, let me know.
+```
