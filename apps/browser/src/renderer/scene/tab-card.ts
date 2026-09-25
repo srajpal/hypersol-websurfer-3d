@@ -1,0 +1,259 @@
+import { CanvasTexture, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace } from 'three';
+import type { Theme } from '@hypersol/themes';
+
+export const CARD_WIDTH = 200;
+export const CARD_HEIGHT = 150;
+const SCALE = 2; // canvas pixels per world unit, for sharp text
+const W = CARD_WIDTH * SCALE;
+const H = CARD_HEIGHT * SCALE;
+const SNAP = { x: 8, y: 8, w: W - 16, h: 228 };
+const BAR_Y = 244;
+const CLOSE = { cx: 366, cy: 268, r: 17 };
+
+export type CardPart = 'body' | 'close';
+
+export interface CardModel {
+  /** Tab id, or 'plus' for the new-tab card. */
+  key: number | 'plus';
+  title: string;
+  loading: boolean;
+  favicon?: string;
+  focused: boolean;
+}
+
+/**
+ * One tab card in the room: the page's snapshot, its favicon and title,
+ * and a close button (shown on hover, always on the focused card, so
+ * touch can reach it). Drawn into a canvas texture on a plane.
+ */
+export class TabCard {
+  readonly mesh: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  private readonly canvas = document.createElement('canvas');
+  private readonly ctx: CanvasRenderingContext2D;
+  private readonly texture: CanvasTexture;
+  private model: CardModel;
+  private snapshot: HTMLImageElement | null = null;
+  private favicon: HTMLImageElement | null = null;
+  private faviconSrc: string | undefined;
+  private hovered = false;
+  private hoverClose = false;
+  private spinAngle = 0;
+
+  constructor(
+    model: CardModel,
+    private readonly theme: Theme,
+    private readonly onRedraw: () => void,
+  ) {
+    this.model = model;
+    this.canvas.width = W;
+    this.canvas.height = H;
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) throw new Error('2D canvas unavailable');
+    this.ctx = ctx;
+    this.texture = new CanvasTexture(this.canvas);
+    this.texture.colorSpace = SRGBColorSpace;
+    this.mesh = new Mesh(
+      new PlaneGeometry(CARD_WIDTH, CARD_HEIGHT),
+      new MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false, fog: false }),
+    );
+    this.mesh.userData['card'] = this;
+    this.setFavicon(model.favicon);
+    this.draw();
+  }
+
+  get key(): number | 'plus' {
+    return this.model.key;
+  }
+
+  /** True while the card shows a spinner and needs frames. */
+  get spinning(): boolean {
+    return this.model.key !== 'plus' && this.model.loading && this.snapshot === null;
+  }
+
+  get hasSnapshot(): boolean {
+    return this.snapshot !== null;
+  }
+
+  update(model: CardModel): void {
+    const changed =
+      model.title !== this.model.title ||
+      model.loading !== this.model.loading ||
+      model.focused !== this.model.focused ||
+      model.favicon !== this.model.favicon;
+    this.model = model;
+    if (model.favicon !== this.faviconSrc) this.setFavicon(model.favicon);
+    if (changed) this.draw();
+  }
+
+  setSnapshot(dataUrl: string): void {
+    const img = new Image();
+    img.onload = () => {
+      this.snapshot = img;
+      this.draw();
+      this.onRedraw();
+    };
+    img.src = dataUrl;
+  }
+
+  setHover(hovered: boolean, overClose: boolean): boolean {
+    if (hovered === this.hovered && overClose === this.hoverClose) return false;
+    this.hovered = hovered;
+    this.hoverClose = overClose;
+    this.draw();
+    return true;
+  }
+
+  setOpacity(opacity: number): void {
+    this.mesh.material.opacity = opacity;
+    this.mesh.visible = opacity > 0;
+  }
+
+  /** Advances the spinner; call once per frame while spinning. */
+  tick(dtMs: number): void {
+    this.spinAngle = (this.spinAngle + dtMs * 0.006) % (Math.PI * 2);
+    this.draw();
+  }
+
+  /** Which part of the card a texture coordinate falls on. */
+  partAt(u: number, v: number): CardPart {
+    const x = u * W;
+    const y = (1 - v) * H;
+    const showsClose = this.model.key !== 'plus' && (this.hovered || this.model.focused);
+    if (showsClose && Math.hypot(x - CLOSE.cx, y - CLOSE.cy) <= CLOSE.r + 6) return 'close';
+    return 'body';
+  }
+
+  /** A point on the card in its local coordinates (for tests and hit checks). */
+  static localPoint(part: CardPart): { x: number; y: number } {
+    if (part === 'close') return { x: CLOSE.cx / SCALE - CARD_WIDTH / 2, y: CARD_HEIGHT / 2 - CLOSE.cy / SCALE };
+    return { x: 0, y: 12 };
+  }
+
+  dispose(): void {
+    this.texture.dispose();
+    this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
+  }
+
+  private setFavicon(src: string | undefined): void {
+    this.faviconSrc = src;
+    this.favicon = null;
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => {
+      if (this.faviconSrc !== src) return;
+      this.favicon = img;
+      this.draw();
+      this.onRedraw();
+    };
+    img.src = src;
+  }
+
+  private draw(): void {
+    const { ctx } = this;
+    const c = this.theme.colors;
+    const focused = this.model.focused;
+    ctx.clearRect(0, 0, W, H);
+
+    roundRect(ctx, 2, 2, W - 4, H - 4, 18);
+    ctx.fillStyle = c.panelGlass;
+    ctx.globalAlpha = 0.92;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = focused ? 5 : 3;
+    ctx.strokeStyle = focused ? c.accent : this.hovered ? c.text : c.textMuted;
+    if (this.model.key === 'plus') ctx.setLineDash([14, 10]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (this.model.key === 'plus') {
+      ctx.fillStyle = this.hovered ? c.accent : c.text;
+      ctx.font = '300 110px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('+', W / 2, 118);
+      ctx.font = '600 24px system-ui, sans-serif';
+      ctx.fillText('New tab', W / 2, 238);
+      this.texture.needsUpdate = true;
+      return;
+    }
+
+    // Snapshot area.
+    ctx.save();
+    roundRect(ctx, SNAP.x, SNAP.y, SNAP.w, SNAP.h, 12);
+    ctx.clip();
+    if (this.snapshot) {
+      const img = this.snapshot;
+      const scale = Math.max(SNAP.w / img.width, SNAP.h / img.height);
+      // Top of the page, like a thumbnail.
+      ctx.drawImage(img, SNAP.x + (SNAP.w - img.width * scale) / 2, SNAP.y, img.width * scale, img.height * scale);
+    } else {
+      ctx.fillStyle = c.backgroundTop;
+      ctx.fillRect(SNAP.x, SNAP.y, SNAP.w, SNAP.h);
+      if (this.spinning) {
+        ctx.strokeStyle = c.accent;
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(W / 2, SNAP.y + SNAP.h / 2, 26, this.spinAngle, this.spinAngle + Math.PI * 1.4);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = c.textMuted;
+        ctx.font = '600 64px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((this.model.title.trim()[0] ?? '·').toUpperCase(), W / 2, SNAP.y + SNAP.h / 2);
+      }
+    }
+    ctx.restore();
+
+    // Label bar: favicon, title, close button.
+    let textX = 18;
+    if (this.favicon) {
+      ctx.drawImage(this.favicon, 16, BAR_Y + 8, 32, 32);
+      textX = 58;
+    }
+    const showsClose = this.hovered || focused;
+    const maxText = (showsClose ? CLOSE.cx - CLOSE.r - 10 : W - 16) - textX;
+    ctx.fillStyle = c.text;
+    ctx.font = '500 22px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fit(ctx, this.model.title || 'Untitled', maxText), textX, BAR_Y + 24);
+
+    if (showsClose) {
+      ctx.beginPath();
+      ctx.arc(CLOSE.cx, CLOSE.cy, CLOSE.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.hoverClose ? c.accent : c.backgroundTop;
+      ctx.fill();
+      ctx.strokeStyle = this.hoverClose ? c.backgroundBottom : c.text;
+      ctx.lineWidth = 3;
+      const d = 6;
+      ctx.beginPath();
+      ctx.moveTo(CLOSE.cx - d, CLOSE.cy - d);
+      ctx.lineTo(CLOSE.cx + d, CLOSE.cy + d);
+      ctx.moveTo(CLOSE.cx + d, CLOSE.cy - d);
+      ctx.lineTo(CLOSE.cx - d, CLOSE.cy + d);
+      ctx.stroke();
+    }
+    this.texture.needsUpdate = true;
+  }
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+}
+
+/** Shortens text with an ellipsis to fit a width. */
+function fit(ctx: CanvasRenderingContext2D, text: string, width: number): string {
+  if (ctx.measureText(text).width <= width) return text;
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (ctx.measureText(`${text.slice(0, mid)}…`).width <= width) lo = mid;
+    else hi = mid - 1;
+  }
+  return `${text.slice(0, lo)}…`;
+}

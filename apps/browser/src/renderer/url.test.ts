@@ -1,5 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAddress } from './url';
+import { normalizeAddress, resolveInput } from './url';
+
+describe('resolveInput', () => {
+  it('loads web addresses', () => {
+    expect(resolveInput('example.com')).toEqual({ kind: 'address', url: 'https://example.com/' });
+  });
+
+  it('searches DuckDuckGo for anything else', () => {
+    expect(resolveInput('3d web browser')).toEqual({
+      kind: 'search',
+      url: 'https://duckduckgo.com/?q=3d%20web%20browser',
+      query: '3d web browser',
+    });
+    expect(resolveInput('hello')!.kind).toBe('search');
+    // Never runs script-like input; it becomes a search.
+    expect(resolveInput('javascript:alert(1)')).toEqual({
+      kind: 'search',
+      url: 'https://duckduckgo.com/?q=javascript%3Aalert(1)',
+      query: 'javascript:alert(1)',
+    });
+  });
+
+  it('uses another search address when given one', () => {
+    expect(resolveInput('a&b', 'http://127.0.0.1:9/search?q=%s')!.url).toBe('http://127.0.0.1:9/search?q=a%26b');
+  });
+
+  it('ignores empty input', () => {
+    expect(resolveInput('   ')).toBeNull();
+  });
+});
 
 describe('normalizeAddress', () => {
   it('keeps full web addresses', () => {

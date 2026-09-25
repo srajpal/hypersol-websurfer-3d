@@ -10,6 +10,13 @@ import { _electron as electron, type ElectronApplication, type Page } from 'play
 export const APP_DIR = resolve(fileURLToPath(new URL('../../apps/browser/', import.meta.url)));
 const electronPath = createRequire(join(APP_DIR, 'package.json'))('electron') as unknown as string;
 
+/**
+ * Chromium switch for every test run: no host name resolves except this
+ * machine, so nothing can leave it, and any other name reports "address
+ * not found" at once.
+ */
+export const OFFLINE_RULES = '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost';
+
 export interface Point {
   x: number;
   y: number;
@@ -25,6 +32,8 @@ export interface Harness {
 
 export interface LaunchOptions {
   tilt?: number;
+  /** Search address with %s (a local stand-in for DuckDuckGo). */
+  searchUrl?: string;
 }
 
 /**
@@ -45,11 +54,12 @@ function cleanEnv(): Record<string, string> {
   return env;
 }
 
-/** Launches the built app with a throwaway profile and test hooks on. */
+/** Launches the built app with a throwaway profile and test hooks on. An empty start address opens a start tab. */
 export async function launch(startUrl: string, opts: LaunchOptions = {}): Promise<Harness> {
   const userDataDir = await mkdtemp(join(tmpdir(), 'hypersol-e2e-'));
-  const args = [APP_DIR, `--start-url=${startUrl}`, `--hypersol-user-data=${userDataDir}`];
+  const args = [APP_DIR, `--start-url=${startUrl}`, `--hypersol-user-data=${userDataDir}`, OFFLINE_RULES];
   if (opts.tilt !== undefined) args.push(`--tilt=${opts.tilt}`);
+  if (opts.searchUrl !== undefined) args.push(`--search-url=${opts.searchUrl}`);
   const app = await electron.launch({
     executablePath: electronPath,
     args,
@@ -93,30 +103,83 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
 export interface ShellHooks {
   ready: boolean;
   frames(): number;
-  layout(): { panelWidth: number; panelHeight: number; cameraZ: number };
+  layout(): { panelWidth: number; panelHeight: number; cameraZ: number; viewportWidth: number; viewportHeight: number };
   cameraOffset(): Point;
   parallaxPaused(): boolean;
   projectPagePoint(u: number, v: number): Point;
   panelQuad(): Point[];
   sceneColors(): Record<string, string>;
-  status(): { state: string; url: string; title?: string; message?: string };
+  status(): { state: string; url: string; title?: string; message?: string } | null;
+  tabs(): TabInfo[];
+  focusedTabId(): number;
+  cardPoint(key: number | 'plus', part: 'body' | 'close'): Point | null;
+  rail(): { scroll: number; maxScroll: number; fits: number };
+  animating(): boolean;
+  webContentsIdOf(tabId: number): number | null;
+}
+
+export interface TabInfo {
+  id: number;
+  url: string;
+  title: string;
+  state: string;
+  focused: boolean;
+  hasSnapshot: boolean;
+  hasFavicon: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
 }
 
 export type ShellWindow = Window & { __hypersolShellTest: ShellHooks };
 
-/** Runs JavaScript inside a web page (a webview guest), chosen by address. */
-export async function inPage<T>(h: Harness, expression: string, urlPart = ''): Promise<T> {
+type HookFn = { [K in keyof ShellHooks]: ShellHooks[K] extends (...a: never[]) => unknown ? K : never }[keyof ShellHooks];
+
+/** Calls one of the shell's test hooks by name. */
+export function shellCall<K extends HookFn>(
+  h: Harness,
+  name: K,
+  ...args: Parameters<ShellHooks[K]>
+): Promise<Awaited<ReturnType<ShellHooks[K]>>> {
+  return h.shell.evaluate(
+    ([name, args]) => {
+      const k = (window as unknown as ShellWindow).__hypersolShellTest as unknown as Record<
+        string,
+        (...a: unknown[]) => unknown
+      >;
+      return k[name]!(...args);
+    },
+    [name, args] as [string, unknown[]],
+  ) as Promise<Awaited<ReturnType<ShellHooks[K]>>>;
+}
+
+/** A web page, by part of its address or by web contents id. */
+export type PageRef = string | { id: number };
+
+/** Runs JavaScript inside a web page (a webview guest). An address part picks the newest match. */
+export async function inPage<T>(h: Harness, expression: string, page: PageRef = ''): Promise<T> {
   return h.app.evaluate(
-    async ({ webContents }, { expression, urlPart }) => {
+    async ({ webContents }, { expression, page }) => {
       const guests = webContents
         .getAllWebContents()
-        .filter((w) => w.getType() === 'webview' && w.getURL().includes(urlPart));
+        .filter(
+          (w) =>
+            w.getType() === 'webview' &&
+            (typeof page === 'string' ? w.getURL().includes(page) : w.id === page.id),
+        );
       const guest = guests[guests.length - 1];
-      if (!guest) throw new Error(`No web page matching "${urlPart}"`);
+      if (!guest) throw new Error(`No web page matching ${JSON.stringify(page)}`);
       return guest.executeJavaScript(expression, true);
     },
-    { expression, urlPart },
+    { expression, page },
   ) as Promise<T>;
+}
+
+/** The focused tab's web page. */
+export async function focusedPage(h: Harness): Promise<{ id: number }> {
+  const tabId = await shellCall(h, 'focusedTabId');
+  const id = await shellCall(h, 'webContentsIdOf', tabId);
+  if (id === null) throw new Error('The focused tab has no web page');
+  return { id };
 }
 
 export async function waitFor<T>(
@@ -144,43 +207,40 @@ export async function waitFor<T>(
   );
 }
 
+const PAINTED = 'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))';
+
 /**
- * Waits until a page whose address contains urlPart has loaded and
- * painted. Chromium ignores input to a page until its first paint (so
- * does Chrome), and "loaded" can come a moment before that; a person
- * cannot click what has not appeared yet, so tests wait for the paint.
+ * Waits until the page's latest paint is on screen: two frames in the
+ * page, then two frames in the shell, which composites the page into the
+ * window. Input sent before the shell's frames is routed to the shell,
+ * not the page (found 2026-09-25; the cause of the intermittent C2 and
+ * the lost first right-click in D8). A person cannot click in that
+ * window either: nothing new has appeared yet.
  */
-export async function waitForPage(h: Harness, urlPart: string): Promise<void> {
-  await waitFor(
-    `page ${urlPart} to load`,
-    () => inPage<string>(h, 'document.readyState', urlPart),
-    (s) => s === 'complete',
-  );
-  await inPage(
-    h,
-    'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))',
-    urlPart,
-  );
+async function onScreen(h: Harness, page: PageRef): Promise<void> {
+  await inPage(h, PAINTED, page);
+  await h.shell.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true)))));
 }
 
-type HookFn = { [K in keyof ShellHooks]: ShellHooks[K] extends (...a: never[]) => unknown ? K : never }[keyof ShellHooks];
+/**
+ * Waits until a page has loaded and its paint is on screen, and any
+ * switch animation has finished. Chromium ignores input to a page until
+ * its first paint (so does Chrome), and "loaded" can come a moment
+ * before that; a person cannot click what has not appeared yet.
+ */
+export async function waitForPage(h: Harness, page: PageRef): Promise<void> {
+  await waitFor(
+    `page ${JSON.stringify(page)} to load`,
+    () => inPage<string>(h, 'document.readyState', page),
+    (s) => s === 'complete',
+  );
+  await settled(h);
+  await onScreen(h, page);
+}
 
-/** Calls one of the shell's test hooks by name. */
-export function shellCall<K extends HookFn>(
-  h: Harness,
-  name: K,
-  ...args: Parameters<ShellHooks[K]>
-): Promise<Awaited<ReturnType<ShellHooks[K]>>> {
-  return h.shell.evaluate(
-    ([name, args]) => {
-      const k = (window as unknown as ShellWindow).__hypersolShellTest as unknown as Record<
-        string,
-        (...a: unknown[]) => unknown
-      >;
-      return k[name]!(...args);
-    },
-    [name, args] as [string, unknown[]],
-  ) as Promise<Awaited<ReturnType<ShellHooks[K]>>>;
+/** Waits until any switch animation has finished. */
+export function settled(h: Harness): Promise<boolean> {
+  return waitFor('switch animation to finish', () => shellCall(h, 'animating'), (a) => !a);
 }
 
 export function project(h: Harness, u: number, v: number): Promise<Point> {
@@ -188,19 +248,33 @@ export function project(h: Harness, u: number, v: number): Promise<Point> {
 }
 
 /** Centre of an element inside the web page, in page pixels. */
-export function pageCentre(h: Harness, selector: string, urlPart = ''): Promise<Point> {
+export function pageCentre(h: Harness, selector: string, page: PageRef = ''): Promise<Point> {
   return inPage<Point>(
     h,
     `(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`,
-    urlPart,
+    page,
   );
 }
 
 /** Screen point of an element inside the web page, through the 3D tilt. */
-export async function screenPointOf(h: Harness, selector: string, urlPart = ''): Promise<Point> {
-  const c = await pageCentre(h, selector, urlPart);
+export async function screenPointOf(h: Harness, selector: string, page: PageRef = ''): Promise<Point> {
+  const c = await pageCentre(h, selector, page);
   return project(h, c.x, c.y);
+}
+
+/**
+ * Clicks at a screen point the way a person does: the pointer arrives and
+ * rests for a frame, then the button goes down. Playwright's own click
+ * moves and presses in the same instant; right after a page appears,
+ * moves, or resizes, that first instant's events can be routed to the
+ * shell instead of the page (found 2026-09-25, TODO.md C2). A pointer
+ * that has already arrived is routed correctly.
+ */
+export async function clickAt(h: Harness, p: Point, options: { button?: 'left' | 'right' } = {}): Promise<void> {
+  await h.shell.mouse.move(p.x, p.y);
+  await h.shell.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true)))));
+  await h.shell.mouse.click(p.x, p.y, options);
 }
 
 /** Resizes the window's content area and waits for the page to follow. */
@@ -214,14 +288,20 @@ export async function setContentSize(h: Harness, width: number, height: number):
     () => h.shell.evaluate(() => [window.innerWidth, window.innerHeight]),
     ([w, ht]) => w === width && ht === height,
   );
-  const layout = await shellCall(h, 'layout');
+  // The room lays out again on the resize event, a frame after the size changes.
+  const layout = await waitFor(
+    'the room to lay out for the new size',
+    () => shellCall(h, 'layout'),
+    (l) => l.viewportWidth === width && l.viewportHeight === height,
+  );
+  const page = await focusedPage(h);
   await waitFor(
     'page to match the panel size',
-    () => inPage<number[]>(h, '[window.innerWidth, window.innerHeight]'),
+    () => inPage<number[]>(h, '[window.innerWidth, window.innerHeight]', page),
     ([w, ht]) => w === layout.panelWidth && ht === layout.panelHeight,
   );
-  // As after a load: wait until the resized page has painted.
-  await inPage(h, 'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))');
+  // As after a load: wait until the resized page is on screen.
+  await onScreen(h, page);
 }
 
 /**
@@ -234,14 +314,18 @@ export async function setContentSize(h: Harness, width: number, height: number):
  * page's own view here; the click that focuses the field still goes
  * through the window's real routing and hit-testing.
  */
-export async function typeInPage(h: Harness, text: string, urlPart = ''): Promise<void> {
+export async function typeInPage(h: Harness, text: string, page: PageRef = ''): Promise<void> {
   await h.app.evaluate(
-    ({ webContents }, { text, urlPart }) => {
+    ({ webContents }, { text, page }) => {
       const guests = webContents
         .getAllWebContents()
-        .filter((w) => w.getType() === 'webview' && w.getURL().includes(urlPart));
+        .filter(
+          (w) =>
+            w.getType() === 'webview' &&
+            (typeof page === 'string' ? w.getURL().includes(page) : w.id === page.id),
+        );
       const guest = guests[guests.length - 1];
-      if (!guest) throw new Error(`No web page matching "${urlPart}"`);
+      if (!guest) throw new Error(`No web page matching ${JSON.stringify(page)}`);
       for (const ch of text) {
         const key = ch === '\n' ? 'Enter' : ch;
         guest.sendInputEvent({ type: 'keyDown', keyCode: key });
@@ -249,8 +333,86 @@ export async function typeInPage(h: Harness, text: string, urlPart = ''): Promis
         guest.sendInputEvent({ type: 'keyUp', keyCode: key });
       }
     },
-    { text, urlPart },
+    { text, page },
   );
+}
+
+/** Presses a key, with modifiers, inside a web page (see typeInPage). */
+export async function pressInPage(
+  h: Harness,
+  keyCode: string,
+  modifiers: ('control' | 'shift' | 'alt' | 'meta')[] = [],
+  page?: PageRef,
+): Promise<void> {
+  const target = page ?? (await focusedPage(h));
+  await h.app.evaluate(
+    ({ webContents }, { keyCode, modifiers, target }) => {
+      const guest = webContents
+        .getAllWebContents()
+        .filter(
+          (w) =>
+            w.getType() === 'webview' &&
+            (typeof target === 'string' ? w.getURL().includes(target) : w.id === target.id),
+        )
+        .pop();
+      if (!guest) throw new Error('No web page to press keys in');
+      guest.sendInputEvent({ type: 'keyDown', keyCode, modifiers });
+      guest.sendInputEvent({ type: 'keyUp', keyCode, modifiers });
+    },
+    { keyCode, modifiers, target },
+  );
+}
+
+/**
+ * Presses a key in the shell window through Electron's input path, which
+ * is where the main process sees browser shortcuts. Playwright's keyboard
+ * reaches the shell's page but skips that path, so it cannot test them.
+ */
+export async function pressInShell(
+  h: Harness,
+  keyCode: string,
+  modifiers: ('control' | 'shift' | 'alt' | 'meta')[] = [],
+): Promise<void> {
+  await h.app.evaluate(
+    ({ BrowserWindow }, { keyCode, modifiers }) => {
+      const wc = BrowserWindow.getAllWindows()[0]!.webContents;
+      wc.sendInputEvent({ type: 'keyDown', keyCode, modifiers });
+      wc.sendInputEvent({ type: 'keyUp', keyCode, modifiers });
+    },
+    { keyCode, modifiers },
+  );
+}
+
+// ---- Top bar, tabs, and cards -------------------------------------------
+
+export const ADDRESS = 'hs-toolbar [data-testid="address"]';
+
+/** Types into the address bar and presses Enter. */
+export async function navigateTo(h: Harness, text: string): Promise<void> {
+  await h.shell.fill(ADDRESS, text);
+  await h.shell.press(ADDRESS, 'Enter');
+}
+
+export function tabs(h: Harness): Promise<TabInfo[]> {
+  return shellCall(h, 'tabs');
+}
+
+export async function focusedTab(h: Harness): Promise<TabInfo> {
+  const tab = (await tabs(h)).find((t) => t.focused);
+  if (!tab) throw new Error('No focused tab');
+  return tab;
+}
+
+/** Clicks a tab card (or the "+" card), on its body or its close button. */
+export async function clickCard(h: Harness, key: number | 'plus', part: 'body' | 'close' = 'body'): Promise<void> {
+  // While a page flies to or from its card it can cover the cards; a
+  // person waits for the motion to end.
+  await settled(h);
+  const p = await shellCall(h, 'cardPoint', key, part);
+  if (!p) throw new Error(`Card ${key} is not showing`);
+  // Hover first, as a person would, so the close button appears.
+  await h.shell.mouse.move(p.x, p.y, { steps: 3 });
+  await h.shell.mouse.click(p.x, p.y);
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

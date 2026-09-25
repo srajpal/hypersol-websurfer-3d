@@ -7,9 +7,10 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestone 1 in progress.** The first app code exists: one live
-web page on a tilted panel in a 3D room. See TODO.md and
-[Project documents](#project-documents).
+**Status: milestone 2 built, awaiting review.** A usable browser in a
+3D room: tabs as cards on an arc, a top bar with address and search,
+keyboard shortcuts, a start panel, error cards, and a right-click menu.
+See TODO.md and [Project documents](#project-documents).
 
 ## The story
 
@@ -104,22 +105,24 @@ and similar services will not play.
 
 ## Building and running
 
-Early development: milestone 1 is in progress. Checked on Windows 11
-only (macOS and Linux not checked yet). You need Node 22 and pnpm.
+Early development. Checked on Windows 11 only (macOS and Linux not
+checked yet). You need Node 22 and pnpm.
 
 ```
 pnpm install
 pnpm dev
 ```
 
-`pnpm dev` opens the app with one web page on a tilted panel in a 3D
-room and a temporary address field at the top. Development runs use a
+`pnpm dev` opens the app on a start tab. Type an address or a search
+in the top bar; Ctrl+T opens a tab, Ctrl+W closes one, Ctrl+Tab moves
+between them, and the cards on the left switch tabs. Development runs use a
 throwaway profile in the `userData/` folder, never your normal browser
 data.
 
 Tests: `pnpm test` (unit), `pnpm lint`, `pnpm typecheck`, and
-`pnpm test:e2e` (builds the app and drives it; opens windows while it
-runs). Current results are in TODO.md.
+`pnpm test:e2e` (builds the app and drives it for about 90 seconds;
+opens windows while it runs, and needs openssl on PATH, which Git for
+Windows provides). Current results are in TODO.md.
 
 ## Contributing
 

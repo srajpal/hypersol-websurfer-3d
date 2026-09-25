@@ -38,6 +38,7 @@ body {
   outline: 1px solid var(--hs-accent);
   box-shadow: 0 0 calc(48px * var(--hs-glow-strength))
     color-mix(in srgb, var(--hs-accent) 55%, transparent);
+  overflow: hidden;
 }
 
 .hs-panel webview {
@@ -46,79 +47,179 @@ body {
   height: 100%;
 }
 
-.hs-panel-overlay {
+/* Waiting: a soft shimmer over a new page until it first draws. */
+.hs-shimmer {
   position: absolute;
   inset: 0;
   display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+  background: linear-gradient(
+      100deg,
+      transparent 20%,
+      color-mix(in srgb, var(--hs-accent) 18%, transparent) 50%,
+      transparent 80%
+    ),
+    var(--hs-panel-glass);
+  background-size: 250% 100%, auto;
+  animation: hs-shimmer 1.4s linear infinite;
+}
+
+.hs-shimmer[data-visible] {
+  display: block;
+}
+
+@keyframes hs-shimmer {
+  from {
+    background-position: 125% 0, 0 0;
+  }
+  to {
+    background-position: -125% 0, 0 0;
+  }
+}
+
+/* Error cards, inside the page panel. */
+.hs-error-card-layer {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
   padding: 24px;
+  background: linear-gradient(180deg, var(--hs-background-top), var(--hs-background-bottom));
+}
+
+.hs-error-card-layer[data-visible] {
+  display: grid;
+}
+
+.hs-error-card {
+  max-width: 520px;
+  padding: 28px 32px;
+  border-radius: 14px;
+  border: 1px solid var(--hs-accent);
   background: var(--hs-panel-glass);
   color: var(--hs-text);
-  font-size: 16px;
-  text-align: center;
+  box-shadow: 0 0 calc(40px * var(--hs-glow-strength)) color-mix(in srgb, var(--hs-accent) 35%, transparent);
+  text-align: left;
 }
 
-.hs-panel-overlay[data-visible] {
-  display: flex;
+.hs-error-card[data-kind='certificate'] {
+  border-color: #ff8a65;
 }
 
-.hs-panel-overlay .hs-overlay-detail {
+.hs-error-card h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.hs-error-card p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.hs-error-card .hs-error-address {
   color: var(--hs-text-muted);
   font-size: 13px;
   word-break: break-all;
-  max-width: 80%;
 }
 
-.hs-panel-overlay button {
+.hs-error-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.hs-error-actions button,
+.hs-start button {
   font: inherit;
   font-size: 14px;
   padding: 6px 18px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--hs-accent);
   background: transparent;
   color: var(--hs-text);
   cursor: pointer;
 }
 
-.hs-panel-overlay button:focus-visible {
+.hs-error-actions button:focus-visible {
   outline: 2px solid var(--hs-accent);
   outline-offset: 2px;
 }
 
-#dev-address {
-  position: fixed;
-  top: 12px;
-  left: 40px;
-  right: 40px;
-  z-index: 10;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 0;
+/* The new-tab start panel. */
+.hs-start {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 10% 12% 24px;
+  overflow: auto;
+  background: linear-gradient(180deg, var(--hs-background-top), var(--hs-background-bottom));
+  color: var(--hs-text);
 }
 
-#dev-address input {
-  flex: 1;
-  max-width: 720px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid var(--hs-text-muted);
+.hs-start h1 {
+  margin: 0 0 24px;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hs-start-search input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 640px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--hs-accent) 50%, transparent);
   background: var(--hs-panel-glass);
   color: var(--hs-text);
   font: inherit;
-  font-size: 14px;
+  font-size: 16px;
 }
 
-#dev-address input:focus {
+.hs-start-search input:focus {
   outline: 2px solid var(--hs-accent);
   outline-offset: 1px;
 }
 
-#dev-status {
+.hs-start-section {
+  margin-top: 32px;
+}
+
+.hs-start-section h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--hs-text-muted);
-  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hs-empty {
+  margin: 0;
+  font-size: 16px;
+}
+
+.hs-empty-hint {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--hs-text-muted);
+}
+
+/* Visually hidden, still read by screen readers and reachable by keyboard. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-shimmer {
+    animation: none;
+  }
 }

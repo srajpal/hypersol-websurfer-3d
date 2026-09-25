@@ -1,7 +1,9 @@
+/** DuckDuckGo, the default search engine (ARCHITECTURE.md section 4). */
+export const DEFAULT_SEARCH_URL = 'https://duckduckgo.com/?q=%s';
+
 /**
- * Turns what was typed into the temporary address field into a web
- * address, or null if it is not one. Search from the address bar comes
- * with the HUD in milestone 2.
+ * Turns typed text into a web address, or null if it is not one.
+ * Only http, https, and the blank page are accepted.
  */
 export function normalizeAddress(input: string): string | null {
   const text = input.trim();
@@ -26,4 +28,21 @@ function parse(text: string): string | null {
   } catch {
     return null;
   }
+}
+
+export type AddressResult =
+  | { kind: 'address'; url: string }
+  | { kind: 'search'; url: string; query: string };
+
+/**
+ * What the address bar does with typed text: load it if it is a web
+ * address, otherwise search for it. Null for empty text.
+ * searchUrl contains %s where the encoded query goes.
+ */
+export function resolveInput(input: string, searchUrl = DEFAULT_SEARCH_URL): AddressResult | null {
+  const query = input.trim();
+  if (query === '') return null;
+  const url = normalizeAddress(query);
+  if (url !== null) return { kind: 'address', url };
+  return { kind: 'search', url: searchUrl.replace('%s', encodeURIComponent(query)), query };
 }

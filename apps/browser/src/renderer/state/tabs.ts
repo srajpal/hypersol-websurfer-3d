@@ -1,0 +1,133 @@
+/**
+ * The tab list and which tab is focused. Pure data: the shell's
+ * controller turns changes here into pages, cards, and HUD updates.
+ */
+
+export type TabState = 'start' | 'loading' | 'loaded' | 'failed' | 'crashed';
+
+export interface Tab {
+  id: number;
+  /** Address shown for the tab; '' for a start tab. */
+  url: string;
+  title: string;
+  state: TabState;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  /** Favicon as a data: URL, when the page has one. */
+  favicon?: string;
+}
+
+export interface OpenOptions {
+  url?: string;
+  /** Open behind the focused tab instead of in front. */
+  background?: boolean;
+  /** Put the new tab right after this one (the tab that opened it). */
+  afterId?: number;
+}
+
+export type TabsListener = (tabs: TabStore) => void;
+
+export class TabStore {
+  private list: Tab[] = [];
+  private focused = -1;
+  private nextId = 1;
+  private readonly listeners = new Set<TabsListener>();
+
+  get tabs(): readonly Tab[] {
+    return this.list;
+  }
+
+  get focusedId(): number {
+    return this.focused;
+  }
+
+  get focusedTab(): Tab | undefined {
+    return this.get(this.focused);
+  }
+
+  get(id: number): Tab | undefined {
+    return this.list.find((t) => t.id === id);
+  }
+
+  indexOf(id: number): number {
+    return this.list.findIndex((t) => t.id === id);
+  }
+
+  subscribe(listener: TabsListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /** Opens a tab and returns it. A tab without an address is a start tab. */
+  open(options: OpenOptions = {}): Tab {
+    const url = options.url ?? '';
+    const tab: Tab = {
+      id: this.nextId++,
+      url,
+      title: url === '' ? 'New tab' : url,
+      state: url === '' ? 'start' : 'loading',
+      canGoBack: false,
+      canGoForward: false,
+    };
+    const after = options.afterId === undefined ? -1 : this.indexOf(options.afterId);
+    if (after >= 0) {
+      this.list.splice(after + 1, 0, tab);
+    } else {
+      this.list.push(tab);
+    }
+    if (!options.background || this.focused === -1) this.focused = tab.id;
+    this.emit();
+    return tab;
+  }
+
+  focus(id: number): void {
+    if (id === this.focused || !this.get(id)) return;
+    this.focused = id;
+    this.emit();
+  }
+
+  /**
+   * Closes a tab. Focus moves to the tab on the right, or the left if it
+   * was last. Closing the only tab leaves a fresh start tab, so the
+   * window always has a page.
+   */
+  close(id: number): void {
+    const i = this.indexOf(id);
+    if (i === -1) return;
+    this.list.splice(i, 1);
+    if (this.list.length === 0) {
+      this.focused = -1;
+      this.open();
+      return;
+    }
+    if (this.focused === id) {
+      this.focused = (this.list[i] ?? this.list[i - 1])!.id;
+    }
+    this.emit();
+  }
+
+  /** Focuses the next tab (or previous with step -1), wrapping around. */
+  cycle(step: 1 | -1): void {
+    if (this.list.length < 2) return;
+    const i = this.indexOf(this.focused);
+    const next = (i + step + this.list.length) % this.list.length;
+    this.focus(this.list[next]!.id);
+  }
+
+  update(id: number, changes: Partial<Omit<Tab, 'id'>>): void {
+    const tab = this.get(id);
+    if (!tab) return;
+    let changed = false;
+    for (const [key, value] of Object.entries(changes) as [keyof Tab, unknown][]) {
+      if (tab[key] !== value) {
+        (tab as unknown as Record<string, unknown>)[key] = value;
+        changed = true;
+      }
+    }
+    if (changed) this.emit();
+  }
+
+  private emit(): void {
+    for (const listener of this.listeners) listener(this);
+  }
+}

@@ -2,14 +2,16 @@ import { DEFAULT_TILT_DEG, clampTilt } from '@hypersol/scene-core';
 import { isAllowedPageUrl } from './security';
 
 export interface LaunchOptions {
-  /** First page to show. */
+  /** First page to show; '' opens a start tab. */
   startUrl: string;
   /** Page tilt in degrees, 0 to 20. */
   tiltDeg: number;
   /** Profile folder for this run, if given on the command line. */
   userDataDir?: string;
-  /** Set by the end-to-end tests: records attach and request logs. */
+  /** Set by the end-to-end tests: records logs and exposes test hooks. */
   testMode: boolean;
+  /** Test mode only: search address with %s, in place of DuckDuckGo. */
+  searchUrl?: string;
 }
 
 function switchValue(argv: readonly string[], name: string): string | undefined {
@@ -20,9 +22,10 @@ function switchValue(argv: readonly string[], name: string): string | undefined 
 
 /**
  * Reads the launch options:
- *   --start-url=<http(s) address>   first page (default about:blank)
+ *   --start-url=<http(s) address>   first page (default: a start tab)
  *   --tilt=<degrees>                page tilt, clamped to 0..20 (default 10)
  *   --hypersol-user-data=<folder>   profile folder for this run
+ *   --search-url=<address with %s>  search engine, test mode only
  * and HYPERSOL_TEST=1 for test mode.
  */
 export function parseLaunchOptions(
@@ -32,10 +35,17 @@ export function parseLaunchOptions(
   const url = switchValue(argv, 'start-url');
   const tilt = switchValue(argv, 'tilt');
   const userDataDir = switchValue(argv, 'hypersol-user-data');
+  const testMode = env['HYPERSOL_TEST'] === '1';
+  const search = switchValue(argv, 'search-url');
+  const searchUrl =
+    testMode && search !== undefined && search.includes('%s') && isAllowedPageUrl(search) && search !== ''
+      ? search
+      : undefined;
   return {
-    startUrl: url !== undefined && isAllowedPageUrl(url) ? url : 'about:blank',
+    startUrl: url !== undefined && url !== '' && url !== 'about:blank' && isAllowedPageUrl(url) ? url : '',
     tiltDeg: tilt === undefined || tilt.trim() === '' ? DEFAULT_TILT_DEG : clampTilt(Number(tilt)),
     ...(userDataDir ? { userDataDir } : {}),
-    testMode: env['HYPERSOL_TEST'] === '1',
+    testMode,
+    ...(searchUrl ? { searchUrl } : {}),
   };
 }

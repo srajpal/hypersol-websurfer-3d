@@ -60,18 +60,3 @@ export function hardenShell(
   shell.on('will-navigate', (event) => event.preventDefault());
   shell.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
-
-/**
- * Hardens a web page's contents: only web addresses, and links that ask
- * for a new window open in the same page for now (tabs arrive in
- * milestone 2).
- */
-export function hardenGuest(guest: WebContents): void {
-  guest.setWindowOpenHandler(({ url }) => {
-    if (isAllowedPageUrl(url) && url !== '') void guest.loadURL(url);
-    return { action: 'deny' };
-  });
-  guest.on('will-navigate', (event, url) => {
-    if (!isAllowedPageUrl(url)) event.preventDefault();
-  });
-}

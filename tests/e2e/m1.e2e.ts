@@ -14,8 +14,11 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FIXTURES_DIR, startFixtureServer, type FixtureServer } from './fixture-server';
 import {
+  ADDRESS,
+  clickAt,
   inPage,
   launch,
+  navigateTo,
   pageCentre,
   project,
   screenPointOf,
@@ -30,6 +33,9 @@ import {
 } from './harness';
 
 let server: FixtureServer;
+
+/** The error card layer of the focused tab's page. */
+const OVERLAY = '[data-testid="page-panel"][aria-hidden="false"] [data-testid="page-overlay"]';
 
 beforeAll(async () => {
   server = await startFixtureServer();
@@ -67,7 +73,7 @@ async function clickGrid(h: Harness): Promise<{ expected: Record<string, Point>;
     const centre = await pageCentre(h, `#${id}`, 'click-grid');
     expected[id] = centre;
     const screen = await project(h, centre.x, centre.y);
-    await h.shell.mouse.click(screen.x, screen.y);
+    await clickAt(h, screen);
     try {
       await waitFor(
         `click on ${id} to register`,
@@ -214,7 +220,7 @@ describe('C4 typing', () => {
   /** Clicks a field where it shows on the tilted page and waits until it has focus. */
   async function clickToFocus(id: string): Promise<void> {
     const p = await screenPointOf(h, `#${id}`, 'form');
-    await h.shell.mouse.click(p.x, p.y);
+    await clickAt(h, p);
     await waitFor(
       `#${id} to take focus from the click`,
       () => inPage<string>(h, 'document.activeElement.id', 'form'),
@@ -237,7 +243,7 @@ describe('C4 typing', () => {
 
   it('ticks a checkbox', async () => {
     const p = await screenPointOf(h, '#agree', 'form');
-    await h.shell.mouse.click(p.x, p.y);
+    await clickAt(h, p);
     await waitFor('checkbox ticked', () => inPage<boolean>(h, 'document.getElementById("agree").checked', 'form'), (v) => v, 5000);
   });
 });
@@ -288,16 +294,15 @@ describe('C6 hover and links', () => {
   });
 
   it('follows a link to the second page', async () => {
-    await h.shell.fill('#dev-address-input', server.url('link-a.html'));
-    await h.shell.press('#dev-address-input', 'Enter');
+    await navigateTo(h, server.url('link-a.html'));
     await waitForPage(h, 'link-a');
     const p = await screenPointOf(h, '#go', 'link-a');
-    await h.shell.mouse.click(p.x, p.y);
+    await clickAt(h, p);
     await waitForPage(h, 'link-b');
     expect(await inPage<string>(h, 'document.title', 'link-b')).toBe('Link B');
     await waitFor(
       'address field to show page B',
-      () => h.shell.inputValue('#dev-address-input'),
+      () => h.shell.inputValue(ADDRESS),
       (v) => v.endsWith('link-b.html'),
     );
   });
@@ -356,8 +361,7 @@ describe('C8 no unexpected traffic', () => {
 
   it('requests nothing but local files and 127.0.0.1', async () => {
     for (const page of ['form.html', 'long.html', 'hover.html', 'click-grid.html']) {
-      await h.shell.fill('#dev-address-input', server.url(page));
-      await h.shell.press('#dev-address-input', 'Enter');
+      await navigateTo(h, server.url(page));
       await waitForPage(h, page.replace('.html', ''));
     }
     await sleep(1000);
@@ -411,19 +415,18 @@ describe('C10 load failure', () => {
   });
   afterAll(async () => h?.close());
 
-  it('shows plain "couldn\'t load" text and keeps running', async () => {
+  it('shows the "couldn\'t connect" card and keeps running', async () => {
     const target = own.url('form.html');
     await own.close();
-    await h.shell.fill('#dev-address-input', target);
-    await h.shell.press('#dev-address-input', 'Enter');
+    await navigateTo(h, target);
     await waitFor(
-      'failure message',
-      () => h.shell.locator('[data-testid="page-overlay"]').textContent(),
-      (t) => (t ?? '').includes("Couldn't load this page."),
+      'failure card',
+      () => h.shell.locator(OVERLAY).textContent(),
+      (t) => (t ?? '').includes("Couldn't connect"),
     );
-    expect(await h.shell.locator('[data-testid="page-overlay"]').isVisible()).toBe(true);
-    expect((await shellCall(h, 'status')).state).toBe('failed');
-    expect(await h.shell.textContent('#dev-status')).toBe("Couldn't load");
+    expect(await h.shell.locator(OVERLAY).isVisible()).toBe(true);
+    expect(await h.shell.locator(OVERLAY).textContent()).toContain(target);
+    expect((await shellCall(h, 'status'))!.state).toBe('failed');
     expect(await h.shell.evaluate(() => 1 + 1)).toBe(2);
     expect(await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
   });
@@ -444,15 +447,15 @@ describe('C11 page crash', () => {
     });
     await waitFor(
       'crash message',
-      () => h.shell.locator('[data-testid="page-overlay"]').textContent(),
-      (t) => (t ?? '').includes('This page stopped working.'),
+      () => h.shell.locator(OVERLAY).textContent(),
+      (t) => (t ?? '').includes('This page went dark'),
     );
-    expect((await shellCall(h, 'status')).state).toBe('crashed');
+    expect((await shellCall(h, 'status'))!.state).toBe('crashed');
 
     // Click Reload where it appears on the tilted page.
     const centre = await h.shell.evaluate(() => {
-      const b = document.getElementById('panel-reload')!;
-      const panel = document.querySelector('.hs-panel') as HTMLElement;
+      const panel = document.querySelector('[data-testid="page-panel"][aria-hidden="false"]') as HTMLElement;
+      const b = panel.querySelector('#panel-reload') as HTMLElement;
       let x = b.offsetWidth / 2;
       let y = b.offsetHeight / 2;
       let el: HTMLElement | null = b;
@@ -464,9 +467,9 @@ describe('C11 page crash', () => {
       return { x, y };
     });
     const p = await project(h, centre.x, centre.y);
-    await h.shell.mouse.click(p.x, p.y);
+    await clickAt(h, p);
     await waitForPage(h, 'link-a');
-    await waitFor('overlay to hide', () => h.shell.locator('[data-testid="page-overlay"]').isVisible(), (v) => !v);
-    await waitFor('loaded state', () => shellCall(h, 'status'), (s) => s.state === 'loaded');
+    await waitFor('overlay to hide', () => h.shell.locator(OVERLAY).isVisible(), (v) => !v);
+    await waitFor('loaded state', () => shellCall(h, 'status'), (s) => s?.state === 'loaded');
   });
 });

@@ -1,0 +1,340 @@
+import { LitElement, css, html, nothing, type PropertyValues } from 'lit';
+
+export type MenuAction = 'new-tab' | 'close-tab' | 'about';
+
+const icon = {
+  back: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>`,
+  forward: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>`,
+  reload: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" /></svg>`,
+  menu: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6h.01M12 12h.01M12 18h.01" /></svg>`,
+};
+
+/**
+ * The top bar: back, forward, reload, the address and search field, the
+ * menu, and the loading strip under it. Emits events; the shell's
+ * controller does the work.
+ *
+ * Events (bubbling, composed): hs-navigate (detail: typed text), hs-back,
+ * hs-forward, hs-reload, hs-menu (detail: MenuAction).
+ */
+export class HsToolbar extends LitElement {
+  static override properties = {
+    url: { type: String },
+    canGoBack: { type: Boolean },
+    canGoForward: { type: Boolean },
+    canReload: { type: Boolean },
+    loading: { type: Boolean },
+    menuOpen: { state: true },
+    strip: { state: true },
+  };
+
+  declare url: string;
+  declare canGoBack: boolean;
+  declare canGoForward: boolean;
+  declare canReload: boolean;
+  declare loading: boolean;
+  declare menuOpen: boolean;
+  declare strip: 'idle' | 'loading' | 'done';
+  private stripTimer: number | undefined;
+
+  constructor() {
+    super();
+    this.url = '';
+    this.canGoBack = false;
+    this.canGoForward = false;
+    this.canReload = false;
+    this.loading = false;
+    this.menuOpen = false;
+    this.strip = 'idle';
+  }
+
+  static override styles = css`
+    :host {
+      position: fixed;
+      top: 12px;
+      left: 24px;
+      right: 24px;
+      z-index: 10;
+      display: block;
+      font-family: inherit;
+    }
+    .bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 40px;
+      padding: 0 6px;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--hs-accent) 35%, transparent);
+      background: color-mix(in srgb, var(--hs-panel-glass) 88%, transparent);
+      box-shadow: 0 0 calc(24px * var(--hs-glow-strength)) color-mix(in srgb, var(--hs-accent) 25%, transparent);
+      position: relative;
+    }
+    button {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--hs-text);
+      cursor: pointer;
+      transition: background 200ms ease;
+    }
+    button:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--hs-accent) 18%, transparent);
+    }
+    button:disabled {
+      color: var(--hs-text-muted);
+      opacity: 0.45;
+      cursor: default;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    [role='menuitem']:focus-visible {
+      outline: 2px solid var(--hs-accent);
+      outline-offset: 1px;
+    }
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .menu-button svg {
+      stroke-width: 3.2;
+    }
+    input {
+      flex: 1;
+      min-width: 0;
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: color-mix(in srgb, var(--hs-background-bottom) 60%, transparent);
+      color: var(--hs-text);
+      font: inherit;
+      font-size: 14px;
+    }
+    input::placeholder {
+      color: var(--hs-text-muted);
+    }
+    input:focus {
+      border-color: var(--hs-accent);
+      outline: none;
+    }
+    .strip {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: -1px;
+      height: 3px;
+      border-radius: 2px;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 250ms ease;
+    }
+    .strip[data-state='loading'],
+    .strip[data-state='done'] {
+      opacity: 1;
+    }
+    .strip span {
+      display: block;
+      height: 100%;
+      width: 40%;
+      background: var(--hs-accent);
+      box-shadow: 0 0 8px var(--hs-accent);
+    }
+    .strip[data-state='loading'] span {
+      animation: sweep 1.1s ease-in-out infinite;
+    }
+    .strip[data-state='done'] span {
+      width: 100%;
+      transition: width 200ms ease;
+    }
+    @keyframes sweep {
+      from {
+        transform: translateX(-100%);
+      }
+      to {
+        transform: translateX(250%);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .strip[data-state='loading'] span {
+        animation: none;
+        width: 100%;
+        opacity: 0.6;
+      }
+    }
+    [role='menu'] {
+      position: absolute;
+      top: 46px;
+      right: 0;
+      min-width: 240px;
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--hs-accent) 35%, transparent);
+      background: var(--hs-panel-glass);
+      box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+    }
+    [role='menuitem'] {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      width: 100%;
+      height: auto;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 14px;
+      text-align: left;
+    }
+    kbd {
+      font: inherit;
+      color: var(--hs-text-muted);
+    }
+  `;
+
+  /**
+   * Puts the cursor in the address field, showing the current address
+   * selected. Waits for pending updates so a new tab's empty address is
+   * shown rather than the previous tab's.
+   */
+  focusAddress(): void {
+    void this.updateComplete.then(() => {
+      const input = this.renderRoot.querySelector('input');
+      if (!input) return;
+      input.value = this.url;
+      input.focus();
+      input.select();
+    });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener('pointerdown', this.onOutside);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    document.removeEventListener('pointerdown', this.onOutside);
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('loading')) {
+      window.clearTimeout(this.stripTimer);
+      if (this.loading) this.strip = 'loading';
+      else if (this.strip === 'loading') {
+        this.strip = 'done';
+        this.stripTimer = window.setTimeout(() => (this.strip = 'idle'), 400);
+      }
+    }
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    const input = this.renderRoot.querySelector('input');
+    if (input && changed.has('url') && (this.renderRoot as ShadowRoot).activeElement !== input) {
+      input.value = this.url;
+    }
+  }
+
+  override render() {
+    const mod = navigator.platform.startsWith('Mac') ? 'Cmd' : 'Ctrl';
+    return html`
+      <div class="bar">
+        <button data-testid="back" aria-label="Back" title="Back" ?disabled=${!this.canGoBack} @click=${() => this.fire('hs-back')}>
+          ${icon.back}
+        </button>
+        <button data-testid="forward" aria-label="Forward" title="Forward" ?disabled=${!this.canGoForward} @click=${() => this.fire('hs-forward')}>
+          ${icon.forward}
+        </button>
+        <button data-testid="reload" aria-label="Reload" title="Reload" ?disabled=${!this.canReload} @click=${() => this.fire('hs-reload')}>
+          ${icon.reload}
+        </button>
+        <input
+          data-testid="address"
+          type="text"
+          aria-label="Address and search"
+          placeholder="Search the web or type an address"
+          spellcheck="false"
+          autocomplete="off"
+          @focus=${(e: FocusEvent) => (e.target as HTMLInputElement).select()}
+          @keydown=${this.onKey}
+        />
+        <button
+          class="menu-button"
+          data-testid="menu"
+          aria-label="Menu"
+          title="Menu"
+          aria-haspopup="menu"
+          aria-expanded=${this.menuOpen ? 'true' : 'false'}
+          @click=${() => (this.menuOpen = !this.menuOpen)}
+        >
+          ${icon.menu}
+        </button>
+        ${this.menuOpen
+          ? html`<div role="menu" aria-label="Menu" @keydown=${this.onMenuKey}>
+              <button role="menuitem" data-testid="menu-new-tab" @click=${() => this.menu('new-tab')}>
+                New tab <kbd>${mod}+T</kbd>
+              </button>
+              <button role="menuitem" data-testid="menu-close-tab" @click=${() => this.menu('close-tab')}>
+                Close tab <kbd>${mod}+W</kbd>
+              </button>
+              <button role="menuitem" data-testid="menu-about" @click=${() => this.menu('about')}>
+                About HyperSol WebSurfer 3D
+              </button>
+            </div>`
+          : nothing}
+        <div class="strip" data-testid="progress" data-state=${this.strip} aria-hidden="true"><span></span></div>
+      </div>
+    `;
+  }
+
+  private readonly onOutside = (e: PointerEvent) => {
+    if (this.menuOpen && !e.composedPath().includes(this)) this.menuOpen = false;
+  };
+
+  private readonly onKey = (e: KeyboardEvent) => {
+    const input = e.target as HTMLInputElement;
+    if (e.key === 'Enter') {
+      const text = input.value.trim();
+      if (text !== '') {
+        this.fire('hs-navigate', text);
+        input.blur();
+      }
+    } else if (e.key === 'Escape') {
+      input.value = this.url;
+      input.select();
+    }
+  };
+
+  private readonly onMenuKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      this.menuOpen = false;
+      (this.renderRoot.querySelector('[data-testid="menu"]') as HTMLButtonElement | null)?.focus();
+    }
+  };
+
+  private menu(action: MenuAction): void {
+    this.menuOpen = false;
+    this.fire('hs-menu', action);
+  }
+
+  private fire(type: string, detail?: unknown): void {
+    this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
+  }
+}
+
+customElements.define('hs-toolbar', HsToolbar);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'hs-toolbar': HsToolbar;
+  }
+}

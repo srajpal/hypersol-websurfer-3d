@@ -1,18 +1,18 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-25 (milestone 1 built, awaiting acceptance).
+Last updated 2026-09-25 (milestone 2 built, awaiting acceptance).
 
 ## Where things stand
 
-Milestone 1 (Live page in the 3D room) is built. The app runs
-(`pnpm dev`) with a live web page tilted in a 3D room. The owner checked
-real sites and real typing on 2026-09-25 (text slightly soft when
-tilted). Unit tests, lint, and type check pass; the end-to-end suite
-passes 23 of 23 in most runs, but check C2 is intermittent (cause
-unknown, details in TODO.md). Waiting for the owner to accept the
-milestone. Milestone 2 (Browsing basics) is being planned; its plan
-needs design answers and approval before any build.
+Milestone 1 is done (accepted 2026-09-25). Milestone 2 (Browsing
+basics) is built: tabs as cards on an arc, top bar, shortcuts, start
+panel, error cards, right-click menu, new-window rules. Unit tests (73),
+lint, type check, and all 57 end-to-end checks pass; the intermittent
+C2 was traced to input sent in the same instant a page changes (details
+in TODO.md). Waiting for the owner's look-and-feel check (D12) and
+acceptance, and for confirmation of one architecture change: the shell,
+not the main process, owns the tabs (ARCHITECTURE.md section 4).
 
 A four-perspective documentation review (technical, product/UX,
 operational, business) ran on 2026-09-24. Its doc fixes and rule updates
@@ -132,9 +132,9 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestone 1 awaits acceptance;
-   milestone 2's plan awaits design answers and approval. Tick tasks
-   and record check results in TODO.md as they actually run.
+2. Do only what the prompt approves. Milestone 2 awaits acceptance;
+   milestone 3 has no plan yet. Tick tasks and record check results in
+   TODO.md as they actually run.
 3. Any new package needs approval first (rule 4 in AGENTS.md). The
    installed set and versions are listed in TODO.md, milestone 1.
 4. Update README.md, ARCHITECTURE.md, TODO.md, and this file whenever a

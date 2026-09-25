@@ -5,7 +5,7 @@ import { isAllowedPageUrl } from './security';
 describe('parseLaunchOptions', () => {
   it('has safe defaults', () => {
     expect(parseLaunchOptions(['electron', '.'], {})).toEqual({
-      startUrl: 'about:blank',
+      startUrl: '',
       tiltDeg: 10,
       testMode: false,
     });
@@ -28,8 +28,17 @@ describe('parseLaunchOptions', () => {
     expect(parseLaunchOptions(['--tilt=90'], {}).tiltDeg).toBe(20);
     expect(parseLaunchOptions(['--tilt=-3'], {}).tiltDeg).toBe(0);
     expect(parseLaunchOptions(['--tilt=abc'], {}).tiltDeg).toBe(10);
-    expect(parseLaunchOptions(['--start-url=file:///etc/passwd'], {}).startUrl).toBe('about:blank');
-    expect(parseLaunchOptions(['--start-url=javascript:alert(1)'], {}).startUrl).toBe('about:blank');
+    expect(parseLaunchOptions(['--start-url=file:///etc/passwd'], {}).startUrl).toBe('');
+    expect(parseLaunchOptions(['--start-url=javascript:alert(1)'], {}).startUrl).toBe('');
+    expect(parseLaunchOptions(['--start-url=about:blank'], {}).startUrl).toBe('');
+  });
+
+  it('accepts a search address only in test mode', () => {
+    const arg = '--search-url=http://127.0.0.1:5000/search?q=%s';
+    expect(parseLaunchOptions([arg], {}).searchUrl).toBeUndefined();
+    expect(parseLaunchOptions([arg], { HYPERSOL_TEST: '1' }).searchUrl).toBe('http://127.0.0.1:5000/search?q=%s');
+    expect(parseLaunchOptions(['--search-url=http://x.example/'], { HYPERSOL_TEST: '1' }).searchUrl).toBeUndefined();
+    expect(parseLaunchOptions(['--search-url=file:///%s'], { HYPERSOL_TEST: '1' }).searchUrl).toBeUndefined();
   });
 });
 

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>New windows</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: sans-serif;
+        font-size: 22px;
+        background: #ffffff;
+      }
+      a,
+      button {
+        display: inline-block;
+        margin: 0 0 24px;
+        padding: 14px 24px;
+        font-size: 22px;
+        border: 2px solid #3050c0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>New windows</h1>
+    <p><a id="blank" href="link-b.html?from=blank" target="_blank">Opens a new tab</a></p>
+    <p><a id="plain" href="link-b.html?from=plain">Ordinary link (Ctrl-click opens behind)</a></p>
+    <p><button id="open" type="button">window.open on click</button></p>
+    <script>
+      document.getElementById('open').addEventListener('click', () => {
+        window.open('link-b.html?from=click');
+      });
+      // A pop-up nobody asked for: must be blocked.
+      setTimeout(() => window.open('link-b.html?from=auto'), 300);
+    </script>
+  </body>
+</html>

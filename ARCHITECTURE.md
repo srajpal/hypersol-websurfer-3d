@@ -77,6 +77,11 @@ touchpad, no touch screen.
 | Telemetry | None. No analytics, no crash reporter. | Brief requirement. |
 | Camera | Fixed desk view with subtle mouse parallax; parallax pauses while the pointer is over the page | Simple and predictable; targets never move under the cursor. Free movement is a later milestone. |
 | Window frame | Standard OS title bar | Reliable on all three OSes; a custom frame is considered in the theme milestone. |
+| Tab ownership | The shell owns the tabs: each tab is a `<webview>` the shell creates once and keeps in its page | Follows from the milestone 1 decision to show pages as webviews in the shell: a webview lives in the shell's page and reloads if moved, so the shell must own it. The main process keeps the jobs only it can do: shortcuts, new-window rules, the right-click menu, favicons, snapshots. Changed in milestone 2 from "TabManager in the main process"; owner to confirm. |
+| Keyboard shortcuts | Handled in the main process (before-input-event) for the shell and every page | Work wherever the keyboard focus is, including inside a page; the page never sees the shortcut keys. |
+| New windows | Always a tab: in front, or behind for Ctrl-click and middle-click; blocked unless the page had a click or key press in the last 5 seconds | Owner decision 2026-09-25 (prompt 19); 5 seconds matches Chromium's user-activation window. |
+| Right-click menu | Built in the main process from Chromium's context-menu data | Electron has none by default. |
+| App menu | None on Windows and Linux; standard app, Edit, and Window menus on macOS | Clipboard shortcuts need the Edit roles on macOS. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
 | Bookmarks and history | SQLite (better-sqlite3, prebuilt binaries; node:sqlite proposed instead, see open question 3) | Fast search over thousands of rows; standard for browsers. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
@@ -100,24 +105,37 @@ hypersol-websurfer-3d/
       electron.vite.config.ts
       src/
         main/                  main process
-          index.ts             app start, single instance, window creation
-          tabs/                TabManager: create, close, focus, navigate, snapshot
-          privacy/             blocker setup, DoH setup, hardened session defaults
-          storage/             settings.json, SQLite history and bookmarks
-          ipc/                 typed message handlers (one file per topic)
-          menu/                keyboard shortcuts and app menu
+          index.ts             app start, single instance, window, app menu,
+                               tab snapshot requests
+          guests.ts            per web page: shortcuts, new windows,
+                               right-click menu, favicons
+          shortcuts.ts, popups.ts, context-menu.ts
+                               the rules behind those, unit tested
+          security.ts          webview lock-down, allowed addresses
+          launch-options.ts    command-line options
+          test-hooks.ts        logs for the end-to-end tests (test runs only)
+          privacy/             (milestone 4) blocker, DoH, session defaults
+          storage/             (milestone 3) settings.json, SQLite history
+                               and bookmarks
+        shared/
+          commands.ts          messages between main and the shell
         preload/
           shell.ts             safe bridge exposed to the 3D shell
           page.ts              injected into every web page: depth layering,
                                image and model discovery, no Node access
         renderer/              the 3D shell (one Chromium page)
-          index.html
-          scene/               Three.js room, camera, lighting, PagePanel,
-                               TabCard, input mapping
-          hud/                 Lit components: address bar, nav buttons,
-                               panels (library, settings, error). Tabs are
-                               3D cards under scene/, not a 2D strip.
-          state/               small store: tabs, focused tab, theme, status
+          index.html, main.ts
+          app.ts               controller: tabs, pages, room, top bar, commands
+          scene/               room.ts (Three.js room, camera, cards, switch
+                               animation, input), tab-view.ts (one tab's page,
+                               shimmer, error cards), tab-card.ts,
+                               start-panel.ts
+          hud/                 Lit components: toolbar.ts (nav buttons,
+                               address bar, menu, loading strip), about.ts.
+                               Tabs are 3D cards under scene/, not a 2D strip.
+          state/               tabs.ts: the tab list and focus
+          url.ts, load-errors.ts
+                               address-or-search, error card wording
           themes/              applies @hypersol/themes values to CSS
                                variables and Three.js materials
       resources/               icons, default filter list snapshot
@@ -135,7 +153,8 @@ hypersol-websurfer-3d/
     screens.md                 layout notes and states (from this document)
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright: launch app, open a site, switch theme
+    e2e/                       Playwright drives the built app (m1, m2 checks)
+    fixtures/                  sample pages served from 127.0.0.1
 ```
 
 ## 6. Parts (HoloML repository, created alongside)
@@ -157,18 +176,23 @@ package with one passing test. Language design itself is a later milestone.
 
 ## 7. Data flow
 
-1. User types an address in the HUD. The shell sends "navigate" over IPC.
-2. TabManager in main tells the tab's Chromium view to load the URL.
-   The blocker inspects every request; the named DoH resolver resolves
-   the host name.
-3. Load events flow back to the shell, which updates the address bar,
-   progress strip, and title.
-4. The page preload measures top-level sections and images and applies
-   depth offsets; it reports image rectangles to main for later use.
-5. On tab switch, main captures a snapshot of the outgoing tab and the
-   shell paints it onto that tab's 3D card.
-6. Visited pages are written to SQLite history. Bookmarks are written on
-   user action. Settings are written on change.
+1. The user types in the address bar or the start panel. The shell
+   decides between an address and a search (DuckDuckGo) and loads it in
+   the tab's webview.
+2. Chromium loads the page. From milestone 4, the blocker inspects
+   every request and the named DoH resolver resolves the host name.
+3. The webview's events update the tab list, which updates the address
+   bar, loading strip, title, and card.
+4. The main process sends the shell what only it sees: shortcut key
+   presses, new-tab requests from pages, and favicons.
+5. Shortly after a page settles, and when switching away from it, the
+   shell asks the main process for a snapshot (the one request the
+   shell's bridge allows, and only for its own tabs) and paints it onto
+   the tab's card.
+6. From milestone 5, the page preload measures top-level sections and
+   images and applies depth offsets; it reports image rectangles.
+7. From milestone 3, visited pages are written to SQLite history.
+   Bookmarks are written on user action. Settings are written on change.
 
 ## 8. What is saved, and where
 
@@ -179,8 +203,10 @@ package with one passing test. Language design itself is a later milestone.
 | Cookies, cache, site storage | Chromium profile folder managed by Electron | Standard browser behaviour |
 | Filter lists | cached file in the app data folder | Refreshed on a schedule; switchable in Settings |
 
-Nothing leaves the machine except user-initiated page loads, encrypted
-DNS lookups to the named resolver, and filter-list refreshes. The
+Nothing leaves the machine except user-initiated page loads (including
+the favicon a page names, fetched through that page's own session, as a
+browser tab does), encrypted DNS lookups to the named resolver, and
+filter-list refreshes. The
 spellchecker dictionary download is turned off. Any future update check
 would be a fourth item here and needs the owner's approval first.
 
@@ -220,9 +246,16 @@ No free camera movement in the first result.
   Library with no history or bookmarks: same wording.
 - Error: shown inside the panel as a card with a plain message, the
   address, and Retry. Cases: address not found, connection failed,
+  certificate not valid (no Retry and no way to proceed; Go back only),
   blocked by the privacy shield (with "open anyway"), page crashed
   ("This page went dark"), encrypted DNS blocked on this network (with
   "use this network's DNS for now").
+- Right-click menu on a page: back, forward, reload; on a link, open in
+  new tab and copy link address; on selected text, copy; in a text
+  field, cut, copy, paste, select all.
+- Motion: tab switches animate over 250 ms; with the system's reduced
+  motion setting they are instant and the loading strip and shimmer
+  stop moving.
 - Privacy status: the shield icon shows a count; clicking opens a small
   popover listing what was blocked.
 
@@ -252,9 +285,12 @@ fonts, sound design, VR.
    spike (TODO.md task 8). Clicks, hover, scrolling, links, and real
    keyboard typing work at the default tilt (owner check 2026-09-25),
    so the flat-page fallback is not used. Remaining: text is slightly
-   soft when tilted (revisit tilt and sharpness in milestone 6), and an
-   intermittent missed click in the first seconds after launch in the
-   automated check C2 (cause unknown; see TODO.md).
+   soft when tilted (revisit tilt and sharpness in milestone 6).
+   Found in milestone 2: input sent in the same instant a page appears,
+   moves, or resizes can be routed to the shell instead of the page.
+   A pointer that has already arrived is routed correctly, so mouse use
+   is not affected; a touch tap at that instant might be (recheck with
+   C14 on a touch screen). This was the cause of the intermittent C2.
 3. Prebuilt better-sqlite3 binaries for the chosen Electron line on all
    three OSes. Check first whether Electron's bundled Node provides
    node:sqlite, which would remove the only native module. Checked
@@ -271,11 +307,15 @@ Checked on Windows 11, 2026-09-24 (macOS and Linux not checked yet):
 - Build: `pnpm build` (output in apps/browser/out)
 - Unit tests: `pnpm test`
 - Lint and type check: `pnpm lint`, `pnpm typecheck`
-- End-to-end: `pnpm test:e2e` (23 of 23 in most runs; check C2 is
-  intermittent, see TODO.md)
+- End-to-end: `pnpm test:e2e` (milestone 1 and 2 checks, about 90
+  seconds; needs openssl on PATH for the certificate-error check, which
+  Git for Windows provides)
 
 Not checked yet: `pnpm package` (installers per OS, milestone 7).
 
-Launch options, for development and tests: `--start-url=<address>`,
-`--tilt=<0 to 20>`, `--hypersol-user-data=<folder>`; `HYPERSOL_TEST=1`
-turns on the test hooks.
+Launch options, for development and tests: `--start-url=<address>`
+(default: a start tab), `--tilt=<0 to 20>`,
+`--hypersol-user-data=<folder>`; `HYPERSOL_TEST=1` turns on the test
+hooks and allows `--search-url=<address with %s>`. The tests also pass
+Chromium's `--host-resolver-rules` so that no name resolves except this
+machine.

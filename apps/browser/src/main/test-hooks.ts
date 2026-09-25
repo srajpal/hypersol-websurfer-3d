@@ -8,6 +8,10 @@ import type { AttachRecord } from './security';
 export interface TestLog {
   attaches: AttachRecord[];
   requests: string[];
+  /** Addresses of new-window requests that were blocked. */
+  blockedPopups: string[];
+  /** Right-click menus, in order; run() picks an entry by label. */
+  menus: { labels: string[]; run(label: string): void }[];
 }
 
 declare global {
@@ -15,7 +19,7 @@ declare global {
 }
 
 export function installTestHooks(): TestLog {
-  const log: TestLog = { attaches: [], requests: [] };
+  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [] };
   globalThis.__hypersolTest = log;
   // Every request the default session makes (the shell and web pages share it).
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {

@@ -9,8 +9,8 @@ Plan approved 2026-09-24.
 
 | # | Milestone | Useful result | Status |
 |---|---|---|---|
-| 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Built; awaiting owner acceptance (one intermittent check) |
-| 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards | Later |
+| 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Done (accepted 2026-09-25 with C2 as a known issue) |
+| 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Built; awaiting owner acceptance (D12) |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Later |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Later |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Later |
@@ -45,10 +45,11 @@ Milestones 1 to 7 make up the first useful result in BRIEF.md.
 
 ## Milestone 1 — Live page in the 3D room
 
-Status: Built 2026-09-25. Plan approved 2026-09-24; build approved
-2026-09-24 (prompt 16). All tasks done. Waiting for the owner's
-acceptance, with one known issue: check C2 is intermittent (see Check
-results).
+Status: Done. Plan approved 2026-09-24; build approved 2026-09-24
+(prompt 16); built 2026-09-25; accepted by the owner 2026-09-25 (prompt
+19, "continue with next milestone") with one known issue: check C2 is
+intermittent (see Check results). Its investigation continues in
+milestone 2.
 
 Goal: prove that a live web page tilted in 3D takes clicks, typing, and
 scrolling correctly (ARCHITECTURE.md open question 2), and set up the
@@ -168,7 +169,7 @@ C2 failures; 1 of 3 further runs of C2 alone also failed (see C2).
 | # | Result |
 |---|---|
 | C1 | Pass |
-| C2 | Intermittent. When it passes, all 54 clicks land within 3 px of the target at 0°, 10°, and 20°, at 1280×800 and 1024×700. In some full runs, one click in the first seconds after a fresh launch on a tilted page never reaches the page (no pointer or mouse event at all) while the shell keeps focus on the webview. Not reproduced in 276 targeted clicks outside that window (back-to-back, after resizes, at delays of 0 to 1000 ms), and not seen by the owner in real use. Cause not found. Changes that did not remove it: waiting for the page to paint after load and after resize, and waiting for the window to have focus (both kept as fair preconditions). The grid page now records every pointer, mouse, and focus event, and C2 prints them when a click is missed. |
+| C2 | Cause found and fixed in the tests in milestone 2 (see milestone 2, task 13); passes in every run since. Original note: intermittent. When it passes, all 54 clicks land within 3 px of the target at 0°, 10°, and 20°, at 1280×800 and 1024×700. In some full runs, one click in the first seconds after a fresh launch on a tilted page never reaches the page (no pointer or mouse event at all) while the shell keeps focus on the webview. Not reproduced in 276 targeted clicks outside that window (back-to-back, after resizes, at delays of 0 to 1000 ms), and not seen by the owner in real use. Cause not found. Changes that did not remove it: waiting for the page to paint after load and after resize, and waiting for the window to have focus (both kept as fair preconditions). The grid page now records every pointer, mouse, and focus event, and C2 prints them when a click is missed. |
 | C3 | Pass |
 | C4 | Pass, with the method changed (see the Checks table). Playwright's keyboard, and Electron's input events sent to the window, never reached the page, tilted or flat. A real keyboard does: the owner typed into Wikipedia's search box on the tilted page (2026-09-25). The automated check keeps the real click routing and delivers the keys to the page's view. Gap: automated window-to-page keyboard routing is not covered; plan an OS-level input check with the per-OS checks in milestone 7. |
 | C5 | Pass |
@@ -200,4 +201,175 @@ Regression list started by this milestone: C1 to C11.
 
 C1 to C12 pass (with the fallback in place if needed), the owner
 accepts C13, the docs are updated, and the owner approves the finished
+milestone.
+
+## Milestone 2 — Browsing basics
+
+Status: Built 2026-09-25. Plan and build approved 2026-09-25 (prompt
+19). All tasks done and all automated checks pass; waiting for the
+owner's look-and-feel check (D12) and acceptance.
+
+Goal: a browser you can use day to day in the 3D room: several tabs,
+a real top bar, keyboard shortcuts, a new-tab start panel, clear error
+cards, and a right-click menu.
+
+### Decisions (2026-09-25)
+
+Already settled in ARCHITECTURE.md section 9: tab cards in a shallow
+arc on the left, each a snapshot with title and favicon, click to
+focus, the focused page slides into the centre, close on hover, "+"
+card at the end; top HUD with back, forward, reload, address and search
+bar (DuckDuckGo), menu button; thin loading strip under the bar;
+Ctrl/Cmd+T, Ctrl/Cmd+W, Ctrl/Cmd+L, Ctrl+Tab; start panel with search
+box, bookmarks grid, recent history ("Nothing saved yet" when empty);
+error cards with a plain message, the address, and Retry; shimmer until
+first paint; spinner on a card until its snapshot.
+
+New, from the owner's answers (prompt 19):
+- Links that ask for a new window open as a new tab in front;
+  Ctrl-click or middle-click opens it behind. A page opening a window
+  without a recent click or key press is blocked.
+- When there are more tabs than fit, the arc scrolls with the mouse
+  wheel over it; cards stay full size. The focused card is kept in view.
+- A right-click menu: back, forward, reload; on a link, open link in new
+  tab and copy link address; on selected text, copy; in a text field,
+  cut, copy, paste, select all.
+- A certificate-error card ("This site's certificate isn't valid") with
+  no way to proceed; Go back only.
+- Assumptions accepted: the focused card always shows its close button
+  (works for touch); the menu holds New tab, Close tab, and About
+  (Library and Settings join in milestone 3); tab cards open and close
+  with 250 ms animations.
+
+### Software to install (approved with the plan, prompt 19)
+
+lit (web components for the HUD; named in ARCHITECTURE.md section 4).
+Tests also use the openssl already on the machine (bundled with Git) to
+make a throwaway certificate at run time for the certificate-error check.
+
+### Tasks
+
+- [x] 1. Tab arc layout maths in scene-core: card positions on a shallow
+      arc, visible range, scroll clamping, keep-focused-in-view.
+- [x] 2. Tab store in the shell (pure, unit tested): add in front or
+      behind, close with a sensible next focus, next and previous,
+      closing the last tab leaves a fresh start tab.
+- [x] 3. Several live pages: one webview per tab, created once and never
+      moved in the page so it never reloads; background pages hidden;
+      the focused page slides between its card and the centre (250 ms).
+- [x] 4. Tab cards in the WebGL room: snapshot texture, title and
+      favicon, spinner until the snapshot, hover and focused states,
+      close button (always on the focused card), "+" card, wheel
+      scrolling, and an off-screen DOM tab list mirroring the cards for
+      keyboard and screen-reader access.
+- [x] 5. HUD as Lit components: back, forward, reload, address and search
+      bar, menu (New tab, Close tab, About), loading strip. Replaces the
+      temporary address field.
+- [x] 6. Address or search: web addresses load; anything else searches
+      DuckDuckGo. Tests point search at a local stand-in.
+- [x] 7. Keyboard shortcuts handled in the main process for both the
+      shell and web pages: Ctrl/Cmd+T, Ctrl/Cmd+W, Ctrl/Cmd+L, Ctrl+Tab,
+      Ctrl+Shift+Tab, Ctrl/Cmd+R and F5, Alt+Left and Alt+Right (Cmd+[
+      and Cmd+] on macOS).
+- [x] 8. New-window handling as decided above, including pop-up blocking.
+- [x] 9. Start panel for new tabs: search box, bookmarks and history
+      sections with the "Nothing saved yet" empty state.
+- [x] 10. Waiting and error states: shimmer until first paint; error cards
+      for address not found, connection failed, certificate error, page
+      crashed ("This page went dark"), and any other failure.
+- [x] 11. Right-click menu as decided above.
+- [x] 12. About panel: name, version, Electron and Chromium versions,
+      licence.
+- [x] 13. C2 investigation continued (missed click shortly after launch).
+- [x] 14. Tests: unit tests for the new pure logic; end-to-end checks
+      below; milestone 1 checks updated only where milestone 2 changes
+      the requirement (the temporary address field and plain-text error
+      text are replaced).
+- [x] 15. Docs: ARCHITECTURE.md, README, AGENTS.md Testing, HANDOFF.
+
+### Sample inputs (written by the agent)
+
+Existing fixtures plus: `new-window.html` (a target=_blank link and a
+script that tries window.open without a click), `slow` (a server route
+that answers after a delay, for the loading strip), `search` (a local
+search stand-in that shows the query), and a local HTTPS server with a
+self-signed certificate made at run time. All tests block every host
+except 127.0.0.1 with Chromium's host resolver rules, so nothing leaves
+the machine; `notfound.test` exercises "address not found".
+
+### Checks
+
+| # | Check | How | Expected result |
+|---|---|---|---|
+| D1 | Top bar | Automated | Address shows the page; Enter on an address loads it; Enter on words searches; back, forward, reload work and are disabled when they cannot act |
+| D2 | Tabs | Automated | "+" card and Ctrl+T open a start tab; clicking a card focuses it; Ctrl+Tab and Ctrl+Shift+Tab cycle; switching keeps each page's state without reloading; hover close and Ctrl+W close; closing the last tab leaves a start tab |
+| D3 | Snapshots | Automated | Background cards show a snapshot; spinner only until then |
+| D4 | Many tabs | Automated: 12 tabs | Arc scrolls with the wheel; cards keep full size; focused card in view |
+| D5 | New-window links | Automated | target=_blank opens a tab in front; Ctrl-click opens one behind; window.open without a click is blocked |
+| D6 | Loading | Automated: slow page | Loading strip shows while loading and hides after |
+| D7 | Error cards | Automated | Not found, connection failed, certificate error (no proceed), crash ("This page went dark"), each with the address; Retry recovers where it applies |
+| D8 | Right-click menu | Automated | Link menu opens the link in a background tab and copies its address; text field menu offers paste; selected text copies |
+| D9 | Start panel | Automated | Empty state reads "Nothing saved yet" with a hint; its search box searches |
+| D10 | Shortcuts | Automated, from the shell and from inside a page | Each shortcut does its job |
+| D11 | About | Automated | Shows versions; Escape closes |
+| D12 | Look and feel | Manual, owner | Tab arc, cards, top bar, animations feel right |
+| C1–C11 | Milestone 1 regression | Automated | Still pass |
+
+### Check results (Windows 11, 2026-09-25)
+
+Unit: 73 tests in 11 files pass. Lint and type check clean.
+End-to-end (`pnpm test:e2e`, 57 checks: C1 to C11 and D1 to D11): the
+last three runs passed 57 of 57 (about 90 seconds each). Of the eight
+full runs after the last input fix, seven passed; the other failed on a
+race in the test helper after a resize (it read the room's layout
+before the room had updated), which was then fixed.
+
+| # | Result |
+|---|---|
+| D1 | Pass |
+| D2 | Pass |
+| D3 | Pass: snapshots on both cards, favicon shown, no frames drawn once idle |
+| D4 | Pass: 12 tabs; rail scrolls with the wheel; card spacing unchanged within 1.5 px |
+| D5 | Pass: unrequested pop-up blocked; target=_blank in front; Ctrl-click behind, next to its opener; window.open on click in front |
+| D6 | Pass |
+| D7 | Pass: not found, connection failed with Retry recovering, certificate error with no Retry and no way to proceed (crash card covered by C11) |
+| D8 | Pass |
+| D9 | Pass |
+| D10 | Pass |
+| D11 | Pass |
+| D12 | Not checked yet (owner) |
+| C1–C11 | Pass. C9 measured 139 to 145 frames per second during parallax on these runs: the display was at 144 Hz; the rate follows the display. |
+
+Found and fixed during the build:
+- Webviews need the `allowpopups` attribute, or Electron drops every
+  new-window request before the main process can decide.
+- The first address shown in a new tab could be the previous tab's.
+- Cards were clipped at the window's left edge; the rail moved right.
+- Task 13 (C2): input sent in the same instant a page appears, moves, or
+  resizes can be routed to the shell instead of the page. Waiting two
+  shell frames after the page paints, and letting the pointer arrive
+  before pressing (as a real mouse does), removed every such failure.
+  Mouse use is not affected. A touch tap at that instant might be:
+  recheck with C14 on a touch screen.
+
+Test-method notes (the requirements are unchanged):
+- Shortcut keys pressed in the shell are sent through Electron's input
+  path, where the main process sees them; Playwright's keyboard reaches
+  the shell's page but skips that path.
+- The right-click menu is read from a test log and an entry chosen by
+  label, instead of a native popup that waits for a real mouse. The
+  entries and their actions are the same code as in normal use.
+- Playwright's own screenshots can show a page wider than it is (seen
+  2026-09-25); Electron's capture of the same moment is correct. Use
+  Electron captures when judging looks.
+
+Open for the owner:
+- The "+" card sits after the last tab, so with more tabs than fit it
+  scrolls out of view when the rail is at the top (Ctrl+T and the menu
+  still open tabs). Keep, or pin "+" at the bottom of the rail?
+
+### Done when
+
+D1 to D11 and C1 to C11 pass (C2's known issue aside, unless fixed), the
+owner accepts D12, the docs are updated, and the owner approves the
 milestone.
