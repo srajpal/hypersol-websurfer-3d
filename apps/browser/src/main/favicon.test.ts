@@ -184,15 +184,31 @@ describe('FaviconLoader cancels what it refuses (PR #7 review)', () => {
       log.open += 1;
       log.maxOpen = Math.max(log.maxOpen, log.open);
       let closed = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let settle: (() => void) | undefined;
       const close = () => {
         if (closed) return;
         closed = true;
+        // Stop the pending chunk so nothing is written to a closed stream.
+        clearTimeout(timer);
+        settle?.();
         log.open -= 1;
         log.closed += 1;
       };
       init.signal.addEventListener('abort', close);
       const body = new ReadableStream<Uint8Array>({
-        pull: (c) => new Promise<void>((r) => setTimeout(() => (c.enqueue(new Uint8Array(1024)), r()), 5)),
+        pull: (c) => {
+          // An aborted request fails its body, as a real fetch does.
+          if (closed) return c.error(new Error('aborted'));
+          return new Promise<void>((r) => {
+            settle = r;
+            timer = setTimeout(() => {
+              settle = undefined;
+              c.enqueue(new Uint8Array(1024));
+              r();
+            }, 5);
+          });
+        },
         cancel: close,
       });
       const headers: Record<string, string> = declared === null ? {} : { 'content-length': String(declared) };

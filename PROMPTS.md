@@ -306,3 +306,12 @@ Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b
 ```text
 comments added to PR, review
 ```
+
+## 27 — 2026-09-25
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b35 · Tokens: not captured
+
+```text
+One P2 blocker remains: the new favicon test helper, line 195 leaves a timer running after stream cancellation. It produces five uncaught Controller is already closed errors. Although 123 assertions pass, the unit-test command fails; I reproduced this in isolation.
+Cancel the pending timer and settle its promise when the stream closes, then rerun the unit suite. That is the only remaining blocker I found. Native macOS/Linux remain untested.
+```
