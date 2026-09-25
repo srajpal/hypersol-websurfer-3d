@@ -14,8 +14,8 @@ code exists yet. See [Project documents](#project-documents).
 
 In December 2000, two computer engineering students who had met at
 Florida Atlantic University, Sunny Rajpal and Mauricio Sadicoff, started
-a small Florida software company. In early 2001 it became HyperSol, LLC,
-with a plain mission: build high-quality software that makes people's
+a small Florida software company. In early 2001 it became HyperSol, with
+a plain mission: build high-quality software that makes people's
 time on a computer more productive and more fun.
 
 Their first product was a web browser. HyperSol WebSurfer was born, as
@@ -89,6 +89,7 @@ own repository so it stays independent and reusable:
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Technical decisions, parts and files, screens and style, open questions |
 | [AGENTS.md](AGENTS.md) | Rules for AI agents and contributors working in this repo |
 | [PROMPTS.md](PROMPTS.md) | Verbatim log of every owner prompt that shaped the project |
+| [HANDOFF.md](HANDOFF.md) | Current state, decisions made, open questions, how to resume |
 
 ## Technology
 
