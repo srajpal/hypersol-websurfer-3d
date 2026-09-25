@@ -141,11 +141,32 @@ Break only this target into manageable tasks. Propose checks for agreed behavior
 Show the plan. After approval, save it in TODO.md, including design tasks and checks. Propose any needed brief, design, or rules update before changing it. Keep later work listed but not approved to build. Do not write app code. Wait for separate build approval.
 ```
 
-## 10 — 2026-09-24
+## 11 — 2026-09-24
 
 Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Tokens: 146,235 at logging
+
+Correction (2026-09-24): first logged as a second "10" by a parallel
+session. Renumbered to 11 by time order; later entries shifted by one.
 
 ```text
 add a rule to commit after changes, if there are a bunch of commits remind me for a push.
 when a new session is started and CLAUDE.md is read make the session a remote control session. keeps this in CLAUDE.md so it only works in claude code. if there is an issue with that, let me know.
+```
+
+## 12 — 2026-09-24
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Tokens: 92,542 at logging
+
+```text
+q1 - a
+q2 - a
+q3 - a
+```
+
+## 13 — 2026-09-24
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Tokens: 97,340 at logging
+
+```text
+approve to save and commit
 ```

@@ -87,6 +87,7 @@ own repository so it stays independent and reusable:
 |---|---|
 | [BRIEF.md](BRIEF.md) | User, problem, full idea, first useful result, features for later |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Technical decisions, parts and files, screens and style, open questions |
+| [TODO.md](TODO.md) | Milestone roadmap and the current milestone's tasks and checks |
 | [AGENTS.md](AGENTS.md) | Rules for AI agents and contributors working in this repo |
 | [PROMPTS.md](PROMPTS.md) | Verbatim log of every owner prompt that shaped the project |
 | [HANDOFF.md](HANDOFF.md) | Current state, decisions made, open questions, how to resume |

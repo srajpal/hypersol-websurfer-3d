@@ -1,12 +1,14 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-24 (evening).
+Last updated 2026-09-24 (evening, after the milestone plan).
 
 ## Where things stand
 
-Planning is complete and approved. No app code exists. Nothing has been
-installed, built, or tested. The next step is the milestone plan.
+Planning is complete and approved, including the milestone roadmap and
+the milestone 1 plan in TODO.md. No app code exists. Nothing has been
+installed, built, or tested. The next step is build approval for
+milestone 1 (Live page in the 3D room).
 
 Two repositories, both with a first commit pushed to `main`:
 
@@ -22,8 +24,9 @@ The two local folders sit side by side. Never nest one in the other.
 1. AGENTS.md (rules; CLAUDE.md imports it)
 2. BRIEF.md (what we are building and for whom)
 3. ARCHITECTURE.md (how, and what is still open)
-4. README.md (the story and public face)
-5. PROMPTS.md (every owner prompt, verbatim, with model and effort)
+4. TODO.md (roadmap, current milestone tasks and checks)
+5. README.md (the story and public face)
+6. PROMPTS.md (every owner prompt, verbatim, with model and effort)
 
 The holoml repo has its own README.md and AGENTS.md, which defer to the
 browser repo for rules and the prompt log.
@@ -36,10 +39,13 @@ browser repo for rules and the prompt log.
 - Stack: Electron 44, TypeScript, Three.js, Lit, SQLite (better-sqlite3),
   @ghostery/adblocker-electron, electron-vite, electron-builder, Vitest,
   Playwright. Reasons in ARCHITECTURE.md section 4.
-- Focused page is a live Chromium view placed with CSS 3D transforms;
-  background tabs are snapshot textures; offscreen rendering is the
-  upgrade path, hidden behind a PagePanel interface.
-- Layout: fixed "desk" camera with mouse parallax, focused page centre,
+- Focused page is a live Chromium view (an Electron `<webview>`) placed
+  with CSS 3D transforms; background tabs are snapshot textures;
+  offscreen rendering is the upgrade path, hidden behind a PagePanel
+  interface. If tilted input fails, the fallback is a flat, face-on live
+  page in the 3D room.
+- Layout: fixed "desk" camera with mouse parallax (paused while the
+  pointer is over the page), standard OS title bar, focused page centre,
   tab cards in a left arc, sharp 2D HUD on top, Library and Settings
   panels sliding in from the right.
 - Themes: Nebula (dark, default) and Daylight (light).
@@ -55,7 +61,8 @@ browser repo for rules and the prompt log.
 1. Exact theme colours and accent; any owner sketches. Decide in the
    theme milestone.
 2. Whether clicks land correctly on a live page rotated in 3D. Must be
-   the first spike of milestone 1. Fallback is texture-panel mode.
+   the first spike of milestone 1. Fallback is a flat, face-on live
+   page; texture mode stays the later upgrade path.
 3. Whether prebuilt better-sqlite3 binaries exist for Electron 44 on all
    three OSes. Check before adding the dependency.
 
@@ -69,9 +76,10 @@ CMake 3.28. No Rust, no C++ compiler. `gh` is logged in as srajpal.
 1. Log the owner's new prompt in PROMPTS.md before doing anything else.
    Read the session's model, effort, and context tokens from the app
    and record them; if unavailable, say "not captured".
-2. Do only what the prompt approves. The next expected prompt is a
-   request for the milestone plan. Draft it, show it, wait for approval,
-   then save it. Do not write app code until a milestone is approved.
+2. Do only what the prompt approves. The next expected prompt is build
+   approval for milestone 1 in TODO.md. Do not write app code until it
+   is given. Tick tasks and record check results in TODO.md as they
+   actually run.
 3. Before the first code milestone, ask for approval to install
    dependencies (rule 4 in AGENTS.md), and list exactly what will be
    installed.
@@ -85,7 +93,7 @@ CMake 3.28. No Rust, no C++ compiler. `gh` is logged in as srajpal.
 
 ## Things not yet done, on purpose
 
-- No milestone plan.
+- Milestones 2 onward are listed in TODO.md but not approved to build.
 - No package.json, no dependencies, no code in either repo.
 - No SPEC.md in holoml (outline is part of a later milestone).
 - No git tags, branches, CI, issue templates, or GitHub settings.

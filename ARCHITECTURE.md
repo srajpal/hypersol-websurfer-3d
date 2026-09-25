@@ -1,7 +1,8 @@
 # HyperSol WebSurfer 3D — Architecture
 
 Status: approved 2026-09-24. Run and test steps are marked "not checked yet"
-until they have actually been executed.
+until they have actually been executed. The milestone roadmap and current
+plan are in TODO.md.
 
 ## 1. Summary
 
@@ -51,7 +52,8 @@ binaries. Electron 44 is the current stable line.
 | App framework | Electron 44 | Bundles Chromium; one codebase for three desktop OSes; huge ecosystem; matches "embed an existing engine". |
 | Language | TypeScript everywhere | One language for shell, main process, HoloML parser; easiest for contributors. |
 | 3D library | Three.js | Most used open-source web 3D library; supports both WebGL objects and live DOM in one scene. |
-| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer) | Sharp text, native input, zero pixel copying. |
+| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer), using an Electron `<webview>` element in the shell | Sharp text, native input, zero pixel copying. `WebContentsView` is a flat native layer and cannot be transformed in 3D. Each webview is locked down on attach (preload stripped, safe web preferences forced). |
+| Fallback if tilted input fails | Focused page faces the viewer flat, room stays 3D around it | Keeps sharp text and native input; tab cards and transitions still tilt. Decided 2026-09-24. |
 | Background tabs in 3D | Snapshot textures on WebGL cards | Cheap; lit and occluded like real objects. |
 | Upgrade path | Offscreen rendering to GPU textures | Lets pages curve, bend, and receive lighting later; hidden behind the PagePanel interface. |
 | Page depth layering | Injected preload CSS on top-level sections and images | Interactive, no copying; also reports image positions for later 3D lifting. |
@@ -60,7 +62,8 @@ binaries. Electron 44 is the current stable line.
 | Encrypted DNS | Electron app.configureHostResolver, secureDnsMode "secure" | Built into Chromium; no extra service. |
 | Default search engine | DuckDuckGo | Privacy-respecting default; changeable in Settings. |
 | Telemetry | None. No analytics, no crash reporter. | Brief requirement. |
-| Camera | Fixed desk view with subtle mouse parallax | Simple and predictable for the first result; free movement is a later milestone. |
+| Camera | Fixed desk view with subtle mouse parallax; parallax pauses while the pointer is over the page | Simple and predictable; targets never move under the cursor. Free movement is a later milestone. |
+| Window frame | Standard OS title bar | Reliable on all three OSes; a custom frame is considered in the theme milestone. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
 | Bookmarks and history | SQLite (better-sqlite3, prebuilt binaries) | Fast search over thousands of rows; standard for browsers. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
@@ -168,7 +171,9 @@ filter-list refreshes.
 ### Layout for the first result (approved)
 
 The Room: one full-window 3D scene, seen from a fixed "desk" camera with a
-slight parallax that follows the mouse.
+slight parallax that follows the mouse. Parallax pauses while the pointer
+is over the page and eases back (about 250 ms); it resumes over the room.
+The window uses the standard OS title bar.
 
 - Centre: the focused page, a large upright panel, gently tilted toward
   the viewer, with a soft glow edge in the theme's accent colour.
@@ -224,7 +229,9 @@ fonts, sound design, VR.
    proposal. Exact colours, accent, and any owner sketches are still to
    be confirmed in the theme milestone.
 2. Live-panel input on a rotated page: confirmed in the first milestone
-   spike; fallback is the texture panel mode. Not checked yet.
+   spike. Fallback (decided 2026-09-24) is a flat, face-on live page with
+   the room in 3D around it; texture mode stays the later upgrade path.
+   Not checked yet.
 3. Prebuilt better-sqlite3 binaries for Electron 44 on all three OSes.
    Not checked yet.
 
