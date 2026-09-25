@@ -94,8 +94,12 @@ own repository so it stays independent and reusable:
 
 ## Technology
 
-Electron 44, TypeScript, Three.js, Lit, SQLite, Ghostery's open-source
-ad-blocking engine. Reasons for each choice are in ARCHITECTURE.md.
+Electron (current supported stable line), TypeScript, Three.js, Lit,
+SQLite, Ghostery's open-source ad-blocking engine. Reasons for each
+choice are in ARCHITECTURE.md.
+
+Known limitation: Electron ships no DRM module, so video from Netflix
+and similar services will not play.
 
 ## Building and running
 

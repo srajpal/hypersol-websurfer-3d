@@ -43,23 +43,30 @@ Available: Node 22.16, npm 10.9, pnpm 12.4, git 2.45, Python 3.13,
 .NET 9, CMake 3.28, VS Code.
 Not available: Rust, C++ compiler (cl, clang, gcc).
 Consequence: choose a TypeScript stack; native modules must ship prebuilt
-binaries. Electron 44 is the current stable line.
+binaries.
+
+Electron is not installed on this machine. Electron 44 was the current
+stable line on 2026-09-24 according to the project's release listing.
+AGENTS.md rule 13 rechecks this at the start of each milestone; the
+version and date checked are recorded here.
 
 ## 4. Decisions and reasons
 
 | Decision | Choice | Why |
 |---|---|---|
-| App framework | Electron 44 | Bundles Chromium; one codebase for three desktop OSes; huge ecosystem; matches "embed an existing engine". |
+| App framework | Electron, current supported stable line (44 as of 2026-09-24) | Bundles Chromium; one codebase for three desktop OSes; huge ecosystem; matches "embed an existing engine". Electron ships no Widevine DRM module, so DRM video (Netflix, Disney+, Spotify web) does not play; documented limitation, not planned. |
 | Language | TypeScript everywhere | One language for shell, main process, HoloML parser; easiest for contributors. |
 | 3D library | Three.js | Most used open-source web 3D library; supports both WebGL objects and live DOM in one scene. |
-| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer), using an Electron `<webview>` element in the shell | Sharp text, native input, zero pixel copying. `WebContentsView` is a flat native layer and cannot be transformed in 3D. Each webview is locked down on attach (preload stripped, safe web preferences forced). |
+| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer), using an Electron `<webview>` element in the shell | Sharp text, native input, zero pixel copying. `WebContentsView` is a flat native layer and cannot be transformed in 3D. On attach, any page-requested preload is replaced by the trusted page preload (page.ts, a stub until milestone 5) and safe web preferences are forced. |
 | Fallback if tilted input fails | Focused page faces the viewer flat, room stays 3D around it | Keeps sharp text and native input; tab cards and transitions still tilt. Decided 2026-09-24. |
 | Background tabs in 3D | Snapshot textures on WebGL cards | Cheap; lit and occluded like real objects. |
 | Upgrade path | Offscreen rendering to GPU textures | Lets pages curve, bend, and receive lighting later; hidden behind the PagePanel interface. |
 | Page depth layering | Injected preload CSS on top-level sections and images | Interactive, no copying; also reports image positions for later 3D lifting. |
 | Ad/tracker blocking | @ghostery/adblocker-electron | Open source, uBlock-compatible lists, built for Electron sessions. |
-| Filter-list updates | Fetched on a schedule, on by default, switchable in Settings | Keeps blocking current; the only network call the browser makes on its own. |
-| Encrypted DNS | Electron app.configureHostResolver, secureDnsMode "secure" | Built into Chromium; no extra service. |
+| Filter-list updates | Fetched on a schedule through Electron's net.fetch (Chromium's network stack, so encrypted DNS applies), on by default, switchable in Settings | Keeps blocking current. Exact lists and URLs are named in docs/privacy.md in milestone 4. |
+| Encrypted DNS | Electron app.configureHostResolver after app ready, secureDnsMode "secure", resolver Quad9 (https://dns.quad9.net/dns-query) | Built into Chromium. The resolver sees every hostname, so it is a named third-party service: Quad9 is a non-profit with a no-logging policy. Owner may change it. Settings offers Secure (default) or Automatic (falls back to the network's DNS). |
+| Encrypted DNS failure | Error card "Encrypted DNS is blocked on this network" with "Use this network's DNS for now", which switches to Automatic for the session | Secure mode has no fallback, so captive portals and corporate networks would otherwise fail every lookup with no explanation. |
+| Spellchecker | Off by default | Electron otherwise downloads dictionaries from a CDN on Windows and Linux, contradicting the privacy statement. |
 | Default search engine | DuckDuckGo | Privacy-respecting default; changeable in Settings. |
 | Telemetry | None. No analytics, no crash reporter. | Brief requirement. |
 | Camera | Fixed desk view with subtle mouse parallax; parallax pauses while the pointer is over the page | Simple and predictable; targets never move under the cursor. Free movement is a later milestone. |
@@ -101,10 +108,12 @@ hypersol-websurfer-3d/
           index.html
           scene/               Three.js room, camera, lighting, PagePanel,
                                TabCard, input mapping
-          hud/                 Lit components: address bar, tab strip,
-                               nav buttons, panels (library, settings, error)
+          hud/                 Lit components: address bar, nav buttons,
+                               panels (library, settings, error). Tabs are
+                               3D cards under scene/, not a 2D strip.
           state/               small store: tabs, focused tab, theme, status
-          themes/              theme definitions and CSS variables
+          themes/              applies @hypersol/themes values to CSS
+                               variables and Three.js materials
       resources/               icons, default filter list snapshot
   packages/
     scene-core/                @hypersol/scene-core: room layout math,
@@ -144,7 +153,8 @@ package with one passing test. Language design itself is a later milestone.
 
 1. User types an address in the HUD. The shell sends "navigate" over IPC.
 2. TabManager in main tells the tab's Chromium view to load the URL.
-   The blocker inspects every request; DoH resolves the host name.
+   The blocker inspects every request; the named DoH resolver resolves
+   the host name.
 3. Load events flow back to the shell, which updates the address bar,
    progress strip, and title.
 4. The page preload measures top-level sections and images and applies
@@ -163,8 +173,10 @@ package with one passing test. Language design itself is a later milestone.
 | Cookies, cache, site storage | Chromium profile folder managed by Electron | Standard browser behaviour |
 | Filter lists | cached file in the app data folder | Refreshed on a schedule; switchable in Settings |
 
-Nothing leaves the machine except user-initiated page loads and
-filter-list refreshes.
+Nothing leaves the machine except user-initiated page loads, encrypted
+DNS lookups to the named resolver, and filter-list refreshes. The
+spellchecker dictionary download is turned off. Any future update check
+would be a fourth item here and needs the owner's approval first.
 
 ## 9. Screens and style
 
@@ -188,7 +200,8 @@ The window uses the standard OS title bar.
   requests on the current page).
 
 Movement: standard browser shortcuts (Ctrl/Cmd+T new tab, Ctrl/Cmd+W
-close, Ctrl/Cmd+L address bar, Ctrl/Cmd+Tab next tab). Mouse and touch:
+close, Ctrl/Cmd+L address bar, Ctrl+Tab next tab on every platform since
+Cmd+Tab is the macOS app switcher). Mouse and touch:
 click or tap cards and buttons; scroll inside the page scrolls the page.
 No free camera movement in the first result.
 
@@ -202,7 +215,8 @@ No free camera movement in the first result.
 - Error: shown inside the panel as a card with a plain message, the
   address, and Retry. Cases: address not found, connection failed,
   blocked by the privacy shield (with "open anyway"), page crashed
-  ("This page went dark").
+  ("This page went dark"), encrypted DNS blocked on this network (with
+  "use this network's DNS for now").
 - Privacy status: the shield icon shows a count; clicking opens a small
   popover listing what was blocked.
 
@@ -228,12 +242,14 @@ fonts, sound design, VR.
 1. Theme look: Nebula (dark) default and Daylight (light) are the working
    proposal. Exact colours, accent, and any owner sketches are still to
    be confirmed in the theme milestone.
-2. Live-panel input on a rotated page: confirmed in the first milestone
-   spike. Fallback (decided 2026-09-24) is a flat, face-on live page with
-   the room in 3D around it; texture mode stays the later upgrade path.
-   Not checked yet.
-3. Prebuilt better-sqlite3 binaries for Electron 44 on all three OSes.
-   Not checked yet.
+2. Live-panel input on a rotated page: to be answered by the milestone 1
+   spike (TODO.md task 8). Fallback (decided 2026-09-24) is a flat,
+   face-on live page with the room in 3D around it; texture mode stays
+   the later upgrade path. Not checked yet.
+3. Prebuilt better-sqlite3 binaries for the chosen Electron line on all
+   three OSes. Check first whether Electron's bundled Node provides
+   node:sqlite, which would remove the only native module. Not checked
+   yet.
 
 ## 11. Run and test (not checked yet)
 

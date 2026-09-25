@@ -3,7 +3,10 @@
 Every prompt from the owner, verbatim and in order. Model and effort are
 as reported by the Claude Code app for this session. Tokens are the
 session context total at logging time; per-prompt counts are not
-available from the tool.
+available from the tool. From entry 15 on, each entry also carries a
+session tag (model name plus the first eight characters of the session id)
+so parallel sessions can be told apart. Secrets and personal data are
+replaced with placeholders before logging; images are summarised in one line.
 
 ## 1 — 2026-09-24
 
@@ -198,4 +201,12 @@ Review the documentation from four perspectives: technical, product/UX, operatio
 4. Keep each section under 200 words.
 5. Think step by step before answering.
 </instructions>
+```
+
+## 15 — 2026-09-24
+
+Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Session: fable-50df9360 · Tokens: 246,551 at logging
+
+```text
+Implement, commit, and push
 ```

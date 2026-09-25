@@ -18,8 +18,9 @@ HyperSol WebSurfer 3D is an open-source desktop browser whose interface
 lives in a 3D space. Regular websites render on floating panels in a 3D
 room, with page sections lifted into layered depth. Where possible, the
 browser detects images and 3D models on a page and turns them into
-objects you can inspect. It embeds an existing web engine (Chromium via
-CEF is the leading option) so every modern site works from day one.
+objects you can inspect. It embeds an existing web engine (Chromium, via
+Electron) so modern sites work from day one. One known exception: sites
+that need DRM video, such as Netflix, do not play in Electron.
 
 Alongside the browser, HoloML is a new open markup language for fully 3D
 websites, kept as clean and approachable as HTML. A car maker can publish
@@ -30,7 +31,8 @@ so each stays useful on its own.
 
 The browser looks slick and futuristic, supports themes, and treats
 privacy as a default: built-in ad and tracker blocking, zero telemetry,
-and encrypted DNS. Both projects are licensed under Apache 2.0.
+and encrypted DNS. Both projects are licensed under Apache 2.0; the
+HoloML specification text is also available under CC BY 4.0.
 
 ## First useful result
 Open any normal website in the 3D browser interface on Windows, Mac, and

@@ -82,8 +82,9 @@ electron 44, electron-vite, vite, typescript, @types/node, three,
       `typecheck`.
 - [ ] 2. Main process: single instance, one window with standard frame.
       Sandbox on, context isolation on, no Node in pages. On webview
-      attach, strip any preload and force safe web preferences. Narrow
-      shell bridge.
+      attach, replace any page-requested preload with the trusted page
+      preload (an empty stub until milestone 5) and force safe web
+      preferences. Narrow shell bridge.
 - [ ] 3. Room: Three.js scene with provisional Nebula background and
       lighting, fixed desk camera, CSS3D and WebGL layers stacked.
       Render on demand only (no redraws while idle).
@@ -128,7 +129,7 @@ electron 44, electron-vite, vite, typescript, @types/node, three,
 | C4 | Typing | Automated: input and textarea | Values match exactly |
 | C5 | Scrolling | Automated: wheel over the page, then over the room | Page scrolls only when the pointer is over it |
 | C6 | Hover and links | Automated | Hover reported; link loads the second page |
-| C7 | Page isolation | Automated: `node-probe.html` | No Node access; any webview preload request is stripped |
+| C7 | Page isolation | Automated: `node-probe.html` | No Node access; any page-requested preload is replaced by the trusted stub |
 | C8 | No unexpected traffic | Automated: log all requests during the run | Only 127.0.0.1 |
 | C9 | Idle efficiency | Automated: count frames | No redraws while idle; about 60 fps during parallax |
 | C10 | Load failure | Automated: stop the server, then load a page | Plain "couldn't load" text; app does not crash |
