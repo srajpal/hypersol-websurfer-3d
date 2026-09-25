@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { ChildProcess } from 'node:child_process';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright';
 
 // No trailing separator: on Windows a backslash before the closing quote
@@ -24,6 +25,8 @@ export interface Point {
 
 export interface Harness {
   app: ElectronApplication;
+  /** The app's process, kept from launch: Playwright's handle goes once the app exits. */
+  proc: ChildProcess;
   shell: Page;
   /** console.error output and uncaught errors from the shell and main process. */
   errors: string[];
@@ -39,19 +42,31 @@ export interface LaunchOptions {
    * the app. By default each launch gets a fresh folder that is deleted.
    */
   userDataDir?: string;
+  /** Keep running when the last window closes, as on macOS (test mode switch). */
+  keepRunning?: boolean;
 }
 
 /**
- * Only the OS basics plus the test switch. The test runner's own variables
- * (NODE_OPTIONS and friends) must not leak into Electron's main process.
+ * Test windows stay in the background (off screen, never taking focus or
+ * a taskbar button) so a run does not get in the way (owner request,
+ * prompt 24). Set HYPERSOL_TEST_SHOW=1 to watch a run in normal windows.
  */
-function cleanEnv(): Record<string, string> {
+export const SHOW_WINDOWS = process.env['HYPERSOL_TEST_SHOW'] === '1';
+
+/**
+ * Only the OS basics plus the test switches. The test runner's own
+ * variables (NODE_OPTIONS and friends) must not leak into Electron's main
+ * process.
+ */
+function cleanEnv(keepRunning = false): Record<string, string> {
   const keep = [
     'PATH', 'Path', 'SystemRoot', 'SYSTEMROOT', 'windir', 'TEMP', 'TMP', 'TMPDIR',
     'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'HOME', 'USER', 'LANG',
     'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR',
   ];
   const env: Record<string, string> = { HYPERSOL_TEST: '1' };
+  if (!SHOW_WINDOWS) env['HYPERSOL_TEST_BACKGROUND'] = '1';
+  if (keepRunning) env['HYPERSOL_TEST_KEEP_RUNNING'] = '1';
   for (const k of keep) {
     const v = process.env[k];
     if (v !== undefined) env[k] = v;
@@ -69,12 +84,13 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   const app = await electron.launch({
     executablePath: electronPath,
     args,
-    env: cleanEnv(),
+    env: cleanEnv(opts.keepRunning),
     timeout: 30_000,
   });
   const errors: string[] = [];
   const output: string[] = [];
-  app.process().stderr?.on('data', (d: Buffer) => output.push(d.toString()));
+  const proc = app.process();
+  proc.stderr?.on('data', (d: Buffer) => output.push(d.toString()));
   app.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`main: ${msg.text()}`);
   });
@@ -91,27 +107,52 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   // card hover (found 2026-09-25 as the cause of occasional C3 and D4
   // failures). Test input comes in through Chromium and is unaffected.
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setIgnoreMouseEvents(true));
-  // A person clicks into a window that is already in front: wait until the
-  // new window has finished activating before any input is sent. Windows
-  // occasionally keeps another window in front; then ask for focus.
-  const focused = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false);
-  try {
-    await waitFor('the app window to have focus', focused, (f) => f, 3000);
-  } catch {
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.focus());
-    await waitFor('the app window to have focus', focused, (f) => f, 7000);
+  // The window must be showing before input is sent. In the background it
+  // never takes focus (test input does not need it); when shown for
+  // watching, wait for it to come to the front as a person's would.
+  await waitFor(
+    'the app window to show',
+    () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible() ?? false),
+    (v) => v,
+    10_000,
+  );
+  if (SHOW_WINDOWS) {
+    const focused = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false);
+    try {
+      await waitFor('the app window to have focus', focused, (f) => f, 3000);
+    } catch {
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.focus());
+      await waitFor('the app window to have focus', focused, (f) => f, 7000);
+    }
   }
   return {
     app,
+    proc,
     shell,
     errors,
     close: async () => {
-      await app.close();
+      // The app may already have quit on its own (quit checks).
+      if (proc.exitCode === null && proc.signalCode === null) await app.close();
       // Electron can hold a file for a moment after closing; a leftover
       // temporary folder is harmless, so cleanup does not fail the run.
       if (!keepProfile) await removeFolder(userDataDir);
     },
   };
+}
+
+/** Waits for the app's process to end; returns how long that took, in ms. */
+export async function waitForExit(h: Harness, timeoutMs: number): Promise<number> {
+  const start = Date.now();
+  const proc = h.proc;
+  if (proc.exitCode !== null || proc.signalCode !== null) return 0;
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`The app was still running after ${timeoutMs} ms`)), timeoutMs);
+    proc.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+  return Date.now() - start;
 }
 
 /** Deletes a temporary folder, retrying while Electron releases its files. */
@@ -123,6 +164,7 @@ export async function removeFolder(dir: string): Promise<void> {
 export interface ShellHooks {
   ready: boolean;
   openPanel(): 'library' | 'settings' | null;
+  ignorePrepareClose(): void;
   frames(): number;
   layout(): { panelWidth: number; panelHeight: number; cameraZ: number; viewportWidth: number; viewportHeight: number };
   cameraOffset(): Point;
@@ -301,15 +343,21 @@ export async function clickAt(h: Harness, p: Point, options: { button?: 'left' |
 
 /** Resizes the window's content area and waits for the page to follow. */
 export async function setContentSize(h: Harness, width: number, height: number): Promise<void> {
-  await h.app.evaluate(
-    ({ BrowserWindow }, [w, ht]) => BrowserWindow.getAllWindows()[0]!.setContentSize(w!, ht!),
-    [width, height],
-  );
-  await waitFor(
-    `window ${width}x${height}`,
-    () => h.shell.evaluate(() => [window.innerWidth, window.innerHeight]),
-    ([w, ht]) => w === width && ht === height,
-  );
+  // Adjust the outer size until the inside is right: off screen, Electron's
+  // setContentSize and the frame size it assumes are unreliable (1280x800
+  // came out 1296x839), so correct by the measured difference.
+  const inner = () => h.shell.evaluate(() => [window.innerWidth, window.innerHeight]);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const [iw, ih] = await inner();
+    if (iw === width && ih === height) break;
+    const outer = await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getBounds());
+    await h.app.evaluate(
+      ({ BrowserWindow }, [w, ht]) => BrowserWindow.getAllWindows()[0]!.setSize(w!, ht!),
+      [outer.width + (width - iw!), outer.height + (height - ih!)],
+    );
+    await waitFor('the window to resize', inner, ([w2, h2]) => w2 !== iw || h2 !== ih, 2000).catch(() => undefined);
+  }
+  await waitFor(`window ${width}x${height}`, inner, ([w, ht]) => w === width && ht === height);
   // The room lays out again on the resize event, a frame after the size changes.
   const layout = await waitFor(
     'the room to lay out for the new size',
@@ -412,7 +460,20 @@ export const ADDRESS = 'hs-toolbar [data-testid="address"]';
 /** Types into the address bar and presses Enter. */
 export async function navigateTo(h: Harness, text: string): Promise<void> {
   await h.shell.fill(ADDRESS, text);
-  await h.shell.press(ADDRESS, 'Enter');
+  try {
+    await h.shell.press(ADDRESS, 'Enter', { timeout: 10_000 });
+  } catch (e) {
+    // Rarely seen: the press waits and never happens. Record what still
+    // answers, to find the cause.
+    const within = <T>(p: Promise<T>) =>
+      Promise.race([p.then((v) => JSON.stringify(v)), sleep(3000).then(() => 'no answer in 3 s')]).catch(
+        (err: unknown) => `error: ${String(err)}`,
+      );
+    const shell = await within(h.shell.evaluate(() => [document.readyState, document.activeElement?.tagName ?? '']));
+    const main = await within(h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length));
+    const pages = await within(Promise.resolve(h.app.windows().map((w) => w.url().slice(0, 60))));
+    throw new Error(`${String(e)}\nShell answers: ${shell}\nMain answers: ${main}\nWindows: ${pages}`);
+  }
 }
 
 export function tabs(h: Harness): Promise<TabInfo[]> {

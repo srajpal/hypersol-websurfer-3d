@@ -6,7 +6,7 @@ import { parseDataRequest } from '../../shared/data';
 import { DEFAULT_SETTINGS, applySettingsPatch, parseSettings, searchUrlFor } from '../../shared/settings';
 import { SCHEMA_VERSION, Store } from './database';
 import { StorageService } from './service';
-import { parseSession } from './settings-file';
+import { parseSession, SettingsFile, type SettingsFileSystem } from './settings-file';
 
 describe('Store', () => {
   let store: Store;
@@ -202,5 +202,82 @@ describe('StorageService', () => {
     expect(await s.handle({ op: 'nope' })).toEqual({ ok: false, error: 'Unknown request: nope' });
     expect(await s.handle({ op: 'settings.set', patch: { searchEngine: 'x' } })).toMatchObject({ ok: false });
     s.close();
+  });
+});
+
+describe('settings failures (GitHub issue #2)', () => {
+  let folder: string;
+  const cleaner = { clearCookiesAndSiteData: async () => undefined, clearCache: async () => undefined };
+  beforeEach(() => {
+    folder = mkdtempSync(join(tmpdir(), 'hypersol-settings-'));
+  });
+  afterEach(() => rmSync(folder, { recursive: true, force: true }));
+
+  it('starts with defaults and an explanation when settings.json cannot be read', async () => {
+    mkdirSync(join(folder, 'settings.json')); // a folder where the file should be
+    const s = new StorageService(folder, cleaner);
+    expect(await s.handle({ op: 'settings.get' })).toEqual({ ok: true, value: DEFAULT_SETTINGS });
+    const status = await s.handle({ op: 'status' });
+    expect(status).toMatchObject({ ok: true, value: { available: true } });
+    expect((status as { value: { settingsProblem: string } }).value.settingsProblem).toMatch(/couldn't be read \(EISDIR\)/);
+    s.close();
+  });
+
+  it('a failed save changes nothing and says so', async () => {
+    mkdirSync(join(folder, 'settings.json'));
+    const s = new StorageService(folder, cleaner);
+    const reply = await s.handle({ op: 'settings.set', patch: { searchEngine: 'bing' } });
+    expect(reply).toMatchObject({ ok: false });
+    expect((reply as { error: string }).error).toMatch(/Couldn't save your settings .*Nothing was changed/);
+    expect(await s.handle({ op: 'settings.get' })).toEqual({ ok: true, value: DEFAULT_SETTINGS });
+    s.close();
+  });
+
+  it('a save under a missing folder leaves the settings in use unchanged', () => {
+    const file = new SettingsFile(join(folder, 'missing', 'settings.json'));
+    expect(() => file.save({ ...DEFAULT_SETTINGS, searchEngine: 'bing' })).toThrow(/ENOENT/);
+    expect(file.settings.searchEngine).toBe('duckduckgo');
+  });
+
+  it('keeps a damaged file it cannot move aside, and will not overwrite it', () => {
+    const writes: string[] = [];
+    const fs: SettingsFileSystem = {
+      read: () => '{broken',
+      setAside: () => {
+        throw Object.assign(new Error('locked'), { code: 'EBUSY' });
+      },
+      write: (_p, text) => void writes.push(text),
+    };
+    const file = new SettingsFile('settings.json', fs);
+    expect(file.settings).toEqual(DEFAULT_SETTINGS);
+    expect(file.problem).toMatch(/couldn't be moved aside \(EBUSY\).*left as it is/);
+    expect(() => file.save({ ...DEFAULT_SETTINGS, searchEngine: 'bing' })).toThrow(/EBUSY/);
+    expect(writes).toEqual([]);
+    expect(file.settings.searchEngine).toBe('duckduckgo');
+  });
+
+  it('once the old file is set aside, saves work and the explanation clears', () => {
+    let attempts = 0;
+    let movedAside = false;
+    const writes: string[] = [];
+    const fs: SettingsFileSystem = {
+      read: () => (movedAside ? null : '{broken'),
+      setAside: () => {
+        attempts += 1;
+        if (attempts === 1) throw Object.assign(new Error('locked'), { code: 'EBUSY' });
+        movedAside = true;
+        return 'settings.json.damaged-x';
+      },
+      write: (_p, text) => void writes.push(text),
+    };
+    const file = new SettingsFile('settings.json', fs);
+    expect(file.problem).not.toBeNull();
+    // The second attempt at setting the file aside succeeds, then the save.
+    file.save({ ...DEFAULT_SETTINGS, searchEngine: 'bing' });
+    expect(attempts).toBe(2);
+    expect(movedAside).toBe(true);
+    expect(writes).toHaveLength(1);
+    expect(file.settings.searchEngine).toBe('bing');
+    expect(file.problem).toBeNull();
   });
 });

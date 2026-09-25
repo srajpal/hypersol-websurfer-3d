@@ -12,6 +12,8 @@ export interface TestLog {
   blockedPopups: string[];
   /** Right-click menus, in order; run() picks an entry by label. */
   menus: { labels: string[]; run(label: string): void }[];
+  /** Saved-data requests from the shell, counted by op. */
+  dataOps: Record<string, number>;
 }
 
 declare global {
@@ -19,7 +21,7 @@ declare global {
 }
 
 export function installTestHooks(): TestLog {
-  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [] };
+  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [], dataOps: {} };
   globalThis.__hypersolTest = log;
   // Every request the default session makes (the shell and web pages share it).
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {

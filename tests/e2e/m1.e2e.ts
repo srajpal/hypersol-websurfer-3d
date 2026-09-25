@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FIXTURES_DIR, startFixtureServer, type FixtureServer } from './fixture-server';
 import {
   ADDRESS,
+  SHOW_WINDOWS,
   clickAt,
   inPage,
   launch,
@@ -131,6 +132,19 @@ describe('C1 app launches', () => {
     expect(await inPage<string>(h, 'document.title', 'link-a')).toBe('Link A');
     await sleep(500);
     expect(h.errors).toEqual([]);
+  });
+
+  it('stays out of the way: off every display and never focused (owner request, prompt 24)', async () => {
+    if (SHOW_WINDOWS) return; // windows shown on purpose for watching
+    const where = await h.app.evaluate(({ BrowserWindow, screen }) => {
+      const win = BrowserWindow.getAllWindows()[0]!;
+      const b = win.getBounds();
+      const overlaps = screen
+        .getAllDisplays()
+        .some((d) => b.x < d.bounds.x + d.bounds.width && b.x + b.width > d.bounds.x && b.y < d.bounds.y + d.bounds.height && b.y + b.height > d.bounds.y);
+      return { overlaps, focused: win.isFocused() };
+    });
+    expect(where).toEqual({ overlaps: false, focused: false });
   });
 
   it('uses the same theme value for CSS and 3D colours', async () => {

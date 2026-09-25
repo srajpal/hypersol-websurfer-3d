@@ -47,6 +47,9 @@ if (params.get('test') === '1') {
         return app.ready;
       },
       openPanel: () => app.openPanel,
+      ignorePrepareClose: () => {
+        app.testIgnorePrepareClose = true;
+      },
       frames: () => room.frames,
       layout: () => room.layoutInfo,
       cameraOffset: () => room.parallax.offset,

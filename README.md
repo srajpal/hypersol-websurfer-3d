@@ -126,22 +126,34 @@ own repository so it stays independent and reusable:
 
 ## Technology
 
-Electron (current supported stable line), TypeScript, Three.js, Lit,
-SQLite, Ghostery's open-source ad-blocking engine. Reasons for each
-choice are in ARCHITECTURE.md.
+In use now: Electron 44 (the current supported stable line), TypeScript,
+Three.js, Lit, and SQLite through Node's built-in node:sqlite; Vite and
+electron-vite to build; Vitest and Playwright to test.
+Planned, not yet installed: Ghostery's open-source ad-blocking engine
+(milestone 4) and electron-builder for installers (milestone 7).
+Reasons for each choice are in ARCHITECTURE.md.
 
 Known limitation: Electron ships no DRM module, so video from Netflix
 and similar services will not play.
 
 ## Building and running
 
-Early development. Checked on Windows 11 only (macOS and Linux not
-checked yet). You need Node 22 and pnpm.
+Early development. Checked on Windows 11 only; macOS and Linux have not
+been checked yet, so treat them as untested.
+
+You need Node 22.13 or newer and pnpm 12.4.1. The pnpm version is pinned
+in package.json (`packageManager`), so pnpm, or `corepack enable`, uses
+that exact version. Install with the lockfile as it is:
 
 ```
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+The first run downloads the Electron binary (about 100 MB, from
+Electron's GitHub releases) and checks it against the checksums shipped
+in the electron package. The end-to-end tests also need `openssl` on
+PATH, which Git for Windows provides.
 
 `pnpm dev` opens the app on a start tab. Type an address or a search
 in the top bar; Ctrl+T opens a tab, Ctrl+W closes one, Ctrl+Tab moves
@@ -153,8 +165,10 @@ data.
 
 Tests: `pnpm test` (unit), `pnpm lint`, `pnpm typecheck`, and
 `pnpm test:e2e` (builds the app and drives it for about two minutes;
-opens windows while it runs, and needs openssl on PATH, which Git for
-Windows provides). Current results are in TODO.md.
+needs openssl on PATH, which Git for Windows provides). Its windows stay
+off screen and never take focus, so you can keep working; set
+`HYPERSOL_TEST_SHOW=1` to watch instead. Current results are in
+TODO.md.
 
 ## Contributing
 

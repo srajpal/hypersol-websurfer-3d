@@ -121,19 +121,26 @@ Where tests live:
 - Test fixture pages in tests/fixtures, served from 127.0.0.1.
 - HoloML conformance fixtures in the holoml repo under conformance/.
 
-How to run (from the repo root; recorded 2026-09-24 on Windows 11 after
-they ran; macOS and Linux not checked yet):
-- Install: `pnpm install`
-- Unit: `pnpm test` (Vitest; 35 tests passed)
+How to run (from the repo root; first recorded 2026-09-24 on Windows 11
+after they ran; macOS and Linux not checked yet). Counts are as of the
+date given and grow with each milestone; TODO.md has the latest.
+- Toolchain: Node 22.13 or newer; pnpm 12.4.1, pinned in package.json.
+- Install: `pnpm install --frozen-lockfile`
+- Unit: `pnpm test` (Vitest; 123 tests passed on 2026-09-25)
 - Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
 - End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
-  against it (about two minutes; 71 checks). Needs openssl on PATH for
+  against it (about two and a half minutes; 88 checks on 2026-09-25). Needs openssl on PATH for
   the certificate-error check (Git for Windows includes one). Every
   host except 127.0.0.1 is blocked during the run, and the test windows
   ignore the real mouse, so a resting cursor cannot disturb results. See
   TODO.md for results.
-- The end-to-end run opens app windows on screen; leave the machine
-  alone while it runs.
+- Test windows stay out of the way (owner request, 2026-09-25): they
+  open off screen, never take focus, and have no taskbar button, so the
+  computer can be used during a run; `pnpm screenshots` works the same
+  way. To watch a run in normal windows, set HYPERSOL_TEST_SHOW=1 (for
+  example `HYPERSOL_TEST_SHOW=1 pnpm test:e2e`); then leave the machine
+  alone while it runs. Check C1 confirms background windows are off
+  every display and unfocused.
 
 What to recheck after any change (regression list; grows with each
 milestone; the current milestone's checks are defined in TODO.md):

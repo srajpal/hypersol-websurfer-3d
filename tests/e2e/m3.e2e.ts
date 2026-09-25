@@ -3,7 +3,7 @@
  * the Library and Settings panels, the start panel's data, restarts,
  * clearing data, damaged saved data, and keyboard access.
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -18,8 +18,10 @@ import {
   removeFolder,
   settled,
   shellCall,
+  sleep,
   tabs,
   waitFor,
+  waitForExit,
   waitForPage,
   type Harness,
 } from './harness';
@@ -114,6 +116,22 @@ describe('E1 to E3: bookmarks, history, and the Library', () => {
     await h.shell.click(LIB('lib-clear'));
     await h.shell.click(LIB('lib-clear-confirm'));
     await waitFor('history empty', () => h.shell.locator(LIB('lib-empty')).textContent(), (t) => t === 'Nothing saved yet');
+  });
+
+  it('E2 searches once typing pauses, not on every key (GitHub issue #4)', async () => {
+    await navigateTo(h, server.url('link-b.html'));
+    await waitForPage(h, 'link-b');
+    await openLibrary(h, 'history');
+    await waitFor('a visit listed', () => libTitles(h), (t) => t.length > 0);
+    const searches = () =>
+      h.app.evaluate(() => (globalThis as unknown as { __hypersolTest: { dataOps: Record<string, number> } }).__hypersolTest.dataOps['history.search'] ?? 0);
+    const before = await searches();
+    await h.shell.locator(LIB('lib-search')).pressSequentially('link b', { delay: 30 });
+    await waitFor('search result', () => libTitles(h), (t) => t.join() === 'Link B');
+    // Six keys typed quickly: one search after the pause, not six.
+    expect((await searches()) - before).toBeLessThanOrEqual(2);
+    await h.shell.fill(LIB('lib-search'), '');
+    await h.shell.keyboard.press('Escape');
   });
 
   it('E3 opens a bookmark from the Library and removes it', async () => {
@@ -223,6 +241,46 @@ describe('E6 and E7: restarts', () => {
     }
   });
 
+  it('E6 keeps the latest tabs when the app closes right after a change (GitHub issue #3)', async () => {
+    const profile = newProfile();
+    writeFileSync(join(profile, 'settings.json'), JSON.stringify({ searchEngine: 'duckduckgo', onStartup: 'last-tabs' }));
+    let h = await launch(server.url('link-a.html'), { userDataDir: profile });
+    await waitForPage(h, 'link-a');
+    await pressInShell(h, 'T', ['control']);
+    await settled(h);
+    await navigateTo(h, server.url('link-b.html'));
+    await waitForPage(h, 'link-b');
+    await navigateTo(h, server.url('form.html'));
+    await waitForPage(h, 'form');
+    await h.close(); // at once: well inside the 400 ms the usual save waits
+
+    h = await launch('', { userDataDir: profile });
+    try {
+      const restored = await waitFor('tabs back', () => tabs(h), (t) => t.length === 2);
+      expect(restored.map((t) => t.url)).toEqual([server.url('link-a.html'), server.url('form.html')]);
+      expect((await focusedTab(h)).url).toBe(server.url('form.html'));
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('E6 says so in Settings when the open tabs cannot be saved (GitHub issue #3)', async () => {
+    const profile = newProfile();
+    mkdirSync(join(profile, 'session.json')); // a folder where the file should be
+    const h = await launch(server.url('link-a.html'), { userDataDir: profile });
+    try {
+      await waitForPage(h, 'link-a');
+      await openSettings(h);
+      await waitFor(
+        'save problem shown',
+        () => h.shell.locator(SET('set-session-problem')).textContent(),
+        (t) => (t ?? '').includes("Couldn't save your open tabs"),
+      );
+    } finally {
+      await h.close();
+    }
+  });
+
   it('E7 keeps bookmarks, history, and settings across a restart', async () => {
     const profile = newProfile();
     let h = await launch(server.url('link-a.html'), { userDataDir: profile });
@@ -246,6 +304,98 @@ describe('E6 and E7: restarts', () => {
       await waitFor('history kept', () => libTitles(h), (t) => t.join() === 'Form,Link B,Link A');
       await openSettings(h);
       await waitFor('setting kept', () => h.shell.locator(SET('set-engine-bing')).isChecked(), (c) => c);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+describe('E6b quitting and closing keep the latest tabs (PR #7 review)', () => {
+  // These run with the app kept alive when its last window closes, as it
+  // is on macOS, so a quit that turned into a mere window close would show.
+  const lastTabs = JSON.stringify({ searchEngine: 'duckduckgo', onStartup: 'last-tabs' });
+
+  async function twoTabs(h: Harness): Promise<void> {
+    await waitForPage(h, 'link-a');
+    await pressInShell(h, 'T', ['control']);
+    await settled(h);
+    await navigateTo(h, server.url('link-b.html'));
+    await waitForPage(h, 'link-b');
+  }
+
+  function savedTabs(profile: string): string[] {
+    const text = readFileSync(join(profile, 'session.json'), 'utf8');
+    return (JSON.parse(text) as { tabs: string[] }).tabs;
+  }
+
+  it('Quit saves the tabs and ends the app, even where closing the last window does not', async () => {
+    const profile = newProfile();
+    writeFileSync(join(profile, 'settings.json'), lastTabs);
+    const h = await launch(server.url('link-a.html'), { userDataDir: profile, keepRunning: true });
+    try {
+      await twoTabs(h);
+      await h.app.evaluate(({ app }) => app.quit()); // straight after the last change
+      expect(await waitForExit(h, 5000)).toBeLessThan(5000);
+      expect(savedTabs(profile)).toEqual([server.url('link-a.html'), server.url('link-b.html')]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('closing the window saves the tabs and, where the app keeps running, leaves it running', async () => {
+    const profile = newProfile();
+    writeFileSync(join(profile, 'settings.json'), lastTabs);
+    const h = await launch(server.url('link-a.html'), { userDataDir: profile, keepRunning: true });
+    try {
+      await twoTabs(h);
+      await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+      await waitFor(
+        'the window to close',
+        () => h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length),
+        (n) => n === 0,
+        5000,
+      );
+      await sleep(1000);
+      expect(h.proc.exitCode).toBeNull(); // still running, like macOS
+      expect(savedTabs(profile)).toEqual([server.url('link-a.html'), server.url('link-b.html')]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('if the shell never answers, Quit still ends the app after the 2 s wait', async () => {
+    const h = await launch(server.url('link-a.html'), { userDataDir: newProfile(), keepRunning: true });
+    try {
+      await waitForPage(h, 'link-a');
+      await shellCall(h, 'ignorePrepareClose');
+      const start = Date.now();
+      await h.app.evaluate(({ app }) => app.quit());
+      await waitForExit(h, 8000);
+      const took = Date.now() - start;
+      expect(took).toBeGreaterThanOrEqual(1800);
+      expect(took).toBeLessThan(6000);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('if the shell never answers, closing the window still closes it after the 2 s wait', async () => {
+    const h = await launch(server.url('link-a.html'), { userDataDir: newProfile(), keepRunning: true });
+    try {
+      await waitForPage(h, 'link-a');
+      await shellCall(h, 'ignorePrepareClose');
+      const start = Date.now();
+      await h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+      await waitFor(
+        'the window to close',
+        () => h.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length),
+        (n) => n === 0,
+        8000,
+      );
+      const took = Date.now() - start;
+      expect(took).toBeGreaterThanOrEqual(1800);
+      expect(took).toBeLessThan(6000);
+      expect(h.proc.exitCode).toBeNull();
     } finally {
       await h.close();
     }
@@ -292,6 +442,33 @@ describe('E9 damaged or blocked saved data', () => {
       expect(await h.shell.locator(SET('set-startup-new-tab')).isChecked()).toBe(true);
       expect(readdirSync(profile).some((f) => f.startsWith('settings.json.damaged-'))).toBe(true);
       expect(h.errors).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('unreadable settings: the app opens, explains, and a failed change changes nothing (GitHub issue #2)', async () => {
+    const profile = newProfile();
+    mkdirSync(join(profile, 'settings.json')); // a folder where the file should be
+    const h = await launch('', { userDataDir: profile, searchUrl: searchUrl() });
+    try {
+      await openSettings(h);
+      await waitFor(
+        'explanation',
+        () => h.shell.locator(SET('set-problem')).textContent(),
+        (t) => (t ?? '').includes("Your settings couldn't be read (EISDIR)"),
+      );
+      await h.shell.click(SET('set-engine-brave'));
+      await waitFor(
+        'failure message',
+        () => h.shell.locator(SET('set-message')).textContent(),
+        (t) => (t ?? '').includes("Couldn't save your settings"),
+      );
+      await waitFor('still DuckDuckGo', () => h.shell.locator(SET('set-engine-duckduckgo')).isChecked(), (c) => c);
+      expect(await h.shell.locator(SET('set-engine-brave')).isChecked()).toBe(false);
+      await h.shell.keyboard.press('Escape');
+      await navigateTo(h, 'still default');
+      await waitForPage(h, '/search'); // the local stand-in for DuckDuckGo, not Brave
     } finally {
       await h.close();
     }

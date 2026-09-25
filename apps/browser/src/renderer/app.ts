@@ -34,6 +34,11 @@ const SNAPSHOT_DELAY_MS = 400;
 const SESSION_SAVE_DELAY_MS = 400;
 const isWeb = (url: string) => /^https?:\/\//i.test(url);
 
+/** Same page apart from the #fragment (an in-page jump keeps the favicon). */
+function isSamePage(a: string, b: string): boolean {
+  return a.split('#')[0] === b.split('#')[0];
+}
+
 /**
  * The shell's controller: keeps the tab list, the pages, the room, the
  * top bar, and the panels in step, and acts on commands from the main
@@ -45,11 +50,18 @@ export class App {
   readonly data: DataClient;
   /** True once saved settings and tabs have been loaded. */
   ready = false;
+  /** Test runs only: ignore prepare-close, to test the main process's timeout. */
+  testIgnorePrepareClose = false;
   private settings: Settings = { ...DEFAULT_SETTINGS };
   private readonly views = new Map<number, TabView>();
   private shownFocus = -1;
   private readonly snapshotTimers = new Map<number, number>();
   private sessionTimer: number | undefined;
+  /** Whether the Enter key is held down in the shell. */
+  private enterDown = false;
+  private dataChangeTimer: number | undefined;
+  /** Why the open tabs could not be saved last time, if they could not. */
+  private sessionProblem = '';
   private starUrl = '';
   private openPanelName: PanelName | null = null;
   private focusBeforePanel: Element | null = null;
@@ -66,6 +78,8 @@ export class App {
       },
     });
     this.store.subscribe(() => this.sync());
+    document.addEventListener('keydown', (e) => e.key === 'Enter' && (this.enterDown = true), true);
+    document.addEventListener('keyup', (e) => e.key === 'Enter' && (this.enterDown = false), true);
     this.wireToolbar();
     this.wirePanels();
     options.bridge.onCommand((command) => this.onCommand(command));
@@ -111,7 +125,31 @@ export class App {
     if (!result || !view) return;
     this.store.update(tabId, { url: result.url, state: 'loading', title: result.url });
     view.load(result.url);
-    if (tabId === this.store.focusedId) view.focusContent();
+    if (tabId === this.store.focusedId) this.focusPageAfterEnter(view);
+  }
+
+  /**
+   * Moves the keyboard into the page, but only once the Enter key that
+   * started the navigation has been released (or after half a second):
+   * otherwise the key's release lands in the page. That stray key-up also
+   * stalled the test tool, which waits for the shell to acknowledge it
+   * (found 2026-09-25).
+   */
+  private focusPageAfterEnter(view: TabView): void {
+    if (!this.enterDown) {
+      view.focusContent();
+      return;
+    }
+    const go = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('keyup', onUp, true);
+      if (this.focusedView === view) view.focusContent();
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') go();
+    };
+    const timer = window.setTimeout(go, 500);
+    document.addEventListener('keyup', onUp, true);
   }
 
   // ---- Tabs ---------------------------------------------------------------
@@ -181,8 +219,11 @@ export class App {
     const view = this.views.get(tabId);
     if (!tab || !view) return;
     const state: TabState = view.isStart ? 'start' : status.state;
+    // A different page starts without the previous page's favicon.
+    const newPage = Boolean(status.url) && status.url !== tab.url && !isSamePage(status.url, tab.url);
     this.store.update(tabId, {
       state,
+      ...(newPage ? { favicon: undefined } : {}),
       ...(status.url ? { url: status.url } : {}),
       ...(status.title ? { title: status.title } : status.url && tab.title === tab.url ? { title: status.url } : {}),
     });
@@ -204,15 +245,35 @@ export class App {
     });
   }
 
-  /** Saves the open web tabs, for "reopen your tabs from last time". */
+  /** Saves the open web tabs soon, once changes settle. */
   private scheduleSessionSave(): void {
     if (!this.ready) return;
     window.clearTimeout(this.sessionTimer);
-    this.sessionTimer = window.setTimeout(() => {
-      const web = this.store.tabs.filter((t) => isWeb(t.url));
-      const focused = web.findIndex((t) => t.id === this.store.focusedId);
-      void this.data.get({ op: 'session.save', tabs: web.map((t) => t.url), focused }).catch(() => undefined);
-    }, SESSION_SAVE_DELAY_MS);
+    this.sessionTimer = window.setTimeout(() => void this.saveSessionNow(), SESSION_SAVE_DELAY_MS);
+  }
+
+  /**
+   * Saves the open web tabs now, for "reopen your tabs from last time".
+   * A failure is kept and shown in Settings, not swallowed (GitHub issue #3).
+   */
+  private async saveSessionNow(): Promise<void> {
+    window.clearTimeout(this.sessionTimer);
+    if (!this.ready) return;
+    const web = this.store.tabs.filter((t) => isWeb(t.url));
+    const focused = web.findIndex((t) => t.id === this.store.focusedId);
+    try {
+      await this.data.get({ op: 'session.save', tabs: web.map((t) => t.url), focused });
+      this.setSessionProblem('');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.warn(message);
+      this.setSessionProblem(message);
+    }
+  }
+
+  private setSessionProblem(message: string): void {
+    this.sessionProblem = message;
+    this.options.settingsPanel.sessionProblem = message;
   }
 
   // ---- Saved data ---------------------------------------------------------
@@ -376,14 +437,22 @@ export class App {
         if (tabId !== undefined) this.store.update(tabId, { favicon: command.dataUrl });
         break;
       }
+      case 'prepare-close':
+        if (this.testIgnorePrepareClose) break;
+        void this.saveSessionNow().finally(() => this.options.bridge.closeReady());
+        break;
       case 'data-changed':
         if (command.what === 'settings') {
           void this.data.get({ op: 'settings.get' }).then((s) => (this.settings = s)).catch(() => undefined);
           break;
         }
-        void this.refreshStartData();
-        void this.updateStar();
-        if (this.openPanelName === 'library') void this.options.library.refresh();
+        // Visits and title changes come in bursts; answer once per burst.
+        window.clearTimeout(this.dataChangeTimer);
+        this.dataChangeTimer = window.setTimeout(() => {
+          void this.refreshStartData();
+          void this.updateStar();
+          if (this.openPanelName === 'library') void this.options.library.refresh();
+        }, 100);
         break;
     }
   }

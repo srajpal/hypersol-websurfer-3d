@@ -12,6 +12,18 @@ export interface LaunchOptions {
   testMode: boolean;
   /** Test mode only: search address with %s, in place of DuckDuckGo. */
   searchUrl?: string;
+  /**
+   * Test mode only (HYPERSOL_TEST_BACKGROUND=1): the window opens off
+   * screen, without taking focus or a taskbar button, so test runs do
+   * not get in the way of whoever is using the computer.
+   */
+  testBackground: boolean;
+  /**
+   * Test mode only (HYPERSOL_TEST_KEEP_RUNNING=1): keep running when the
+   * last window closes, as the app does on macOS, to test quitting on any
+   * platform.
+   */
+  testKeepRunning: boolean;
 }
 
 function switchValue(argv: readonly string[], name: string): string | undefined {
@@ -26,7 +38,8 @@ function switchValue(argv: readonly string[], name: string): string | undefined 
  *   --tilt=<degrees>                page tilt, clamped to 0..20 (default 10)
  *   --hypersol-user-data=<folder>   profile folder for this run
  *   --search-url=<address with %s>  search engine, test mode only
- * and HYPERSOL_TEST=1 for test mode.
+ * and HYPERSOL_TEST=1 for test mode, HYPERSOL_TEST_BACKGROUND=1 for
+ * test windows that stay out of the way.
  */
 export function parseLaunchOptions(
   argv: readonly string[],
@@ -47,5 +60,7 @@ export function parseLaunchOptions(
     ...(userDataDir ? { userDataDir } : {}),
     testMode,
     ...(searchUrl ? { searchUrl } : {}),
+    testBackground: testMode && env['HYPERSOL_TEST_BACKGROUND'] === '1',
+    testKeepRunning: testMode && env['HYPERSOL_TEST_KEEP_RUNNING'] === '1',
   };
 }

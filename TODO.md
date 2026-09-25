@@ -492,7 +492,65 @@ Found and fixed during the build:
   not trap focus (like Chrome's side panel), so the check now confirms
   the panel's controls are reachable with Shift+Tab.
 
+Changed after the build (owner, prompt 24): test windows no longer come
+to the front. They open off screen, never take focus, and have no
+taskbar button; Chromium is told to keep drawing them. HYPERSOL_TEST_SHOW=1
+shows them for watching. Resizing now corrects the window's outer size
+step by step, since Electron's content-size call is unreliable off
+screen. New check in C1: background windows are off every display and
+unfocused. Two full runs after the change: 72 of 72; unit tests 99.
+
 ### Done when
 
 E1 to E10, C1 to C11, and D1 to D11 pass, the owner accepts E11, the
 docs and screenshots are updated, and the owner approves the milestone.
+
+## GitHub issues (2026-09-25, prompt 25)
+
+Fixed on branch fix/github-issues-1-6 (pull request for the owner to
+review): #1 favicon limits, #2 settings failures, #3 saving tabs before
+closing, #6 documentation. Partly fixed: #4 (search debouncing and
+merged refreshes) and #5 (toolchain pinned and documented).
+
+Follow-ups, proposed and not approved to build:
+- #4: move database work to a worker off the main process; indexed
+  search and history aggregation; latency benchmarks with budgets.
+  Proposed as a task in milestone 7 (first release), before real users
+  build up large histories.
+- #5: continuous integration for build, lint, types, and tests needs the
+  owner's approval of a service (AGENTS.md rule 3, for example GitHub
+  Actions). Windows, macOS, and Linux coverage belongs with milestone 7's
+  per-OS checks.
+
+New checks added with the fixes: D13 (favicon limits); E6 (tabs saved
+when closing right after a change; failed saves shown); E9 (unreadable
+settings); E2 (search runs once typing pauses).
+
+Also found and fixed: the rare stalled Enter press in the address bar
+(seen twice before). Enter started the navigation on key-down and moved
+the keyboard into the page at once, so the key's release landed in the
+page and the test tool waited for an acknowledgement that never came.
+The page now takes the keyboard once Enter is released (or after half a
+second). A tab also kept the previous page's favicon after navigating;
+fixed with #1.
+
+Results on the branch (Windows 11, 2026-09-25): 119 unit tests; the full
+end-to-end suite, now 82 checks, passed 82 of 82 in three runs in a row.
+
+Pull request #7 review (prompt 26), two findings, both fixed:
+- Refused favicon downloads (declared too large, error status) kept
+  running while the next address was tried. Every attempt now has its
+  own cancel switch and refused bodies are cancelled. New unit tests and
+  a streaming-server check (D13) confirm each connection closes at once,
+  at most one is open, and under 256 KB is sent; both failed against the
+  previous code.
+- Holding the window open to save the tabs cancelled a quit, and only
+  the window was closed afterwards; on macOS the app would keep running
+  after Quit. The main process now remembers a requested quit and resumes
+  it. New checks (E6b) with the app kept alive after its last window
+  closes, as on macOS: Quit ends the app with the latest tabs saved;
+  closing the window saves them and leaves the app running; both still
+  finish when the shell never answers (after the 2 s wait). The Quit
+  checks failed with the resume switched off. Native macOS not tested.
+- Results after the fixes: 123 unit tests; 88 of 88 end-to-end checks in
+  two runs.

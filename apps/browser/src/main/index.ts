@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, session, webContents } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, screen, session, webContents } from 'electron';
 import { defaultTheme } from '@hypersol/themes';
-import { CAPTURE_TAB_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
+import { CAPTURE_TAB_CHANNEL, CLOSE_READY_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
 import { wireGuest, wireShortcuts } from './guests';
 import { parseLaunchOptions } from './launch-options';
@@ -18,10 +18,26 @@ if (options.userDataDir) {
   app.setPath('userData', join(app.getAppPath(), '..', '..', 'userData', 'dev'));
 }
 
+if (options.testBackground) {
+  // Test windows sit off screen, behind everything. Chromium normally stops
+  // drawing windows nobody can see; these switches keep it drawing, so the
+  // checks see the same frames as a visible window.
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
+}
+
 const PAGE_PRELOAD = join(__dirname, '../preload/page.js');
 const SHELL_PRELOAD = join(__dirname, '../preload/shell.js');
 
 let mainWindow: BrowserWindow | null = null;
+/**
+ * Set when the application is asked to quit (Quit, Cmd+Q, app.quit()),
+ * as opposed to one window closing. Holding a window open to save the
+ * tabs cancels that quit, so it is resumed afterwards (PR #7 review).
+ */
+let quitting = false;
 let testLog: TestLog | null = null;
 let storage: StorageService | null = null;
 
@@ -40,10 +56,17 @@ function setAppMenu(): void {
   );
 }
 
+/** A spot to the right of every display, for background test windows. */
+function offScreenPosition(): { x: number; y: number } {
+  const right = Math.max(...screen.getAllDisplays().map((d) => d.bounds.x + d.bounds.width));
+  return { x: right + 200, y: 0 };
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    ...(options.testBackground ? { ...offScreenPosition(), skipTaskbar: true } : {}),
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -72,10 +95,12 @@ function createWindow(): void {
       if (input.type === 'keyDown' && input.key === 'F12') win.webContents.toggleDevTools();
     });
   }
-  win.once('ready-to-show', () => win.show());
+  // Background test windows appear without taking focus.
+  win.once('ready-to-show', () => (options.testBackground ? win.showInactive() : win.show()));
   win.on('closed', () => {
     mainWindow = null;
   });
+  flushBeforeClose(win);
 
   const query: Record<string, string> = {
     startUrl: options.startUrl,
@@ -91,6 +116,43 @@ function createWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'), { query });
   }
+}
+
+/** How long a closing window waits for the shell to save the open tabs. */
+const CLOSE_FLUSH_MS = 2000;
+
+/**
+ * Before the window closes, the shell saves the open tabs at once (its
+ * usual save waits for changes to settle) and confirms; the window then
+ * closes. If the shell does not answer within CLOSE_FLUSH_MS, or has
+ * crashed, it closes anyway (GitHub issue #3). When the application was
+ * quitting, the quit is resumed rather than only closing the window, so
+ * on macOS, where closing the last window keeps the app running, Quit
+ * still quits.
+ */
+function flushBeforeClose(win: BrowserWindow): void {
+  let ready = false;
+  let waiting = false;
+  win.on('close', (event) => {
+    if (ready || win.webContents.isCrashed() || win.webContents.isDestroyed()) return;
+    event.preventDefault();
+    if (waiting) return;
+    waiting = true;
+    const finish = () => {
+      ipcMain.removeListener(CLOSE_READY_CHANNEL, onReady);
+      clearTimeout(timer);
+      ready = true;
+      waiting = false;
+      if (quitting) app.quit();
+      else if (!win.isDestroyed()) win.close();
+    };
+    const onReady = (e: Electron.IpcMainEvent) => {
+      if (e.sender === win.webContents) finish();
+    };
+    const timer = setTimeout(finish, CLOSE_FLUSH_MS);
+    ipcMain.on(CLOSE_READY_CHANNEL, onReady);
+    win.webContents.send(SHELL_COMMAND_CHANNEL, { type: 'prepare-close' } satisfies ShellCommand);
+  });
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -156,6 +218,10 @@ if (!app.requestSingleInstanceLock()) {
       if (!mainWindow || event.sender !== mainWindow.webContents) {
         return { ok: false, error: 'Not allowed' };
       }
+      if (testLog && typeof request === 'object' && request !== null) {
+        const op = String((request as { op?: unknown }).op);
+        testLog.dataOps[op] = (testLog.dataOps[op] ?? 0) + 1;
+      }
       return storage!.handle(request);
     });
     storage.onChange((what) => {
@@ -172,8 +238,13 @@ if (!app.requestSingleInstanceLock()) {
     });
   });
 
+  app.on('before-quit', () => {
+    quitting = true;
+  });
+
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    // macOS keeps the app running with no windows; tests can ask for the same.
+    if (process.platform !== 'darwin' && !options.testKeepRunning) app.quit();
   });
 
   app.on('will-quit', () => storage?.close());

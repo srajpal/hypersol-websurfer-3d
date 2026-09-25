@@ -8,6 +8,8 @@ describe('parseLaunchOptions', () => {
       startUrl: '',
       tiltDeg: 10,
       testMode: false,
+      testBackground: false,
+      testKeepRunning: false,
     });
   });
 
@@ -21,7 +23,19 @@ describe('parseLaunchOptions', () => {
       tiltDeg: 20,
       userDataDir: 'C:\\tmp\\x',
       testMode: true,
+      testBackground: false,
+      testKeepRunning: false,
     });
+  });
+
+  it('keeps test windows in the background only in test mode', () => {
+    expect(parseLaunchOptions([], { HYPERSOL_TEST_BACKGROUND: '1' }).testBackground).toBe(false);
+    expect(parseLaunchOptions([], { HYPERSOL_TEST: '1', HYPERSOL_TEST_BACKGROUND: '1' }).testBackground).toBe(true);
+  });
+
+  it('keeps running after the last window closes only in test mode', () => {
+    expect(parseLaunchOptions([], { HYPERSOL_TEST_KEEP_RUNNING: '1' }).testKeepRunning).toBe(false);
+    expect(parseLaunchOptions([], { HYPERSOL_TEST: '1', HYPERSOL_TEST_KEEP_RUNNING: '1' }).testKeepRunning).toBe(true);
   });
 
   it('clamps tilt and refuses non-web start addresses', () => {
