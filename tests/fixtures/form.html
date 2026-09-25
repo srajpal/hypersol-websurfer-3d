@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Form</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 40px;
+        font-family: sans-serif;
+        font-size: 16px;
+        background: #ffffff;
+      }
+      label {
+        display: block;
+        margin: 18px 0 6px;
+      }
+      input[type='text'],
+      textarea {
+        width: 420px;
+        font-size: 16px;
+        padding: 6px;
+      }
+      textarea {
+        height: 90px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Sample form</h1>
+    <label for="name">Name</label>
+    <input id="name" type="text" />
+    <label for="notes">Notes</label>
+    <textarea id="notes"></textarea>
+    <label for="colour">Colour</label>
+    <select id="colour">
+      <option>Red</option>
+      <option>Green</option>
+      <option>Blue</option>
+    </select>
+    <label><input id="agree" type="checkbox" /> I agree</label>
+  </body>
+</html>

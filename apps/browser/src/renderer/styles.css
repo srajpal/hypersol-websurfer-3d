@@ -1,0 +1,124 @@
+/* Colours come from @hypersol/themes as --hs-* variables (themes/apply.ts). */
+
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--hs-background-top), var(--hs-background-bottom));
+  color: var(--hs-text);
+}
+
+#room {
+  position: fixed;
+  inset: 0;
+}
+
+#room canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+/* The CSS 3D layer lets pointer events through to the room, except on the page. */
+.hs-css-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hs-panel {
+  pointer-events: auto;
+  background: #ffffff;
+  /* Outline, not border, so page pixel (0, 0) is the panel's top-left corner. */
+  outline: 1px solid var(--hs-accent);
+  box-shadow: 0 0 calc(48px * var(--hs-glow-strength))
+    color-mix(in srgb, var(--hs-accent) 55%, transparent);
+}
+
+.hs-panel webview {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.hs-panel-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--hs-panel-glass);
+  color: var(--hs-text);
+  font-size: 16px;
+  text-align: center;
+}
+
+.hs-panel-overlay[data-visible] {
+  display: flex;
+}
+
+.hs-panel-overlay .hs-overlay-detail {
+  color: var(--hs-text-muted);
+  font-size: 13px;
+  word-break: break-all;
+  max-width: 80%;
+}
+
+.hs-panel-overlay button {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--hs-accent);
+  background: transparent;
+  color: var(--hs-text);
+  cursor: pointer;
+}
+
+.hs-panel-overlay button:focus-visible {
+  outline: 2px solid var(--hs-accent);
+  outline-offset: 2px;
+}
+
+#dev-address {
+  position: fixed;
+  top: 12px;
+  left: 40px;
+  right: 40px;
+  z-index: 10;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 0;
+}
+
+#dev-address input {
+  flex: 1;
+  max-width: 720px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--hs-text-muted);
+  background: var(--hs-panel-glass);
+  color: var(--hs-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+#dev-address input:focus {
+  outline: 2px solid var(--hs-accent);
+  outline-offset: 1px;
+}
+
+#dev-status {
+  color: var(--hs-text-muted);
+  font-size: 13px;
+}

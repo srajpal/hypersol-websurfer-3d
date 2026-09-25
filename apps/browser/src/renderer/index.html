@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:"
+    />
+    <title>HyperSol WebSurfer 3D</title>
+  </head>
+  <body>
+    <div id="room"></div>
+    <!-- Temporary address field for milestone 1; replaced by the HUD in milestone 2. -->
+    <form id="dev-address" autocomplete="off">
+      <input
+        id="dev-address-input"
+        type="text"
+        spellcheck="false"
+        placeholder="Type a web address and press Enter"
+        aria-label="Address"
+      />
+      <span id="dev-status" role="status" aria-live="polite"></span>
+    </form>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

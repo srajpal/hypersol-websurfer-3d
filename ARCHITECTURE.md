@@ -45,10 +45,16 @@ Not available: Rust, C++ compiler (cl, clang, gcc).
 Consequence: choose a TypeScript stack; native modules must ship prebuilt
 binaries.
 
-Electron is not installed on this machine. Electron 44 was the current
-stable line on 2026-09-24 according to the project's release listing.
-AGENTS.md rule 13 rechecks this at the start of each milestone; the
-version and date checked are recorded here.
+Electron 44.4.5 was installed on 2026-09-24 (milestone 1), resolved by
+pnpm as the newest 44.x release (Node 24.21.0, Chromium 152.0.7977.130
+inside it). The AGENTS.md rule 13 check of Electron's release notes for
+security releases was not done at the start of milestone 1: the registry
+lookup was blocked by the session's permission check. It is still
+owed.
+
+Graphics on the build machine: NVIDIA GeForce RTX 4050 Laptop GPU and
+AMD Radeon integrated graphics; one 1920×1080 display at 100% scaling;
+touchpad, no touch screen.
 
 ## 4. Decisions and reasons
 
@@ -72,7 +78,7 @@ version and date checked are recorded here.
 | Camera | Fixed desk view with subtle mouse parallax; parallax pauses while the pointer is over the page | Simple and predictable; targets never move under the cursor. Free movement is a later milestone. |
 | Window frame | Standard OS title bar | Reliable on all three OSes; a custom frame is considered in the theme milestone. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
-| Bookmarks and history | SQLite (better-sqlite3, prebuilt binaries) | Fast search over thousands of rows; standard for browsers. |
+| Bookmarks and history | SQLite (better-sqlite3, prebuilt binaries; node:sqlite proposed instead, see open question 3) | Fast search over thousands of rows; standard for browsers. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
 | Build | electron-vite (Vite) and electron-builder | Fast dev reload; installers for Windows, macOS, Linux. |
 | Tests | Vitest (unit), Playwright (Electron end-to-end) | Standard, cross-platform. |
@@ -242,19 +248,34 @@ fonts, sound design, VR.
 1. Theme look: Nebula (dark) default and Daylight (light) are the working
    proposal. Exact colours, accent, and any owner sketches are still to
    be confirmed in the theme milestone.
-2. Live-panel input on a rotated page: to be answered by the milestone 1
-   spike (TODO.md task 8). Fallback (decided 2026-09-24) is a flat,
-   face-on live page with the room in 3D around it; texture mode stays
-   the later upgrade path. Not checked yet.
+2. Live-panel input on a rotated page: partly answered by the milestone
+   1 spike (TODO.md task 8, 2026-09-24). Clicks, hover, scrolling, and
+   links land accurately at 0°, 10°, and 20°. Typing through the test
+   tool does not reach the page; real keyboard input is still to be
+   tried by the owner. Fallback (decided 2026-09-24) is a flat, face-on
+   live page with the room in 3D around it; texture mode stays the later
+   upgrade path.
 3. Prebuilt better-sqlite3 binaries for the chosen Electron line on all
    three OSes. Check first whether Electron's bundled Node provides
-   node:sqlite, which would remove the only native module. Not checked
-   yet.
+   node:sqlite, which would remove the only native module. Checked
+   2026-09-24 on Windows: node:sqlite works in Electron 44.4.5 (Node
+   24.21.0, SQLite 3.53.4). Proposed: use node:sqlite and drop
+   better-sqlite3. Needs owner approval; macOS and Linux not checked.
 
-## 11. Run and test (not checked yet)
+## 11. Run and test
 
+Checked on Windows 11, 2026-09-24 (macOS and Linux not checked yet):
 - Install: `pnpm install`
-- Develop: `pnpm dev` (starts the Electron app with live reload)
+- Develop: `pnpm dev` (starts the Electron app with live reload, using a
+  throwaway profile in the ignored `userData/dev` folder)
+- Build: `pnpm build` (output in apps/browser/out)
 - Unit tests: `pnpm test`
-- End-to-end: `pnpm test:e2e`
-- Package: `pnpm build` then `pnpm package` (installers per OS)
+- Lint and type check: `pnpm lint`, `pnpm typecheck`
+- End-to-end: `pnpm test:e2e` (runs; not all checks pass yet, see
+  TODO.md)
+
+Not checked yet: `pnpm package` (installers per OS, milestone 7).
+
+Launch options, for development and tests: `--start-url=<address>`,
+`--tilt=<0 to 20>`, `--hypersol-user-data=<folder>`; `HYPERSOL_TEST=1`
+turns on the test hooks.

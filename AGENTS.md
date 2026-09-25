@@ -110,25 +110,31 @@ the correction.
 
 ## Testing
 
-Where tests live (planned; nothing exists yet):
+Where tests live:
 - Unit tests next to the code they test: `*.test.ts` in each package and
   in apps/browser/src.
 - End-to-end tests in tests/e2e (Playwright driving the Electron app).
 - Test fixture pages in tests/fixtures, served from 127.0.0.1.
 - HoloML conformance fixtures in the holoml repo under conformance/.
 
-How to run — not checked yet. No test has been run in this project.
-Commands will be recorded here only after they have run successfully.
-- Unit: not checked yet
-- End-to-end: not checked yet
-- Lint and type check: not checked yet
+How to run (from the repo root; recorded 2026-09-24 on Windows 11 after
+they ran; macOS and Linux not checked yet):
+- Install: `pnpm install`
+- Unit: `pnpm test` (Vitest; 35 tests passed)
+- Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
+- End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
+  against it. It runs, but does not pass yet: check C4 (typing) fails
+  and C2 is intermittent. See TODO.md, milestone 1 check results.
+- The end-to-end run opens app windows on screen; leave the machine
+  alone while it runs.
 
 What to recheck after any change (regression list; grows with each
 milestone; the current milestone's checks are defined in TODO.md):
-- Nothing has run yet. Milestone 1 will add checks C1 to C11 from
-  TODO.md: app launches, clicks land on the tilted page, parallax does
-  not shift targets, typing, scrolling, hover and links, page isolation,
-  no unexpected traffic, idle efficiency, load failure, page crash.
+- Milestone 1 checks C1 to C11 from TODO.md (`pnpm test:e2e`): app
+  launches, clicks land on the tilted page, parallax does not shift
+  targets, typing, scrolling, hover and links, page isolation, no
+  unexpected traffic, idle efficiency, load failure, page crash. Plus
+  the unit tests (`pnpm test`).
 - Later milestones add: tabs and HUD (2), bookmarks and history intact
   after restart (3), a known tracker is blocked and DNS resolves over
   HTTPS (4), depth layering (5), theme switch (6), per-OS installers (7).

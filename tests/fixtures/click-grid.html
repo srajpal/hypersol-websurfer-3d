@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Click grid</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: sans-serif;
+        background: #f4f6fb;
+      }
+      button {
+        position: absolute;
+        width: 72px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 3×3 targets: corners, edge midpoints, centre. Each click records which
+         button was hit and where the page saw the pointer. -->
+    <script>
+      window.__fixture = { clicks: [] };
+      const spots = [
+        ['top-left', 6, 6], ['top', 50, 6], ['top-right', 94, 6],
+        ['left', 6, 50], ['centre', 50, 50], ['right', 94, 50],
+        ['bottom-left', 6, 94], ['bottom', 50, 94], ['bottom-right', 94, 94],
+      ];
+      for (const [id, x, y] of spots) {
+        const b = document.createElement('button');
+        b.id = id;
+        b.textContent = id;
+        b.style.left = x + '%';
+        b.style.top = y + '%';
+        document.body.append(b);
+      }
+      document.addEventListener('click', (e) => {
+        const id = e.target instanceof HTMLButtonElement ? e.target.id : 'miss';
+        window.__fixture.clicks.push({ id, x: e.clientX, y: e.clientY });
+      });
+    </script>
+  </body>
+</html>

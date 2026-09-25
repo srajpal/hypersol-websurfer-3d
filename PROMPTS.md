@@ -210,3 +210,11 @@ Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Session: fable-50d
 ```text
 Implement, commit, and push
 ```
+
+## 16 — 2026-09-24
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b35 · Tokens: 116,078 at logging
+
+```text
+Reread the md files, some have changed. Then proceed with install and milestone 1
+```

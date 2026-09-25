@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Node probe</title>
+  </head>
+  <body>
+    <p>Reports whether this page can reach Node or an untrusted preload.</p>
+    <script>
+      window.__fixture = {
+        require: typeof require,
+        process: typeof process,
+        module: typeof module,
+        evilPreloadRan: typeof window.evilPreloadRan,
+      };
+    </script>
+  </body>
+</html>

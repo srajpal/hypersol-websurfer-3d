@@ -1,0 +1,13 @@
+{
+  "name": "@hypersol/themes",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Theme schema and built-in themes for HyperSol WebSurfer 3D.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

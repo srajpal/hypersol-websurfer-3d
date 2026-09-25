@@ -7,8 +7,9 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: planning.** The brief and architecture are approved. No app
-code exists yet. See [Project documents](#project-documents).
+**Status: milestone 1 in progress.** The first app code exists: one live
+web page on a tilted panel in a 3D room. See TODO.md and
+[Project documents](#project-documents).
 
 ## The story
 
@@ -103,8 +104,22 @@ and similar services will not play.
 
 ## Building and running
 
-Not checked yet. Nothing has been built. Commands will appear here once
-they have actually run.
+Early development: milestone 1 is in progress. Checked on Windows 11
+only (macOS and Linux not checked yet). You need Node 22 and pnpm.
+
+```
+pnpm install
+pnpm dev
+```
+
+`pnpm dev` opens the app with one web page on a tilted panel in a 3D
+room and a temporary address field at the top. Development runs use a
+throwaway profile in the `userData/` folder, never your normal browser
+data.
+
+Tests: `pnpm test` (unit), `pnpm lint`, `pnpm typecheck`, and
+`pnpm test:e2e` (builds the app and drives it; opens windows while it
+runs). Current results are in TODO.md.
 
 ## Contributing
 

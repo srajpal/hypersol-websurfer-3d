@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hover</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: sans-serif;
+        background: #ffffff;
+      }
+      #target {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 200px;
+        height: 120px;
+        transform: translate(-50%, -50%);
+        background: #d8e0ff;
+        border: 2px solid #3050c0;
+      }
+      #target:hover {
+        background: #5ce1ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="target">Hover me</div>
+    <script>
+      window.__fixture = { hovered: false, enters: 0, leaves: 0 };
+      const t = document.getElementById('target');
+      t.addEventListener('mouseenter', () => {
+        window.__fixture.hovered = true;
+        window.__fixture.enters++;
+      });
+      t.addEventListener('mouseleave', () => {
+        window.__fixture.hovered = false;
+        window.__fixture.leaves++;
+      });
+    </script>
+  </body>
+</html>

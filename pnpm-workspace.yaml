@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Packages allowed to run install scripts. esbuild's checks its platform
+# binary. Electron 44 has no install script: it downloads its binary on
+# first use and verifies it against the checksums in its package.
+allowBuilds:
+  esbuild: true

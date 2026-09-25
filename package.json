@@ -1,0 +1,23 @@
+{
+  "name": "hypersol-websurfer-3d",
+  "private": true,
+  "description": "HyperSol WebSurfer 3D: an open-source desktop browser with a 3D interface.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @hypersol/browser dev",
+    "build": "pnpm --filter @hypersol/browser build",
+    "test": "vitest run",
+    "test:e2e": "pnpm build && vitest run --config vitest.e2e.config.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc -p packages/scene-core --noEmit && tsc -p packages/themes --noEmit && tsc -p apps/browser --noEmit && tsc -p tests --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "eslint": "^10.11.0",
+    "playwright": "^1.63.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1"
+  }
+}

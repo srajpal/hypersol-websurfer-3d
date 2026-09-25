@@ -1,14 +1,19 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-24 (late evening, after the four-perspective review).
+Last updated 2026-09-24 (night, milestone 1 spike checkpoint).
 
 ## Where things stand
 
-Planning is complete and approved, including the milestone roadmap and
-the milestone 1 plan in TODO.md. No app code exists. Nothing has been
-installed, built, or tested. The next step is build approval for
-milestone 1 (Live page in the 3D room).
+Milestone 1 (Live page in the 3D room) is approved and in progress.
+Dependencies are installed, the app builds and runs (`pnpm dev`), the
+unit tests, lint, and type check pass, and 20 of 23 end-to-end checks
+pass. Work stopped at the spike checkpoint (TODO.md task 8), waiting for
+the owner: typing into the tilted page has not been shown to work
+through the test tool, and a real-keyboard trial by the owner decides
+between keeping the tilt and the agreed flat-page fallback. Check C2 is
+also intermittent (a dropped first click after a resize, cause not yet
+found). Full results are in TODO.md.
 
 A four-perspective documentation review (technical, product/UX,
 operational, business) ran on 2026-09-24. Its doc fixes and rule updates
@@ -76,9 +81,9 @@ browser repo for rules and the prompt log.
 2. Whether clicks land correctly on a live page rotated in 3D. Answered
    by the milestone 1 spike (TODO.md task 8). Fallback is a flat,
    face-on live page; texture mode stays the later upgrade path.
-3. Whether node:sqlite is available in Electron's bundled Node, and if
-   not, whether prebuilt better-sqlite3 binaries exist for all three
-   OSes. Check before adding the dependency.
+3. node:sqlite works in Electron 44.4.5 on Windows (checked
+   2026-09-24). Proposed: use it instead of better-sqlite3; needs owner
+   approval before milestone 3.
 
 ## Open items from the review (need an owner decision)
 
@@ -115,9 +120,11 @@ change scope, add a service, or cost money. None is applied.
 
 ## Machine facts (checked 2026-09-24)
 
-Node 22.16, npm 10.9, pnpm 12.4, git 2.45, Python 3.13, .NET 9,
+Node 22.16, npm 10.9, pnpm 12.4.1, git 2.45, Python 3.13, .NET 9,
 CMake 3.28. No Rust, no C++ compiler. `gh` is logged in as srajpal.
-GPU, display scaling, and touch-screen presence: not recorded yet.
+NVIDIA GeForce RTX 4050 Laptop GPU plus AMD Radeon integrated graphics;
+one 1920×1080 display at 100% scaling; touchpad, no touch screen.
+Electron 44.4.5 is installed in the repo (not globally).
 
 ## How to resume
 
@@ -126,14 +133,13 @@ GPU, display scaling, and touch-screen presence: not recorded yet.
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. The next expected prompt is build
-   approval for milestone 1 in TODO.md. Build approval covers all of
-   that milestone's tasks; check in after the spike result (task 8) and
-   at the end. Do not write app code until it is given. Tick tasks and
-   record check results in TODO.md as they actually run.
-3. Before the first code milestone, ask for approval to install
-   dependencies (rule 4 in AGENTS.md), list exactly what will be
-   installed, and name the downloads the install performs.
+2. Do only what the prompt approves. Milestone 1's build is approved
+   (prompt 16) and is paused at the spike checkpoint. The next expected
+   prompt is the owner's real-keyboard result and decision (TODO.md,
+   "Spike result"). Tick tasks and record check results in TODO.md as
+   they actually run.
+3. Any new package needs approval first (rule 4 in AGENTS.md). The
+   installed set and versions are listed in TODO.md, milestone 1.
 4. Update README.md, ARCHITECTURE.md, TODO.md, and this file whenever a
    decision or the project state changes. Update the Testing section of
    AGENTS.md only with commands that have actually run.
@@ -170,7 +176,10 @@ repo's PROMPTS.md.
 ## Things not yet done, on purpose
 
 - Milestones 2 onward are listed in TODO.md but not approved to build.
-- No package.json, no dependencies, no code in either repo.
+- No code in the holoml repo yet.
+- The Electron release-notes security check (AGENTS.md rule 13) is
+  still owed for milestone 1; the lookup was blocked by a permission
+  check in the session.
 - No SPEC.md in holoml (outline is part of milestone 7).
 - No git tags, branches, CI, issue templates, SECURITY.md, CONTRIBUTING.md,
   or GitHub settings.
