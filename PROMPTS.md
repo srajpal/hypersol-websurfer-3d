@@ -171,9 +171,12 @@ Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Tokens: 97,340 at lo
 approve to save and commit
 ```
 
-## 11 — 2026-09-24
+## 14 — 2026-09-24
 
 Model: Claude Fable 5.1 (claude-fable-5-1) · Effort: high · Tokens: 160,013 at logging
+
+Correction (2026-09-24): first logged as a second "11" because a parallel
+session had logged 10 to 13 in the meantime. Renumbered to 14 by time order.
 
 ```text
 <context>
