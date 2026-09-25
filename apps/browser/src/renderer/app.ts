@@ -55,6 +55,8 @@ export class App {
   private shownFocus = -1;
   private readonly snapshotTimers = new Map<number, number>();
   private sessionTimer: number | undefined;
+  /** Why the open tabs could not be saved last time, if they could not. */
+  private sessionProblem = '';
   private starUrl = '';
   private openPanelName: PanelName | null = null;
   private focusBeforePanel: Element | null = null;
@@ -212,15 +214,35 @@ export class App {
     });
   }
 
-  /** Saves the open web tabs, for "reopen your tabs from last time". */
+  /** Saves the open web tabs soon, once changes settle. */
   private scheduleSessionSave(): void {
     if (!this.ready) return;
     window.clearTimeout(this.sessionTimer);
-    this.sessionTimer = window.setTimeout(() => {
-      const web = this.store.tabs.filter((t) => isWeb(t.url));
-      const focused = web.findIndex((t) => t.id === this.store.focusedId);
-      void this.data.get({ op: 'session.save', tabs: web.map((t) => t.url), focused }).catch(() => undefined);
-    }, SESSION_SAVE_DELAY_MS);
+    this.sessionTimer = window.setTimeout(() => void this.saveSessionNow(), SESSION_SAVE_DELAY_MS);
+  }
+
+  /**
+   * Saves the open web tabs now, for "reopen your tabs from last time".
+   * A failure is kept and shown in Settings, not swallowed (GitHub issue #3).
+   */
+  private async saveSessionNow(): Promise<void> {
+    window.clearTimeout(this.sessionTimer);
+    if (!this.ready) return;
+    const web = this.store.tabs.filter((t) => isWeb(t.url));
+    const focused = web.findIndex((t) => t.id === this.store.focusedId);
+    try {
+      await this.data.get({ op: 'session.save', tabs: web.map((t) => t.url), focused });
+      this.setSessionProblem('');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.warn(message);
+      this.setSessionProblem(message);
+    }
+  }
+
+  private setSessionProblem(message: string): void {
+    this.sessionProblem = message;
+    this.options.settingsPanel.sessionProblem = message;
   }
 
   // ---- Saved data ---------------------------------------------------------
@@ -384,6 +406,9 @@ export class App {
         if (tabId !== undefined) this.store.update(tabId, { favicon: command.dataUrl });
         break;
       }
+      case 'prepare-close':
+        void this.saveSessionNow().finally(() => this.options.bridge.closeReady());
+        break;
       case 'data-changed':
         if (command.what === 'settings') {
           void this.data.get({ op: 'settings.get' }).then((s) => (this.settings = s)).catch(() => undefined);

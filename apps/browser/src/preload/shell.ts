@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import { CAPTURE_TAB_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellBridge, type ShellCommand } from '../shared/commands';
+import {
+  CAPTURE_TAB_CHANNEL,
+  CLOSE_READY_CHANNEL,
+  SHELL_COMMAND_CHANNEL,
+  type ShellBridge,
+  type ShellCommand,
+} from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
 
 /**
@@ -26,6 +32,9 @@ const bridge: ShellBridge = {
   },
   data(request) {
     return ipcRenderer.invoke(DATA_CHANNEL, request);
+  },
+  closeReady() {
+    ipcRenderer.send(CLOSE_READY_CHANNEL);
   },
 };
 

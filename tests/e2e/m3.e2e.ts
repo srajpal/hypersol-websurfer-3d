@@ -223,6 +223,46 @@ describe('E6 and E7: restarts', () => {
     }
   });
 
+  it('E6 keeps the latest tabs when the app closes right after a change (GitHub issue #3)', async () => {
+    const profile = newProfile();
+    writeFileSync(join(profile, 'settings.json'), JSON.stringify({ searchEngine: 'duckduckgo', onStartup: 'last-tabs' }));
+    let h = await launch(server.url('link-a.html'), { userDataDir: profile });
+    await waitForPage(h, 'link-a');
+    await pressInShell(h, 'T', ['control']);
+    await settled(h);
+    await navigateTo(h, server.url('link-b.html'));
+    await waitForPage(h, 'link-b');
+    await navigateTo(h, server.url('form.html'));
+    await waitForPage(h, 'form');
+    await h.close(); // at once: well inside the 400 ms the usual save waits
+
+    h = await launch('', { userDataDir: profile });
+    try {
+      const restored = await waitFor('tabs back', () => tabs(h), (t) => t.length === 2);
+      expect(restored.map((t) => t.url)).toEqual([server.url('link-a.html'), server.url('form.html')]);
+      expect((await focusedTab(h)).url).toBe(server.url('form.html'));
+    } finally {
+      await h.close();
+    }
+  });
+
+  it('E6 says so in Settings when the open tabs cannot be saved (GitHub issue #3)', async () => {
+    const profile = newProfile();
+    mkdirSync(join(profile, 'session.json')); // a folder where the file should be
+    const h = await launch(server.url('link-a.html'), { userDataDir: profile });
+    try {
+      await waitForPage(h, 'link-a');
+      await openSettings(h);
+      await waitFor(
+        'save problem shown',
+        () => h.shell.locator(SET('set-session-problem')).textContent(),
+        (t) => (t ?? '').includes("Couldn't save your open tabs"),
+      );
+    } finally {
+      await h.close();
+    }
+  });
+
   it('E7 keeps bookmarks, history, and settings across a restart', async () => {
     const profile = newProfile();
     let h = await launch(server.url('link-a.html'), { userDataDir: profile });

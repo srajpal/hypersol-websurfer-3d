@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, Menu, screen, session, webContents } from 'electron';
 import { defaultTheme } from '@hypersol/themes';
-import { CAPTURE_TAB_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
+import { CAPTURE_TAB_CHANNEL, CLOSE_READY_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
 import { wireGuest, wireShortcuts } from './guests';
 import { parseLaunchOptions } from './launch-options';
@@ -94,6 +94,7 @@ function createWindow(): void {
   win.on('closed', () => {
     mainWindow = null;
   });
+  flushBeforeClose(win);
 
   const query: Record<string, string> = {
     startUrl: options.startUrl,
@@ -109,6 +110,38 @@ function createWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'), { query });
   }
+}
+
+/** How long a closing window waits for the shell to save the open tabs. */
+const CLOSE_FLUSH_MS = 2000;
+
+/**
+ * Before the window closes, the shell saves the open tabs at once (its
+ * usual save waits for changes to settle) and confirms; the window then
+ * closes. If the shell does not answer within CLOSE_FLUSH_MS, or has
+ * crashed, it closes anyway (GitHub issue #3).
+ */
+function flushBeforeClose(win: BrowserWindow): void {
+  let ready = false;
+  let waiting = false;
+  win.on('close', (event) => {
+    if (ready || win.webContents.isCrashed() || win.webContents.isDestroyed()) return;
+    event.preventDefault();
+    if (waiting) return;
+    waiting = true;
+    const finish = () => {
+      ipcMain.removeListener(CLOSE_READY_CHANNEL, onReady);
+      clearTimeout(timer);
+      ready = true;
+      if (!win.isDestroyed()) win.close();
+    };
+    const onReady = (e: Electron.IpcMainEvent) => {
+      if (e.sender === win.webContents) finish();
+    };
+    const timer = setTimeout(finish, CLOSE_FLUSH_MS);
+    ipcMain.on(CLOSE_READY_CHANNEL, onReady);
+    win.webContents.send(SHELL_COMMAND_CHANNEL, { type: 'prepare-close' } satisfies ShellCommand);
+  });
 }
 
 if (!app.requestSingleInstanceLock()) {

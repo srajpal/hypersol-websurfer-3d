@@ -16,6 +16,7 @@ export class HsSettings extends LitElement {
     settings: { state: true },
     message: { state: true },
     problem: { state: true },
+    sessionProblem: { type: String },
     confirming: { state: true },
     choices: { state: true },
   };
@@ -24,6 +25,8 @@ export class HsSettings extends LitElement {
   declare settings: Settings;
   declare message: string;
   declare problem: string;
+  /** Why the open tabs could not be saved, if they could not. */
+  declare sessionProblem: string;
   declare confirming: boolean;
   declare choices: { history: boolean; cookies: boolean; cache: boolean };
   client: DataClient | null = null;
@@ -34,6 +37,7 @@ export class HsSettings extends LitElement {
     this.settings = { ...DEFAULT_SETTINGS };
     this.message = '';
     this.problem = '';
+    this.sessionProblem = '';
     this.confirming = false;
     this.choices = { history: true, cookies: false, cache: false };
   }
@@ -140,6 +144,9 @@ export class HsSettings extends LitElement {
           <fieldset>
             <legend>On startup</legend>
             ${this.startup('new-tab', 'Open a new tab')} ${this.startup('last-tabs', 'Reopen your tabs from last time')}
+            ${this.sessionProblem
+              ? html`<p class="error" role="alert" data-testid="set-session-problem">${this.sessionProblem}</p>`
+              : nothing}
           </fieldset>
           <fieldset>
             <legend>Clear browsing data</legend>
