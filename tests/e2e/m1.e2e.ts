@@ -22,6 +22,7 @@ import {
   setContentSize,
   shellCall,
   sleep,
+  typeInPage,
   waitFor,
   waitForPage,
   type Harness,
@@ -60,19 +61,29 @@ const GRID_IDS = [
 
 /** Clicks every grid button at its projected screen point; returns what the page saw. */
 async function clickGrid(h: Harness): Promise<{ expected: Record<string, Point>; clicks: Click[] }> {
-  await inPage(h, 'window.__fixture.clicks = []', 'click-grid');
+  await inPage(h, 'window.__fixture.clicks = []; window.__fixture.events = []', 'click-grid');
   const expected: Record<string, Point> = {};
   for (const id of GRID_IDS) {
     const centre = await pageCentre(h, `#${id}`, 'click-grid');
     expected[id] = centre;
     const screen = await project(h, centre.x, centre.y);
     await h.shell.mouse.click(screen.x, screen.y);
-    await waitFor(
-      `click on ${id} to register`,
-      () => inPage<number>(h, 'window.__fixture.clicks.length', 'click-grid'),
-      (n) => n >= GRID_IDS.indexOf(id) + 1,
-      5000,
-    );
+    try {
+      await waitFor(
+        `click on ${id} to register`,
+        () => inPage<number>(h, 'window.__fixture.clicks.length', 'click-grid'),
+        (n) => n >= GRID_IDS.indexOf(id) + 1,
+        5000,
+      );
+    } catch (e) {
+      const events = await inPage<string[]>(h, 'window.__fixture.events', 'click-grid');
+      const shellFocus = await h.shell.evaluate(() => document.activeElement?.tagName ?? 'none');
+      throw new Error(
+        `${String(e)}\nClicked screen point ${screen.x.toFixed(1)},${screen.y.toFixed(1)} for page point ` +
+          `${centre.x.toFixed(1)},${centre.y.toFixed(1)}.\nPage events so far: ${events.join(' ')}\n` +
+          `Shell focus: ${shellFocus}`,
+      );
+    }
   }
   const clicks = await inPage<Click[]>(h, 'window.__fixture.clicks', 'click-grid');
   return { expected, clicks };
@@ -200,26 +211,34 @@ describe('C4 typing', () => {
   });
   afterAll(async () => h?.close());
 
-  it('types into a text input', async () => {
-    const p = await screenPointOf(h, '#name', 'form');
+  /** Clicks a field where it shows on the tilted page and waits until it has focus. */
+  async function clickToFocus(id: string): Promise<void> {
+    const p = await screenPointOf(h, `#${id}`, 'form');
     await h.shell.mouse.click(p.x, p.y);
-    await h.shell.keyboard.type('Hello, 3D world! 123');
+    await waitFor(
+      `#${id} to take focus from the click`,
+      () => inPage<string>(h, 'document.activeElement.id', 'form'),
+      (active) => active === id,
+      5000,
+    );
+  }
+
+  it('types into a text input', async () => {
+    await clickToFocus('name');
+    await typeInPage(h, 'Hello, 3D world! 123', 'form');
     expect(await inPage<string>(h, 'document.getElementById("name").value', 'form')).toBe('Hello, 3D world! 123');
   });
 
   it('types several lines into a textarea', async () => {
-    const p = await screenPointOf(h, '#notes', 'form');
-    await h.shell.mouse.click(p.x, p.y);
-    await h.shell.keyboard.type('line one');
-    await h.shell.keyboard.press('Enter');
-    await h.shell.keyboard.type('line two');
+    await clickToFocus('notes');
+    await typeInPage(h, 'line one\nline two', 'form');
     expect(await inPage<string>(h, 'document.getElementById("notes").value', 'form')).toBe('line one\nline two');
   });
 
   it('ticks a checkbox', async () => {
     const p = await screenPointOf(h, '#agree', 'form');
     await h.shell.mouse.click(p.x, p.y);
-    expect(await inPage<boolean>(h, 'document.getElementById("agree").checked', 'form')).toBe(true);
+    await waitFor('checkbox ticked', () => inPage<boolean>(h, 'document.getElementById("agree").checked', 'form'), (v) => v, 5000);
   });
 });
 

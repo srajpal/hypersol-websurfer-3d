@@ -9,7 +9,7 @@ Plan approved 2026-09-24.
 
 | # | Milestone | Useful result | Status |
 |---|---|---|---|
-| 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Current |
+| 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Built; awaiting owner acceptance (one intermittent check) |
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards | Later |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Later |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Later |
@@ -45,9 +45,10 @@ Milestones 1 to 7 make up the first useful result in BRIEF.md.
 
 ## Milestone 1 — Live page in the 3D room
 
-Status: Current. Plan approved 2026-09-24. Build approved 2026-09-24
-(prompt 16). In progress: stopped at the spike checkpoint (task 8) for
-the owner's decision; see "Spike result" below.
+Status: Built 2026-09-25. Plan approved 2026-09-24; build approved
+2026-09-24 (prompt 16). All tasks done. Waiting for the owner's
+acceptance, with one known issue: check C2 is intermittent (see Check
+results).
 
 Goal: prove that a live web page tilted in 3D takes clicks, typing, and
 scrolling correctly (ARCHITECTURE.md open question 2), and set up the
@@ -106,7 +107,7 @@ first use and checks it against checksums shipped in the package).
 - [x] 7. Design task, style foundation: theme token schema in
       `@hypersol/themes` with provisional Nebula values; one value
       produces both a CSS variable and a Three.js colour.
-- [ ] 8. (In progress; owner decision needed) Spike: run the input checks at 0°, default, and 20°. Record the
+- [x] 8. Spike: run the input checks at 0°, default, and 20°. Record the
       results; apply the flat-page fallback if they fail. Close open
       question 2 in ARCHITECTURE.md.
 - [x] 9. better-sqlite3 check: from release listings, without installing,
@@ -120,7 +121,7 @@ first use and checks it against checksums shipped in the package).
 - [x] 10. Test harness: Vitest, Playwright Electron launcher, a local
       fixture server on 127.0.0.1 with a random port, and the sample
       pages below.
-- [ ] 11. (In progress) Docs: README build and run, AGENTS.md Testing (only commands
+- [x] 11. Docs: README build and run, AGENTS.md Testing (only commands
       that ran), ARCHITECTURE.md, HANDOFF.md.
 
 ### Sample inputs (written by the agent, in `tests/fixtures/`)
@@ -140,7 +141,7 @@ first use and checks it against checksums shipped in the package).
 | C1 | App launches | Automated (Playwright) | Window opens, room renders, no console errors |
 | C2 | Clicks land | Automated: all 9 grid buttons at 0°, default, 20°, at 2 window sizes | Every click hits the intended button |
 | C3 | Parallax does not shift targets | Automated: move the pointer over the room, then click the grid | Parallax pauses over the page; all clicks land |
-| C4 | Typing | Automated: input and textarea | Values match exactly |
+| C4 | Typing | Automated: click the field on the tilted page (real window routing), then type; keys are delivered to the page's view because Playwright's window-level keys do not reach a webview. Manual: real keyboard on a tilted page (owner, 2026-09-25) | Values match exactly |
 | C5 | Scrolling | Automated: wheel over the page, then over the room | Page scrolls only when the pointer is over it |
 | C6 | Hover and links | Automated | Hover reported; link loads the second page |
 | C7 | Page isolation | Automated: `node-probe.html` | No Node access; any page-requested preload is replaced by the trusted stub |
@@ -157,25 +158,28 @@ first use and checks it against checksums shipped in the package).
 
 Machine: NVIDIA GeForce RTX 4050 Laptop GPU plus AMD Radeon integrated
 graphics, one 1920×1080 display at 100% scaling, touchpad, no touch
-screen. Input in the automated checks is sent with Playwright's mouse
-and keyboard (Chrome DevTools Protocol, entering at the window), not OS
-input.
+screen. Clicks in the automated checks are sent with Playwright's mouse
+(Chrome DevTools Protocol, entering at the window), not OS input.
+
+Latest results, 2026-09-25: 35 unit tests pass; lint and type check
+clean. End-to-end: of the last 7 full runs, 5 passed 23 of 23 and 2 had
+C2 failures; 1 of 3 further runs of C2 alone also failed (see C2).
 
 | # | Result |
 |---|---|
 | C1 | Pass |
-| C2 | Pass in the first full run (54 of 54 clicks, all within 3 px of the target, at 0°, 10°, and 20°, at 1280×800 and 1024×700). In the next two runs the first click after a window resize was dropped in 1 and 2 of the 6 cases; later clicks in the same cases landed. Intermittent; cause not yet found. |
+| C2 | Intermittent. When it passes, all 54 clicks land within 3 px of the target at 0°, 10°, and 20°, at 1280×800 and 1024×700. In some full runs, one click in the first seconds after a fresh launch on a tilted page never reaches the page (no pointer or mouse event at all) while the shell keeps focus on the webview. Not reproduced in 276 targeted clicks outside that window (back-to-back, after resizes, at delays of 0 to 1000 ms), and not seen by the owner in real use. Cause not found. Changes that did not remove it: waiting for the page to paint after load and after resize, and waiting for the window to have focus (both kept as fair preconditions). The grid page now records every pointer, mouse, and focus event, and C2 prints them when a click is missed. |
 | C3 | Pass |
-| C4 | Fail. Clicking a text field focuses it inside the page, but typed keys go to the shell's webview element and never reach the page. Same result with Electron's own input events. A flat (untransformed) page also failed in a repeat trial, so the tilt may not be the cause; the injected-input path may be. Real keyboard not yet tried. The checkbox click passes. |
+| C4 | Pass, with the method changed (see the Checks table). Playwright's keyboard, and Electron's input events sent to the window, never reached the page, tilted or flat. A real keyboard does: the owner typed into Wikipedia's search box on the tilted page (2026-09-25). The automated check keeps the real click routing and delivers the keys to the page's view. Gap: automated window-to-page keyboard routing is not covered; plan an OS-level input check with the per-OS checks in milestone 7. |
 | C5 | Pass |
 | C6 | Pass |
 | C7 | Pass |
 | C8 | Pass |
-| C9 | Pass: no frames while idle; 61.6, 60.3, and 61.5 frames per second during parallax in three runs |
+| C9 | Pass: no frames while idle; 60 to 69 frames per second during parallax across runs |
 | C10 | Pass |
 | C11 | Pass |
 | C12 | Pass: 35 unit tests in 5 files |
-| C13 | Not checked yet (owner) |
+| C13 | Owner, 2026-09-25: Wikipedia and other sites opened and typing worked; text looks a little blurry when tilted. Readability accepted; sharpness at the default 10° tilt to revisit in milestone 6. |
 | C14 | Not checked: this machine has no touch screen |
 | C15 | Not checked (milestone 7) |
 
@@ -183,16 +187,12 @@ Also found and handled: Chromium ignores input to a page until it has
 painted, and "loaded" can come a moment earlier, so the tests wait for
 the first paint before interacting.
 
-### Spike result (task 8) and the decision needed
+### Spike result (task 8)
 
-Tilted live pages take clicks, hover, scrolling, and links accurately at
-every tilt tried. Typing has not been shown to work. The open question
-is whether real keyboard input reaches a tilted page, which the
-automated path cannot answer. Proposed next step: the owner runs
-`pnpm dev`, clicks into a text field on a tilted page (for example the
-search box on wikipedia.org), and types. If typing works, the automated
-typing check needs a different input path; if it fails, the agreed
-flat-page fallback applies.
+Answered 2026-09-25: the tilted live page works. Clicks, hover,
+scrolling, links, and real keyboard typing all reach the page at the
+default tilt, so the flat-page fallback is not needed. Text is slightly
+soft when tilted (owner); the page is pixel-sharp only at 0°.
 
 Regression list started by this milestone: C1 to C11.
 

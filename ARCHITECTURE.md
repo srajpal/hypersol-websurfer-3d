@@ -248,13 +248,13 @@ fonts, sound design, VR.
 1. Theme look: Nebula (dark) default and Daylight (light) are the working
    proposal. Exact colours, accent, and any owner sketches are still to
    be confirmed in the theme milestone.
-2. Live-panel input on a rotated page: partly answered by the milestone
-   1 spike (TODO.md task 8, 2026-09-24). Clicks, hover, scrolling, and
-   links land accurately at 0°, 10°, and 20°. Typing through the test
-   tool does not reach the page; real keyboard input is still to be
-   tried by the owner. Fallback (decided 2026-09-24) is a flat, face-on
-   live page with the room in 3D around it; texture mode stays the later
-   upgrade path.
+2. Live-panel input on a rotated page: answered by the milestone 1
+   spike (TODO.md task 8). Clicks, hover, scrolling, links, and real
+   keyboard typing work at the default tilt (owner check 2026-09-25),
+   so the flat-page fallback is not used. Remaining: text is slightly
+   soft when tilted (revisit tilt and sharpness in milestone 6), and an
+   intermittent missed click in the first seconds after launch in the
+   automated check C2 (cause unknown; see TODO.md).
 3. Prebuilt better-sqlite3 binaries for the chosen Electron line on all
    three OSes. Check first whether Electron's bundled Node provides
    node:sqlite, which would remove the only native module. Checked
@@ -271,8 +271,8 @@ Checked on Windows 11, 2026-09-24 (macOS and Linux not checked yet):
 - Build: `pnpm build` (output in apps/browser/out)
 - Unit tests: `pnpm test`
 - Lint and type check: `pnpm lint`, `pnpm typecheck`
-- End-to-end: `pnpm test:e2e` (runs; not all checks pass yet, see
-  TODO.md)
+- End-to-end: `pnpm test:e2e` (23 of 23 in most runs; check C2 is
+  intermittent, see TODO.md)
 
 Not checked yet: `pnpm package` (installers per OS, milestone 7).
 

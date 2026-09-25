@@ -1,19 +1,18 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-24 (night, milestone 1 spike checkpoint).
+Last updated 2026-09-25 (milestone 1 built, awaiting acceptance).
 
 ## Where things stand
 
-Milestone 1 (Live page in the 3D room) is approved and in progress.
-Dependencies are installed, the app builds and runs (`pnpm dev`), the
-unit tests, lint, and type check pass, and 20 of 23 end-to-end checks
-pass. Work stopped at the spike checkpoint (TODO.md task 8), waiting for
-the owner: typing into the tilted page has not been shown to work
-through the test tool, and a real-keyboard trial by the owner decides
-between keeping the tilt and the agreed flat-page fallback. Check C2 is
-also intermittent (a dropped first click after a resize, cause not yet
-found). Full results are in TODO.md.
+Milestone 1 (Live page in the 3D room) is built. The app runs
+(`pnpm dev`) with a live web page tilted in a 3D room. The owner checked
+real sites and real typing on 2026-09-25 (text slightly soft when
+tilted). Unit tests, lint, and type check pass; the end-to-end suite
+passes 23 of 23 in most runs, but check C2 is intermittent (cause
+unknown, details in TODO.md). Waiting for the owner to accept the
+milestone. Milestone 2 (Browsing basics) is being planned; its plan
+needs design answers and approval before any build.
 
 A four-perspective documentation review (technical, product/UX,
 operational, business) ran on 2026-09-24. Its doc fixes and rule updates
@@ -133,11 +132,9 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestone 1's build is approved
-   (prompt 16) and is paused at the spike checkpoint. The next expected
-   prompt is the owner's real-keyboard result and decision (TODO.md,
-   "Spike result"). Tick tasks and record check results in TODO.md as
-   they actually run.
+2. Do only what the prompt approves. Milestone 1 awaits acceptance;
+   milestone 2's plan awaits design answers and approval. Tick tasks
+   and record check results in TODO.md as they actually run.
 3. Any new package needs approval first (rule 4 in AGENTS.md). The
    installed set and versions are listed in TODO.md, milestone 1.
 4. Update README.md, ARCHITECTURE.md, TODO.md, and this file whenever a

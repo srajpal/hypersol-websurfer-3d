@@ -70,6 +70,14 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   });
   shell.on('pageerror', (err) => errors.push(`shell: ${err.message}`));
   await shell.waitForFunction(() => (window as unknown as ShellWindow).__hypersolShellTest?.ready === true);
+  // A person clicks into a window that is already in front: wait until the
+  // new window has finished activating before any input is sent.
+  await waitFor(
+    'the app window to have focus',
+    () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isFocused() ?? false),
+    (focused) => focused,
+    10_000,
+  );
   return {
     app,
     shell,
@@ -211,6 +219,37 @@ export async function setContentSize(h: Harness, width: number, height: number):
     'page to match the panel size',
     () => inPage<number[]>(h, '[window.innerWidth, window.innerHeight]'),
     ([w, ht]) => w === layout.panelWidth && ht === layout.panelHeight,
+  );
+  // As after a load: wait until the resized page has painted.
+  await inPage(h, 'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))');
+}
+
+/**
+ * Types text into whatever has focus inside the web page.
+ *
+ * Playwright's keyboard enters at the shell window through the DevTools
+ * protocol, and that path does not forward keys into a <webview> (tried
+ * 2026-09-24; see TODO.md, C4). A real keyboard does reach the tilted
+ * page (owner's manual check, 2026-09-25). So keys are delivered to the
+ * page's own view here; the click that focuses the field still goes
+ * through the window's real routing and hit-testing.
+ */
+export async function typeInPage(h: Harness, text: string, urlPart = ''): Promise<void> {
+  await h.app.evaluate(
+    ({ webContents }, { text, urlPart }) => {
+      const guests = webContents
+        .getAllWebContents()
+        .filter((w) => w.getType() === 'webview' && w.getURL().includes(urlPart));
+      const guest = guests[guests.length - 1];
+      if (!guest) throw new Error(`No web page matching "${urlPart}"`);
+      for (const ch of text) {
+        const key = ch === '\n' ? 'Enter' : ch;
+        guest.sendInputEvent({ type: 'keyDown', keyCode: key });
+        guest.sendInputEvent({ type: 'char', keyCode: ch === '\n' ? '\r' : ch });
+        guest.sendInputEvent({ type: 'keyUp', keyCode: key });
+      }
+    },
+    { text, urlPart },
   );
 }
 

@@ -123,8 +123,9 @@ they ran; macOS and Linux not checked yet):
 - Unit: `pnpm test` (Vitest; 35 tests passed)
 - Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
 - End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
-  against it. It runs, but does not pass yet: check C4 (typing) fails
-  and C2 is intermittent. See TODO.md, milestone 1 check results.
+  against it (under a minute). 23 of 23 pass in most runs; check C2 is
+  intermittent (a click in the first seconds after launch is sometimes
+  missed). See TODO.md, milestone 1 check results.
 - The end-to-end run opens app windows on screen; leave the machine
   alone while it runs.
 

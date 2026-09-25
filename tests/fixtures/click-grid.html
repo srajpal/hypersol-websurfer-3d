@@ -24,7 +24,17 @@
     <!-- 3×3 targets: corners, edge midpoints, centre. Each click records which
          button was hit and where the page saw the pointer. -->
     <script>
-      window.__fixture = { clicks: [] };
+      window.__fixture = { clicks: [], events: [] };
+      // Every pointer, mouse, and focus event, for diagnosing a missed click.
+      const logEvent = (e) => {
+        const id = e.target && e.target.id ? e.target.id : e.target === window ? 'window' : (e.target.nodeName || '?');
+        const at = 'clientX' in e ? `@${Math.round(e.clientX)},${Math.round(e.clientY)}` : '';
+        window.__fixture.events.push(`${e.type}:${id}${at}`);
+      };
+      for (const t of ['pointerdown', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu']) {
+        document.addEventListener(t, logEvent, true);
+      }
+      for (const t of ['focus', 'blur']) window.addEventListener(t, logEvent);
       const spots = [
         ['top-left', 6, 6], ['top', 50, 6], ['top-right', 94, 6],
         ['left', 6, 50], ['centre', 50, 50], ['right', 94, 50],

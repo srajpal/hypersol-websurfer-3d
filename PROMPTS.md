@@ -218,3 +218,22 @@ Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b
 ```text
 Reread the md files, some have changed. Then proceed with install and milestone 1
 ```
+
+## 17 — 2026-09-25
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b35 · Tokens: 323,569 at logging
+
+```text
+i tested it, i was able to go to wikipedia.org, i was able to type things, i was able to go to other sites. the text looks a little blurry but otherwise things worked
+```
+
+Attachment: one screenshot of the app showing wikipedia.org on the tilted
+panel, with text typed into Wikipedia's search box.
+
+## 18 — 2026-09-25
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: high · Session: opus-6ff60b35 · Tokens: not captured (sent while the agent was working; about 330,000 at the previous reading)
+
+```text
+push your changes and move onto the next milestone and run tests.
+```
