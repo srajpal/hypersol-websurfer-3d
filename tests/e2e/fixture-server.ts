@@ -98,6 +98,8 @@ function page(title: string, body: string): string {
  *   /dns-query?dns=...         a stand-in DNS-over-HTTPS resolver (answers every question)
  *   /dns-portal                a captive portal's web page where the resolver should be
  *   /ddm/...                   an "ad landing" page, served for the ad host mapped to this machine
+ *   /download/sample.txt       a small file sent as an attachment (a download)
+ *   /download/slow.bin         2 MB sent slowly as an attachment (to cancel)
  */
 function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
   const url = new URL(req.url ?? '/', 'http://x');
@@ -187,6 +189,39 @@ function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
   if (path === '/dns-portal') {
     res.writeHead(200, { 'content-type': TYPES['.html']!, 'cache-control': 'no-store' });
     res.end(page('Sign in to the Wi-Fi', '<h1>Sign in to continue</h1>'));
+    return;
+  }
+  if (path === '/download/sample.txt') {
+    const body = Buffer.from('HyperSol download test file\n');
+    res.writeHead(200, {
+      'content-type': 'text/plain',
+      'content-disposition': 'attachment; filename="sample.txt"',
+      'content-length': String(body.length),
+      'cache-control': 'no-store',
+    });
+    res.end(body);
+    return;
+  }
+  if (path === '/download/slow.bin') {
+    const total = 2 * 1024 * 1024;
+    res.writeHead(200, {
+      'content-type': 'application/octet-stream',
+      'content-disposition': 'attachment; filename="slow.bin"',
+      'content-length': String(total),
+      'cache-control': 'no-store',
+    });
+    let sent = 0;
+    const piece = Buffer.alloc(16 * 1024);
+    const timer = setInterval(() => {
+      if (res.destroyed || sent >= total) {
+        clearInterval(timer);
+        if (!res.destroyed) res.end();
+        return;
+      }
+      sent += piece.length;
+      res.write(piece);
+    }, 100);
+    res.on('close', () => clearInterval(timer));
     return;
   }
   if (path.startsWith('/ddm/')) {

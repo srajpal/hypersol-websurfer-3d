@@ -8,7 +8,8 @@
  * page wider than it is. Pages are the local test fixtures, so no real
  * browsing data appears.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { it } from 'vitest';
@@ -45,7 +46,8 @@ it('captures the main screens', async () => {
   }
   mkdirSync(outDir, { recursive: true });
   const server = await startFixtureServer();
-  const h = await launch(server.url('link-a.html'), { searchUrl: `${server.base}search?q=%s` });
+  const downloads = mkdtempSync(join(tmpdir(), 'hypersol-shots-downloads-'));
+  const h = await launch(server.url('link-a.html'), { searchUrl: `${server.base}search?q=%s`, downloadsDir: downloads });
   try {
     await waitForPage(h, 'link-a');
     for (const page of ['form.html', 'long.html']) {
@@ -149,6 +151,29 @@ it('captures the main screens', async () => {
     await h.shell.click('hs-instruments [data-testid="inst-max-network"]');
     await sleep(500);
     await capture(h, '19-network-maximized');
+    await pressInShell(h, 'Escape');
+    await pressInShell(h, 'I', ['control', 'shift']); // instrument panel off again
+
+    // Everyday features (milestone 8): zoom, find, downloads, a private tab.
+    await navigateTo(h, server.url('find.html'));
+    await waitForPage(h, 'find');
+    await h.shell.click('hs-toolbar [data-testid="zoom-in"]');
+    await h.shell.click('hs-toolbar [data-testid="zoom-in"]');
+    await pressInShell(h, 'F', ['control']);
+    await h.shell.fill('hs-find-bar [data-testid="find-input"]', 'needle');
+    await sleep(600);
+    await capture(h, '20-zoom-and-find');
+    await pressInShell(h, 'Escape');
+    await h.shell.click('hs-toolbar [data-testid="zoom-level"]');
+    await navigateTo(h, server.url('download/sample.txt'));
+    await sleep(800);
+    await pressInShell(h, 'J', ['control']);
+    await sleep(400);
+    await capture(h, '21-downloads');
+    await pressInShell(h, 'Escape');
+    await pressInShell(h, 'N', ['control', 'shift']);
+    await sleep(600);
+    await capture(h, '22-private-tab');
   } finally {
     await h.close();
     await server.close();

@@ -15,6 +15,8 @@ export interface TestLog {
   dataOps: Record<string, number>;
   /** Every encrypted DNS mode put into effect, in order. */
   dnsApplied: { mode: string; resolver: string }[];
+  /** Downloads that would have been opened or shown in their folder. */
+  opened: { what: string; path: string }[];
 }
 
 declare global {
@@ -22,7 +24,7 @@ declare global {
 }
 
 export function installTestHooks(): TestLog {
-  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [], dataOps: {}, dnsApplied: [] };
+  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [], dataOps: {}, dnsApplied: [], opened: [] };
   globalThis.__hypersolTest = log;
   // log.requests is filled by the privacy shield's request listener
   // (main/privacy/index.ts): Electron allows one listener per session.

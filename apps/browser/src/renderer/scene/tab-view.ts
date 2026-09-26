@@ -1,6 +1,7 @@
 import type { PagePanel, PageState, PageStatus } from '@hypersol/scene-core';
 import type { WebviewTag } from 'electron';
 import { BLOCKED_CARD, CRASHED_CARD, DNS_BLOCKED_CARD, describeLoadError, isLookupFailure, type LoadErrorCard } from '../load-errors';
+import { PRIVATE_PARTITION } from '../../shared/commands';
 import { LAYERS_CHANNEL, PAGE_IMAGES_CHANNEL, parseImageReport, type LayersState, type PageImage } from '../../shared/layers';
 import { StartPanel, type StartData } from './start-panel';
 
@@ -24,6 +25,8 @@ export interface TabViewEvents {
   useNetworkDns(): Promise<void>;
   /** A new document is ready in the page: time to tell it the layers view's state. */
   onPageReady(): void;
+  /** Find in page results (milestone 8). */
+  onFound?(result: { matches: number; active: number }): void;
 }
 
 /**
@@ -54,6 +57,8 @@ export class TabView implements PagePanel {
     readonly tabId: number,
     url: string,
     private readonly events: TabViewEvents,
+    /** A private tab: its page uses the in-memory private session (milestone 8). */
+    readonly isPrivate = false,
   ) {
     this.element = document.createElement('div');
     this.element.className = 'hs-panel';
@@ -71,6 +76,13 @@ export class TabView implements PagePanel {
         (text) => this.events.onStartSubmit(text),
         (address) => this.events.onStartOpen(address),
       );
+      if (isPrivate) {
+        const note = document.createElement('p');
+        note.className = 'hs-private-note';
+        note.dataset['testid'] = 'private-note';
+        note.textContent = 'Private tab: no history, cookies, or site data are kept. They go when the last private tab closes.';
+        this.start.element.prepend(note);
+      }
       this.element.append(this.start.element);
       this.currentStatus = { state: 'loaded', url: '' };
     } else {
@@ -115,6 +127,44 @@ export class TabView implements PagePanel {
   /** The page's images in view, as its preload last reported them (milestone 5). */
   get images(): PageImage[] {
     return this.pageImages.map((i) => ({ ...i }));
+  }
+
+  /** The page's zoom factor (1 is 100%). */
+  get zoom(): number {
+    if (!this.webview || !this.ready) return 1;
+    try {
+      return this.webview.getZoomFactor();
+    } catch {
+      return 1;
+    }
+  }
+
+  setZoom(factor: number): void {
+    if (this.webview && this.ready) this.webview.setZoomFactor(factor);
+  }
+
+  /**
+   * Find in page; an empty text stops finding. `next` moves to the next or
+   * previous match of the same search; otherwise a new search starts
+   * (Electron's findNext is true for a new search).
+   */
+  find(text: string, forward: boolean, next: boolean): void {
+    if (!this.webview || !this.ready) return;
+    if (text === '') {
+      this.webview.stopFindInPage('clearSelection');
+      this.events.onFound?.({ matches: 0, active: 0 });
+      return;
+    }
+    this.webview.findInPage(text, { forward, findNext: !next });
+  }
+
+  stopFind(): void {
+    if (this.webview && this.ready) this.webview.stopFindInPage('clearSelection');
+  }
+
+  /** Opens the system's print dialog for the page. */
+  print(): void {
+    if (this.webview && this.ready) void this.webview.print().catch(() => undefined);
   }
 
   /** Tells the page's preload the layers view's state. */
@@ -201,6 +251,8 @@ export class TabView implements PagePanel {
     // Without this Electron drops every new-window request before the main
     // process sees it; main/guests.ts decides and always opens a tab instead.
     wv.setAttribute('allowpopups', '');
+    // Set before the first address: a webview's session cannot change afterwards.
+    if (this.isPrivate) wv.setAttribute('partition', PRIVATE_PARTITION);
     wv.setAttribute('src', url);
     this.webview = wv;
     this.shimmer.setAttribute('data-visible', '');
@@ -226,6 +278,10 @@ export class TabView implements PagePanel {
       }
       navState();
       this.events.onPageReady();
+    });
+    wv.addEventListener('found-in-page', (e) => {
+      const r = e.result;
+      if (r.finalUpdate !== false) this.events.onFound?.({ matches: r.matches ?? 0, active: r.activeMatchOrdinal ?? 0 });
     });
     wv.addEventListener('ipc-message', (e) => {
       if (e.channel !== PAGE_IMAGES_CHANNEL) return;

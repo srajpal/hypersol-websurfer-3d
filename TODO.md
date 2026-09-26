@@ -16,7 +16,7 @@ Plan approved 2026-09-24.
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
 | 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Done (accepted 2026-09-26) |
-| 8 | Everyday browser features | Zoom (buttons, shortcuts, per site), find in page, downloads panel, printing, private tabs | Current (plan and build approved 2026-09-26) |
+| 8 | Everyday browser features | Zoom (buttons, shortcuts, per site), find in page, downloads panel, printing, private tabs | Built; awaiting owner review (J9) |
 | 9 | Passwords | A password manager: offer to save on sign-in, fill on return, view and delete; encrypted with the system's keychain | Later |
 | 10 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 11 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
@@ -1133,7 +1133,10 @@ just keep track if it is not time yet."
 
 ## Milestone 8 — Everyday browser features
 
-Status: Current. Plan and build approved 2026-09-26 (prompt 37), with
+Status: Built 2026-09-26; waiting for the owner's review (J9) and
+acceptance. Screenshots: docs/screenshots/m8/ (20 to 22). Electron
+security check at the start: 44.4.5 still newest. Plan and build
+approved 2026-09-26 (prompt 37), with
 the owner's answers Q1 a (this milestone next, then Passwords, then the
 first release), Q2 a (downloads), Q3 a (private tabs).
 
@@ -1165,17 +1168,17 @@ release: zoom, find in page, downloads, printing, and private tabs.
 
 ### Tasks
 
-- [ ] 1. Zoom: buttons, shortcuts, per-site memory, the webview's zoom.
-- [ ] 2. Find in page: the find bar, count, next and previous.
-- [ ] 3. Downloads: the main process saves to the Downloads folder and
+- [x] 1. Zoom: buttons, shortcuts, per-site memory, the webview's zoom.
+- [x] 2. Find in page: the find bar, count, next and previous.
+- [x] 3. Downloads: the main process saves to the Downloads folder and
       reports progress; the Downloads panel; badge.
-- [ ] 4. Printing from the shortcut and the menu.
-- [ ] 5. Private tabs: an in-memory session with the same protections;
+- [x] 4. Printing from the shortcut and the menu.
+- [x] 5. Private tabs: an in-memory session with the same protections;
       marking; no history or saved tabs; menu and shortcut.
-- [ ] 6. docs/privacy.md: downloads and private tabs.
-- [ ] 7. Tests: unit (zoom steps, file names, settings); end-to-end J1 to
+- [x] 6. docs/privacy.md: downloads and private tabs.
+- [x] 7. Tests: unit (zoom steps, file names, settings); end-to-end J1 to
       J8; C to I as regression.
-- [ ] 8. Docs and screenshots (MILESTONE=m8).
+- [x] 8. Docs and screenshots (MILESTONE=m8).
 
 ### Checks
 
@@ -1191,6 +1194,44 @@ release: zoom, find in page, downloads, printing, and private tabs.
 | J8 | Keyboard | Every new control is reachable by keyboard; Escape closes the find bar and the panel |
 | J9 | Look and feel | Owner review; screenshots saved |
 | C to I | Regression | Still pass |
+
+### Check results (Windows 11, 2026-09-26)
+
+Unit: 181 tests pass (zoom steps, per-site zoom settings, safe and
+unique download names, download request checks, shortcuts). Lint and
+type check clean.
+
+End-to-end (`pnpm test:e2e`, 134 checks): J1 to J8 (7 checks) pass.
+Full suite: 134 of 134 on the second run. The first full run had one
+failure, C9's frame rate while the camera follows the pointer (46.5
+frames a second against at least 50); C9 then passed three times alone
+and in the second full run, so it is recorded as a one-off under load,
+to watch.
+
+| # | Result |
+|---|---|
+| J1 | Pass: buttons, Ctrl+plus, minus, 0, the level shown, kept per site after a restart, reset forgets it |
+| J2 | Pass: 3 matches, next and previous, no match, Escape |
+| J3 | Pass: saved in the folder; the second copy is "sample (1).txt"; progress, cancel, show in folder (recorded in tests), clear |
+| J4 | Pass (counted in tests instead of the system dialog) |
+| J5 | Pass: marked; not in history; its cookie unseen by a normal tab and gone after it closes; an in-memory session |
+| J6 | Pass |
+| J7 | Pass |
+| J8 | Pass: the find bar and Downloads panel take the keyboard; Escape closes them |
+| J9 | Not checked yet (owner) |
+| C to I | Pass |
+
+Found and fixed during the build: Electron's findInPage option
+"findNext" is true for a new search (the opposite of its name); the
+first version passed it the other way and found nothing.
+
+Test switch added (test mode only): --downloads-dir, a temporary folder
+for downloads. In tests, "Open" and "Show in folder" are recorded
+instead of opening anything, and printing is counted instead of opening
+the system dialog.
+
+Known limits: a private tab's start panel still shows your bookmarks
+and recent history (it only shows them; nothing new is recorded).
 
 ### Done when
 

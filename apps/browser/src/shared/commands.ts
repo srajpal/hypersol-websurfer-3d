@@ -13,8 +13,22 @@ export const CLOSE_READY_CHANNEL = 'hypersol:close-ready';
 import type { DataOp, DataReply, DataRequest } from './data';
 import type { PrivacyOp, PrivacyReply, PrivacyRequest } from './privacy';
 import type { InspectOp, InspectReply, InspectRequest } from './inspect';
+import type { DownloadInfo, DownloadOp, DownloadReply, DownloadRequest } from './downloads';
+
+/**
+ * The private tabs' session (milestone 8): in memory only, since the name
+ * has no "persist:" prefix, so nothing reaches the disk.
+ */
+export const PRIVATE_PARTITION = 'hypersol-private';
 
 export type ShortcutName =
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'zoom-reset'
+  | 'find'
+  | 'print'
+  | 'downloads'
+  | 'private-tab'
   | 'instruments'
   | 'layers'
   | 'bookmark'
@@ -38,6 +52,8 @@ export type ShellCommand =
   | { type: 'shield'; webContentsId: number; count: number }
   /** The shield blocked a whole page in a tab (the tab shows the blocked card). */
   | { type: 'page-blocked'; webContentsId: number; url: string }
+  /** The downloads list changed (milestone 8). */
+  | { type: 'downloads'; items: DownloadInfo[] }
   /** The filter lists changed (refreshed, or a refresh started or failed). */
   | { type: 'filters-changed' }
   /** The window is closing: save the open tabs now, then call closeReady(). */
@@ -56,6 +72,8 @@ export interface ShellBridge {
   privacy<K extends PrivacyOp>(request: Extract<PrivacyRequest, { op: K }>): Promise<PrivacyReply<K>>;
   /** The instrument panel's readouts (shared/inspect.ts). */
   inspect<K extends InspectOp>(request: Extract<InspectRequest, { op: K }>): Promise<InspectReply<K>>;
+  /** Downloads (shared/downloads.ts). */
+  downloads<K extends DownloadOp>(request: Extract<DownloadRequest, { op: K }>): Promise<DownloadReply<K>>;
   /** Answer to prepare-close: saving is done (or has failed), the window may close. */
   closeReady(): void;
 }

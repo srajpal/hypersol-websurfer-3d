@@ -28,6 +28,8 @@ export interface LaunchOptions {
   filtersBase?: string;
   /** Test mode only: where the encrypted DNS reachability check asks (a local stand-in resolver). */
   dnsProbeUrl?: string;
+  /** Test mode only: save downloads here instead of the Downloads folder. */
+  downloadsDir?: string;
 }
 
 function switchValue(argv: readonly string[], name: string): string | undefined {
@@ -69,6 +71,7 @@ export function parseLaunchOptions(
   const search = switchValue(argv, 'search-url');
   const filtersBase = testMode ? localAddress(switchValue(argv, 'filters-base')) : undefined;
   const dnsProbeUrl = testMode ? localAddress(switchValue(argv, 'dns-probe')) : undefined;
+  const downloadsDir = testMode ? switchValue(argv, 'downloads-dir') : undefined;
   const searchUrl =
     testMode && search !== undefined && search.includes('%s') && isAllowedPageUrl(search) && search !== ''
       ? search
@@ -83,5 +86,6 @@ export function parseLaunchOptions(
     testKeepRunning: testMode && env['HYPERSOL_TEST_KEEP_RUNNING'] === '1',
     ...(filtersBase ? { filtersBase } : {}),
     ...(dnsProbeUrl ? { dnsProbeUrl } : {}),
+    ...(downloadsDir ? { downloadsDir } : {}),
   };
 }

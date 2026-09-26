@@ -1,6 +1,6 @@
 import { LitElement, css, html, nothing, type PropertyValues } from 'lit';
 
-export type MenuAction = 'new-tab' | 'close-tab' | 'library' | 'settings' | 'about';
+export type MenuAction = 'new-tab' | 'private-tab' | 'close-tab' | 'downloads' | 'print' | 'library' | 'settings' | 'about';
 
 const icon = {
   gauge: html`<svg viewBox="0 0 24 24" aria-hidden="true">
@@ -25,7 +25,8 @@ const icon = {
  * controller does the work.
  *
  * Events (bubbling, composed): hs-navigate (detail: typed text), hs-back,
- * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-instruments, hs-new-tab, hs-menu (detail: MenuAction).
+ * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-instruments, hs-new-tab, hs-zoom (detail: 1, -1, or 0 to
+ * reset), hs-menu (detail: MenuAction).
  */
 export class HsToolbar extends LitElement {
   static override properties = {
@@ -38,6 +39,10 @@ export class HsToolbar extends LitElement {
     canBookmark: { type: Boolean },
     layers: { type: Boolean },
     instruments: { type: Boolean },
+    zoom: { type: Number },
+    canZoom: { type: Boolean },
+    private: { type: Boolean },
+    downloading: { type: Boolean },
     canLayers: { type: Boolean },
     menuOpen: { state: true },
     strip: { state: true },
@@ -55,6 +60,13 @@ export class HsToolbar extends LitElement {
   declare canLayers: boolean;
   /** The instrument panel is showing (milestone 7). */
   declare instruments: boolean;
+  /** The page's zoom factor (milestone 8). */
+  declare zoom: number;
+  declare canZoom: boolean;
+  /** The tab in front is private (milestone 8). */
+  declare private: boolean;
+  /** A download is in progress: a dot on the menu button. */
+  declare downloading: boolean;
   declare menuOpen: boolean;
   declare strip: 'idle' | 'loading' | 'done';
   private stripTimer: number | undefined;
@@ -71,6 +83,10 @@ export class HsToolbar extends LitElement {
     this.layers = false;
     this.canLayers = false;
     this.instruments = false;
+    this.zoom = 1;
+    this.canZoom = false;
+    this.private = false;
+    this.downloading = false;
     this.menuOpen = false;
     this.strip = 'idle';
   }
@@ -136,6 +152,48 @@ export class HsToolbar extends LitElement {
     }
     .menu-button svg {
       stroke-width: 3.2;
+    }
+    .zoom {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .zoom button {
+      width: 26px;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .zoom .level {
+      width: auto;
+      min-width: 48px;
+      padding: 0 4px;
+      font-family: var(--hs-font-mono);
+      font-size: 12px;
+    }
+    .private-pill {
+      flex: none;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--hs-accent2);
+      color: var(--hs-background-bottom);
+      font-family: var(--hs-font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .menu-button[data-busy]::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--hs-accent2);
+      box-shadow: 0 0 6px var(--hs-accent2);
+    }
+    .menu-button {
+      position: relative;
     }
     .instruments-button[aria-pressed='true'],
     .layers-button[aria-pressed='true'] {
@@ -299,6 +357,7 @@ export class HsToolbar extends LitElement {
         <button data-testid="reload" aria-label="Reload" title="Reload" ?disabled=${!this.canReload} @click=${() => this.fire('hs-reload')}>
           ${icon.reload}
         </button>
+        ${this.private ? html`<span class="private-pill" data-testid="private-pill" title="Private tab: nothing is kept">PRIVATE</span>` : nothing}
         <input
           data-testid="address"
           type="text"
@@ -309,6 +368,12 @@ export class HsToolbar extends LitElement {
           @focus=${(e: FocusEvent) => (e.target as HTMLInputElement).select()}
           @keydown=${this.onKey}
         />
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button data-testid="zoom-out" aria-label="Zoom out" title=${`Zoom out (${mod}+−)`} ?disabled=${!this.canZoom} @click=${() => this.fire('hs-zoom', -1)}>−</button>
+          <button class="level" data-testid="zoom-level" aria-label=${`Zoom ${Math.round(this.zoom * 100)}%, reset to 100%`} title=${`Reset zoom (${mod}+0)`}
+            ?disabled=${!this.canZoom} @click=${() => this.fire('hs-zoom', 0)}>${Math.round(this.zoom * 100)}%</button>
+          <button data-testid="zoom-in" aria-label="Zoom in" title=${`Zoom in (${mod}+=)`} ?disabled=${!this.canZoom} @click=${() => this.fire('hs-zoom', 1)}>+</button>
+        </div>
         <button
           class="instruments-button"
           data-testid="instruments"
@@ -343,6 +408,7 @@ export class HsToolbar extends LitElement {
         </button>
         <button
           class="menu-button"
+          ?data-busy=${this.downloading}
           data-testid="menu"
           aria-label="Menu"
           title="Menu"
@@ -357,8 +423,17 @@ export class HsToolbar extends LitElement {
               <button role="menuitem" data-testid="menu-new-tab" @click=${() => this.menu('new-tab')}>
                 New tab <kbd>${mod}+T</kbd>
               </button>
+              <button role="menuitem" data-testid="menu-private-tab" @click=${() => this.menu('private-tab')}>
+                New private tab <kbd>${mod}+Shift+N</kbd>
+              </button>
               <button role="menuitem" data-testid="menu-close-tab" @click=${() => this.menu('close-tab')}>
                 Close tab <kbd>${mod}+W</kbd>
+              </button>
+              <button role="menuitem" data-testid="menu-downloads" @click=${() => this.menu('downloads')}>
+                Downloads <kbd>${mod}+J</kbd>
+              </button>
+              <button role="menuitem" data-testid="menu-print" @click=${() => this.menu('print')}>
+                Print <kbd>${mod}+P</kbd>
               </button>
               <button role="menuitem" data-testid="menu-library" @click=${() => this.menu('library')}>
                 Library <kbd>${mod}+Shift+O</kbd>

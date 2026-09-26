@@ -310,3 +310,14 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* A private tab's start panel says what private means (milestone 8). */
+.hs-private-note {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--hs-accent2);
+  color: var(--hs-text);
+  background: color-mix(in srgb, var(--hs-accent2) 14%, transparent);
+  font-size: 14px;
+}

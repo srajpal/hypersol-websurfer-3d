@@ -31,6 +31,14 @@ export function matchShortcut(input: KeyInput, platform: string): ShortcutName |
   if (mod && input.shift && !input.alt && key === 'o') return 'library';
   if (mod && input.shift && !input.alt && key === 'l') return 'layers';
   if (mod && input.shift && !input.alt && key === 'i') return 'instruments';
+  if (mod && input.shift && !input.alt && key === 'n') return 'private-tab';
+  // Zoom: Ctrl/Cmd with plus (also = and the shifted +), minus, and 0.
+  if (mod && !input.alt && (key === '=' || key === '+')) return 'zoom-in';
+  if (plainMod && (key === '-' || key === '_')) return 'zoom-out';
+  if (plainMod && key === '0') return 'zoom-reset';
+  if (plainMod && key === 'f') return 'find';
+  if (plainMod && key === 'p') return 'print';
+  if (plainMod && key === 'j') return 'downloads';
   if (plainMod && key === 'w') return 'close-tab';
   if (plainMod && key === 'l') return 'focus-address';
   if (!mac && input.alt && !input.control && !input.shift && key === 'd') return 'focus-address';

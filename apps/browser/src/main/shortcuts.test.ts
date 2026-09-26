@@ -29,6 +29,14 @@ describe('matchShortcut on Windows and Linux', () => {
     expect(m(key('O', { control: true, shift: true }))).toBe('library');
     expect(m(key('L', { control: true, shift: true }))).toBe('layers');
     expect(m(key('I', { control: true, shift: true }))).toBe('instruments');
+    expect(m(key('N', { control: true, shift: true }))).toBe('private-tab');
+    expect(m(key('=', { control: true }))).toBe('zoom-in');
+    expect(m(key('+', { control: true, shift: true }))).toBe('zoom-in');
+    expect(m(key('-', { control: true }))).toBe('zoom-out');
+    expect(m(key('0', { control: true }))).toBe('zoom-reset');
+    expect(m(key('f', { control: true }))).toBe('find');
+    expect(m(key('p', { control: true }))).toBe('print');
+    expect(m(key('j', { control: true }))).toBe('downloads');
     expect(m(key('l', { control: true }))).toBe('focus-address');
     expect(m(key(',', { control: true }))).toBe('settings');
     expect(m(key('o', { control: true }))).toBeNull();

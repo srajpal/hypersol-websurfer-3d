@@ -174,7 +174,23 @@ export class Privacy {
       }
     });
 
-    this.ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+    this.protect(this.ses);
+
+    // Element hiding: the page preload (preload/page.ts) runs the blocker's
+    // page script, which asks here for the styles to apply.
+    this.handleCosmetics();
+
+    this.filters.onChange(() => this.broadcast({ type: 'filters-changed' }));
+    this.schedule();
+  }
+
+  /**
+   * The shield for one session's web pages: the default session, and the
+   * private tabs' in-memory session (milestone 8), which get the same
+   * protection.
+   */
+  protect(ses: Session): void {
+    ses.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
       this.options.observe?.(details.url);
       const tab = details.webContentsId;
       if (tab === undefined || !this.tabs.has(tab)) {
@@ -185,7 +201,7 @@ export class Privacy {
       callback(this.shield.decide({ url: details.url, resourceType: details.resourceType, tab }));
     });
     // Filter lists can add a content security policy to pages (for example to stop pop-unders).
-    this.ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (details, callback) => {
+    ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (details, callback) => {
       const tab = details.webContentsId;
       const page = details.resourceType === 'mainFrame' ? details.url : details.frame?.top?.url ?? '';
       if (tab === undefined || !this.tabs.has(tab) || this.paused.has(hostOf(page))) {
@@ -194,9 +210,9 @@ export class Privacy {
       }
       this.filters.engine.onHeadersReceived(details, callback);
     });
+  }
 
-    // Element hiding: the page preload (preload/page.ts) runs the blocker's
-    // page script, which asks here for the styles to apply.
+  private handleCosmetics(): void {
     ipcMain.handle(COSMETICS_CHANNEL, (event, _url: unknown, msg: unknown) => {
       const page = this.cosmeticsPage(event);
       if (page === null) return undefined;
@@ -205,9 +221,6 @@ export class Privacy {
     ipcMain.handle(MUTATION_OBSERVER_CHANNEL, (event) =>
       this.cosmeticsPage(event) === null ? false : this.filters.engine.config.enableMutationObserver,
     );
-
-    this.filters.onChange(() => this.broadcast({ type: 'filters-changed' }));
-    this.schedule();
   }
 
   /** A web page (webview tab) was created: its requests are filtered from now on. */

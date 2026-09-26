@@ -1,4 +1,5 @@
 import type { WebContents, WebPreferences } from 'electron';
+import { PRIVATE_PARTITION } from '../shared/commands';
 
 /** Web pages may only be http, https, or the blank page. */
 export function isAllowedPageUrl(url: string): boolean {
@@ -53,7 +54,9 @@ export function hardenShell(
     const requestedPreload =
       lockDownWebPreferences(webPreferences, pagePreloadPath) ?? (params['preload'] || null);
     const src = params['src'] ?? '';
-    const allowed = isAllowedPageUrl(src);
+    // Web pages use the default session, or the private tabs' in-memory one.
+    const partition = params['partition'] ?? '';
+    const allowed = isAllowedPageUrl(src) && (partition === '' || partition === PRIVATE_PARTITION);
     if (!allowed) event.preventDefault();
     onAttach?.({ requestedPreload, appliedPreload: pagePreloadPath, src, allowed });
   });

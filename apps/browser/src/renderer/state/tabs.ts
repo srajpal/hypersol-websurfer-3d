@@ -15,6 +15,8 @@ export interface Tab {
   canGoForward: boolean;
   /** Favicon as a data: URL, when the page has one. */
   favicon?: string;
+  /** A private tab (milestone 8): its own in-memory session, nothing kept. */
+  private: boolean;
 }
 
 export interface OpenOptions {
@@ -23,6 +25,8 @@ export interface OpenOptions {
   background?: boolean;
   /** Put the new tab right after this one (the tab that opened it). */
   afterId?: number;
+  /** Open a private tab. */
+  private?: boolean;
 }
 
 export type TabsListener = (tabs: TabStore) => void;
@@ -68,6 +72,7 @@ export class TabStore {
       state: url === '' ? 'start' : 'loading',
       canGoBack: false,
       canGoForward: false,
+      private: options.private ?? false,
     };
     const after = options.afterId === undefined ? -1 : this.indexOf(options.afterId);
     if (after >= 0) {

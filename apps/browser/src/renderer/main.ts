@@ -6,6 +6,8 @@ import './hud/settings';
 import './hud/shield';
 import './hud/theme-button';
 import './hud/instruments';
+import './hud/find-bar';
+import './hud/downloads';
 import { DEFAULT_TILT_DEG, clampTilt } from '@hypersol/scene-core';
 import { defaultTheme } from '@hypersol/themes';
 import type { ShellBridge } from '../shared/commands';
@@ -42,6 +44,9 @@ const app = new App({
   shield: document.querySelector('hs-shield')!,
   themeButton: document.querySelector('hs-theme-button')!,
   instruments: document.querySelector('hs-instruments')!,
+  findBar: document.querySelector('hs-find-bar')!,
+  downloads: document.querySelector('hs-downloads')!,
+  testMode: params.get('test') === '1',
   tabList: document.getElementById('tab-list') as HTMLElement,
 });
 void app.start();
@@ -77,6 +82,7 @@ if (params.get('test') === '1') {
           hasSnapshot: room.hasSnapshot(t.id),
           hasFavicon: Boolean(t.favicon),
           canGoBack: t.canGoBack,
+          private: t.private,
           canGoForward: t.canGoForward,
         })),
       focusedTabId: () => store.focusedId,
@@ -87,6 +93,13 @@ if (params.get('test') === '1') {
       webContentsIdOf: (tabId: number) => app.viewOf(tabId)?.webContentsId ?? null,
       layersOf: (tabId: number) => app.layersState(tabId),
       theme: () => app.theme.id,
+      zoom: () => ({ factor: app.focusedView?.zoom ?? 1, label: document.querySelector('hs-toolbar')!.zoom }),
+      find: () => {
+        const bar = document.querySelector('hs-find-bar')!;
+        return { open: bar.open, matches: bar.matchCount, active: bar.active };
+      },
+      prints: () => app.testPrints,
+      downloads: () => app.downloadsList,
       instruments: () => {
         const el = document.querySelector('hs-instruments')!;
         return {

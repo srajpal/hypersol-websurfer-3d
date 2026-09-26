@@ -22,6 +22,8 @@ export interface CardModel {
   loading: boolean;
   favicon?: string;
   focused: boolean;
+  /** A private tab: marked on its card. */
+  private?: boolean;
 }
 
 /**
@@ -215,6 +217,18 @@ export class TabCard {
       }
     }
     ctx.restore();
+
+    if (this.model.private) {
+      // A private tab is marked on its card (milestone 8).
+      ctx.fillStyle = c.accent2;
+      roundRect(ctx, SNAP.x + 10, SNAP.y + 10, 150, 40, 8);
+      ctx.fill();
+      ctx.fillStyle = c.backgroundBottom;
+      ctx.font = '700 26px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PRIVATE', SNAP.x + 85, SNAP.y + 31);
+    }
 
     // Label bar: favicon, title, close button.
     let textX = 18;

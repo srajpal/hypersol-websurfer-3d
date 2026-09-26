@@ -77,6 +77,8 @@ export function wireGuest(guest: WebContents, deps: GuestDeps): void {
   });
 
   wireShortcuts(guest, deps);
+  // Ctrl + mouse wheel or a pinch: zoom like the zoom buttons (milestone 8).
+  guest.on('zoom-changed', (_event, direction) => deps.send({ type: 'shortcut', name: direction === 'in' ? 'zoom-in' : 'zoom-out' }));
 
   guest.on('context-menu', (_event, params) => {
     const history = guest.navigationHistory;

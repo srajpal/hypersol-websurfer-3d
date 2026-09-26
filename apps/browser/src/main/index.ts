@@ -1,8 +1,16 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, session, webContents } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, session, webContents, type Session } from 'electron';
 import { daylight, nebula, themeById, type Theme } from '@hypersol/themes';
 import type { ThemeChoice } from '../shared/settings';
-import { CAPTURE_TAB_CHANNEL, CLOSE_READY_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
+import {
+  CAPTURE_TAB_CHANNEL,
+  CLOSE_READY_CHANNEL,
+  PRIVATE_PARTITION,
+  SHELL_COMMAND_CHANNEL,
+  type ShellCommand,
+} from '../shared/commands';
+import { DOWNLOADS_CHANNEL } from '../shared/downloads';
+import { Downloads } from './downloads';
 import { DATA_CHANNEL } from '../shared/data';
 import { PRIVACY_CHANNEL } from '../shared/privacy';
 import { INSPECT_CHANNEL } from '../shared/inspect';
@@ -47,6 +55,9 @@ let testLog: TestLog | null = null;
 let storage: StorageService | null = null;
 let privacy: Privacy | null = null;
 let inspector: Inspector | null = null;
+/** The private tabs' in-memory session, and how many private pages are open. */
+let privateSession: Session | null = null;
+let privatePages = 0;
 
 /**
  * Windows and Linux: no menu bar; shortcuts are handled per web contents
@@ -141,6 +152,15 @@ function createWindow(): void {
   }
 }
 
+/** The last private tab closed: its session's cookies, storage, and cache go. */
+async function forgetPrivateData(): Promise<void> {
+  const s = privateSession;
+  if (!s) return;
+  await s.clearStorageData();
+  await s.clearCache();
+  await s.clearAuthCache();
+}
+
 /** The first scheduled filter refresh waits this long, so it does not compete with the first pages. */
 const FIRST_REFRESH_DELAY_MS = 30_000;
 
@@ -194,6 +214,16 @@ if (!app.requestSingleInstanceLock()) {
     if (contents.getType() !== 'webview') return;
     privacy?.trackTab(contents);
     inspector?.trackTab(contents);
+    // A private tab keeps nothing: no history, and its session's data goes
+    // when the last private tab closes (milestone 8).
+    const isPrivate = privateSession !== null && contents.session === privateSession;
+    if (isPrivate) {
+      privatePages += 1;
+      contents.once('destroyed', () => {
+        privatePages -= 1;
+        if (privatePages === 0) void forgetPrivateData();
+      });
+    }
     wireGuest(contents, {
       send: (command) => {
         const host = contents.hostWebContents;
@@ -203,7 +233,7 @@ if (!app.requestSingleInstanceLock()) {
       get testLog() {
         return testLog;
       },
-      recordVisit: (url, title) => storage?.recordVisit(url, title) ?? null,
+      recordVisit: (url, title) => (isPrivate ? null : (storage?.recordVisit(url, title) ?? null)),
       updateVisitTitle: (id, title) => storage?.updateVisitTitle(id, title),
     });
   });
@@ -212,11 +242,32 @@ if (!app.requestSingleInstanceLock()) {
     if (options.testMode) testLog = installTestHooks();
 
     const ses = session.defaultSession;
-    // No dictionary downloads (privacy statement, ARCHITECTURE.md section 8).
-    ses.setSpellCheckerEnabled(false);
-    // No permissions are granted yet (camera, location, notifications, and
-    // so on). Permission prompts come in a later milestone.
-    ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    const privateSes = session.fromPartition(PRIVATE_PARTITION);
+    privateSession = privateSes;
+    for (const s of [ses, privateSes]) {
+      // No dictionary downloads (privacy statement, ARCHITECTURE.md section 8).
+      s.setSpellCheckerEnabled(false);
+      // No permissions are granted yet (camera, location, notifications, and
+      // so on). Permission prompts come in a later milestone.
+      s.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    }
+
+    // Downloads go straight to the Downloads folder (milestone 8, Q2 a).
+    const downloadsFolder = options.downloadsDir ?? app.getPath('downloads');
+    const log0 = testLog;
+    const downloads = new Downloads({
+      folder: () => downloadsFolder,
+      isShell: (contents) => mainWindow !== null && contents === mainWindow.webContents,
+      onChange: (items) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(SHELL_COMMAND_CHANNEL, { type: 'downloads', items } satisfies ShellCommand);
+        }
+      },
+      ...(log0 ? { opened: (what: string, path: string) => log0.opened.push({ what, path }) } : {}),
+    });
+    downloads.watch(ses);
+    downloads.watch(privateSes);
+    ipcMain.handle(DOWNLOADS_CHANNEL, (event, request: unknown) => downloads.handle(event, request));
 
     // Tab snapshots for the cards: only for a web page the asking shell hosts.
     ipcMain.handle(CAPTURE_TAB_CHANNEL, async (event, id: unknown) => {
@@ -271,6 +322,7 @@ if (!app.requestSingleInstanceLock()) {
     const inspect = new Inspector(ses, { isShell });
     inspector = inspect;
     inspect.start();
+    inspect.watch(privateSes);
     ipcMain.handle(INSPECT_CHANNEL, (event, request: unknown) => {
       if (testLog && typeof request === 'object' && request !== null) {
         const op = String((request as { op?: unknown }).op);
@@ -294,6 +346,7 @@ if (!app.requestSingleInstanceLock()) {
       isShell,
     });
     privacy.start();
+    privacy.protect(privateSes);
     const shield = privacy;
     ipcMain.handle(PRIVACY_CHANNEL, (event, request: unknown) => shield.handle(event, request));
 

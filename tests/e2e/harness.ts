@@ -53,6 +53,8 @@ export interface LaunchOptions {
   filtersBase?: string;
   /** A local stand-in for the encrypted DNS resolver's reachability check. */
   dnsProbe?: string;
+  /** Save downloads here (test mode switch). */
+  downloadsDir?: string;
 }
 
 /**
@@ -92,6 +94,7 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   if (opts.searchUrl !== undefined) args.push(`--search-url=${opts.searchUrl}`);
   if (opts.filtersBase !== undefined) args.push(`--filters-base=${opts.filtersBase}`);
   if (opts.dnsProbe !== undefined) args.push(`--dns-probe=${opts.dnsProbe}`);
+  if (opts.downloadsDir !== undefined) args.push(`--downloads-dir=${opts.downloadsDir}`);
   const app = await electron.launch({
     executablePath: electronPath,
     args,
@@ -174,7 +177,7 @@ export async function removeFolder(dir: string): Promise<void> {
 /** The read-only hooks the shell exposes in test runs (renderer/main.ts). */
 export interface ShellHooks {
   ready: boolean;
-  openPanel(): 'library' | 'settings' | null;
+  openPanel(): 'library' | 'settings' | 'downloads' | null;
   ignorePrepareClose(): void;
   frames(): number;
   layout(): { panelWidth: number; panelHeight: number; cameraZ: number; viewportWidth: number; viewportHeight: number };
@@ -195,6 +198,10 @@ export interface ShellHooks {
   shield(): { count: number; disabled: boolean; open: boolean };
   layersOf(tabId: number): boolean;
   theme(): string;
+  zoom(): { factor: number; label: number };
+  find(): { open: boolean; matches: number; active: number };
+  prints(): number;
+  downloads(): { id: number; filename: string; path: string; received: number; total: number; state: string }[];
   instruments(): {
     open: boolean;
     polling: boolean;
@@ -218,6 +225,7 @@ export interface TabInfo {
   hasFavicon: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  private: boolean;
 }
 
 export type ShellWindow = Window & { __hypersolShellTest: ShellHooks };

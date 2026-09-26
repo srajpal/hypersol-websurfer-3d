@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-26 (milestone 7 accepted).
+Last updated 2026-09-26 (milestone 8 built, awaiting review).
 
 ## Where things stand
 
@@ -162,8 +162,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    2026-09-26, prompt 33); the smaller tab cards are in. Milestone 7
    (Instrument panel) is done (accepted, prompt 36). Milestone 8 (Everyday
    browser features: zoom, find, downloads, printing, private tabs) is
-   approved and being built; milestone 9 is Passwords; the first release
-   is 10. Push before and after each milestone (AGENTS.md rule 11). Tick tasks and record check results in
+   built and awaits the owner's review; milestone 9 is Passwords (needs a
+   plan and questions); the first release is 10. Push before and after each milestone (AGENTS.md rule 11). Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

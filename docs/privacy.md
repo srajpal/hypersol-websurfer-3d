@@ -5,7 +5,7 @@ usage counts. This page lists everything it keeps on your computer and
 everything it sends over the network. It is updated whenever that
 changes (AGENTS.md rule 9).
 
-Status: as of milestone 7 (2026-09-26): ad and tracker blocking and
+Status: as of milestone 8 (2026-09-26): ad and tracker blocking and
 encrypted DNS are on by default. The layers view (milestone 5) and the
 instrument panel (milestone 7) send nothing anywhere.
 
@@ -61,10 +61,19 @@ one.)
 |---|---|---|---|
 | Bookmarks | `hypersol.sqlite` | When you press the star or Ctrl+D | Remove them in the Library, or press the star again |
 | History: each page's address, title, and time of visit | `hypersol.sqlite` | When a tab arrives at a page; the same page again in the same tab (a reload) adds nothing | Delete entries in the Library, "Clear all history", or Settings > Clear browsing data |
-| Settings: search engine, what opens at startup, encrypted DNS mode, daily list updates on or off, sites where the shield is paused, whether pages open in the layers view, and the sites where you switched the layers view, the theme, the page tilt, and the instrument panel's switches | `settings.json` | When you change a setting, pause the shield on a site, or switch the layers view on a page | Delete the file; the defaults return. Settings > "Forget site choices" clears the layers view choices |
+| Settings: search engine, what opens at startup, encrypted DNS mode, daily list updates on or off, sites where the shield is paused, whether pages open in the layers view, and the sites where you switched the layers view, the theme, the page tilt, the instrument panel's switches, and the zoom level of sites you zoomed | `settings.json` | When you change a setting, pause the shield on a site, or switch the layers view on a page | Delete the file; the defaults return. Settings > "Forget site choices" clears the layers view choices |
 | Filter lists from the last update, and when they were downloaded | `filters/engine.bin`, `filters/engine.json` | After a list update | Delete the folder; the starter copy included in the app is used |
 | Open tabs: their addresses and which one is in front | `session.json` | While you browse, shortly after tabs change | Reopened only when Settings > On startup is "Reopen your tabs from last time"; delete the file to forget them |
 | Cookies, site storage, and cache | Chromium's profile files in the same folder | By the sites you visit, as in any browser | Settings > Clear browsing data |
+| Files you download | Your system's Downloads folder | When you download them | Delete them there; the Downloads panel's list is only for this session |
+
+Private tabs (Ctrl+Shift+N, or New private tab in the menu) keep none
+of this: their pages are not added to history, are not reopened with
+"reopen your tabs", and their cookies, site storage, and cache live in
+memory only and are cleared when the last private tab closes. Files
+downloaded in a private tab are still saved to the Downloads folder,
+and bookmarks you add in one are kept, as in other browsers. The shield
+and encrypted DNS work the same in private tabs.
 
 If `settings.json` is damaged, it is renamed to
 `settings.json.damaged-<date and time>` and kept for inspection, and the

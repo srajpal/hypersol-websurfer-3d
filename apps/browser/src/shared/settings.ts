@@ -49,6 +49,8 @@ export interface Settings {
   instrumentsConsole: boolean;
   instrumentsNetwork: boolean;
   consoleLevel: ConsoleFilter;
+  /** Zoom factor per site (host name), when not 100% (milestone 8). */
+  zoomSites: Record<string, number>;
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -67,10 +69,11 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   instrumentsConsole: true,
   instrumentsNetwork: true,
   consoleLevel: 'all',
+  zoomSites: Object.freeze({}) as Record<string, number>,
 });
 
 const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites', 'layersOnOpen', 'layersSites', 'theme', 'pageTilt',
-  'instruments', 'instrumentsReadouts', 'instrumentsGauges', 'instrumentsConsole', 'instrumentsNetwork', 'consoleLevel'] as const;
+  'instruments', 'instrumentsReadouts', 'instrumentsGauges', 'instrumentsConsole', 'instrumentsNetwork', 'consoleLevel', 'zoomSites'] as const;
 const INSTRUMENT_SWITCHES = ['instruments', 'instrumentsReadouts', 'instrumentsGauges', 'instrumentsConsole', 'instrumentsNetwork'] as const;
 export const MAX_PAUSED_SITES = 1000;
 export const MAX_LAYERS_SITES = 1000;
@@ -91,7 +94,12 @@ const isDnsMode = (v: unknown): v is DnsMode => v === 'secure' || v === 'automat
  */
 export function applySettingsPatch(current: Settings, patch: unknown): { settings: Settings } | { error: string } {
   if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) return { error: 'Not a settings object' };
-  const next: Settings = { ...current, pausedSites: [...current.pausedSites], layersSites: { ...current.layersSites } };
+  const next: Settings = {
+    ...current,
+    pausedSites: [...current.pausedSites],
+    layersSites: { ...current.layersSites },
+    zoomSites: { ...current.zoomSites },
+  };
   for (const [key, value] of Object.entries(patch)) {
     if (key === 'searchEngine') {
       if (!isEngine(value)) return { error: `Unknown search engine: ${String(value)}` };
@@ -113,6 +121,14 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
     } else if ((INSTRUMENT_SWITCHES as readonly string[]).includes(key)) {
       if (typeof value !== 'boolean') return { error: `${key} must be true or false` };
       next[key as (typeof INSTRUMENT_SWITCHES)[number]] = value;
+    } else if (key === 'zoomSites') {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return { error: 'zoomSites must map host names to zoom factors' };
+      const entries = Object.entries(value as Record<string, unknown>);
+      const ok = (v: unknown) => typeof v === 'number' && v >= 0.25 && v <= 5;
+      if (entries.length > MAX_LAYERS_SITES || !entries.every(([h, v]) => isHostName(h) && ok(v))) {
+        return { error: 'zoomSites must map host names to zoom factors from 0.25 to 5' };
+      }
+      next.zoomSites = Object.fromEntries(entries.map(([h, v]) => [h.toLowerCase(), v as number]));
     } else if (key === 'consoleLevel') {
       if (value !== 'all' && value !== 'warnings' && value !== 'errors') return { error: `Unknown console level: ${String(value)}` };
       next.consoleLevel = value;
@@ -143,7 +159,7 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
 
 /** A fresh copy of the defaults (the list inside is never shared). */
 export function defaults(): Settings {
-  return { ...DEFAULT_SETTINGS, pausedSites: [], layersSites: {} };
+  return { ...DEFAULT_SETTINGS, pausedSites: [], layersSites: {}, zoomSites: {} };
 }
 
 /**

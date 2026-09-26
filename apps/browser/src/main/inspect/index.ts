@@ -38,16 +38,21 @@ export class Inspector {
   ) {}
 
   start(): void {
-    this.ses.webRequest.onCompleted({ urls: ['<all_urls>'] }, (d) => {
+    this.watch(this.ses);
+  }
+
+  /** Listens to one session's web pages (the default one, and the private tabs' one). */
+  watch(ses: Session): void {
+    ses.webRequest.onCompleted({ urls: ['<all_urls>'] }, (d) => {
       if (d.webContentsId === undefined || !this.tabs.has(d.webContentsId)) return;
       this.monitor.completed(d.webContentsId, d.id, d.statusCode, declaredBytes(d.responseHeaders), d.fromCache, d.timestamp);
     });
-    this.ses.webRequest.onErrorOccurred({ urls: ['<all_urls>'] }, (d) => {
+    ses.webRequest.onErrorOccurred({ urls: ['<all_urls>'] }, (d) => {
       if (d.webContentsId === undefined || !this.tabs.has(d.webContentsId)) return;
       this.monitor.failed(d.webContentsId, d.id, d.error, d.timestamp);
     });
     // Records each certificate Chromium checks; the verdict stays Chromium's.
-    this.ses.setCertificateVerifyProc((request, callback) => {
+    ses.setCertificateVerifyProc((request, callback) => {
       const c = request.certificate;
       this.monitor.certificate({
         host: request.hostname,

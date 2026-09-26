@@ -65,6 +65,9 @@ upgrade needed.
 Rule 13 check, 2026-09-26 (start of milestone 7, the instrument panel):
 44.4.5 still the newest stable release. No upgrade needed.
 
+Rule 13 check, 2026-09-26 (start of milestone 8, everyday features):
+44.4.5 still the newest stable release. No upgrade needed.
+
 Graphics on the build machine: NVIDIA GeForce RTX 4050 Laptop GPU and
 AMD Radeon integrated graphics; one 1920×1080 display at 100% scaling;
 touchpad, no touch screen.
@@ -110,6 +113,11 @@ touchpad, no touch screen.
 | Themes | Nebula (dark, default) and Daylight (light) in packages/themes; each sets the HUD's CSS variables, the room (sky decorations, grid, desk, glow, fog, lights), the cards, and the layers view's outline, and switches at run time. Settings > Theme: Nebula, Daylight, or Match the system; a button at the bottom right switches the two. The window's background and title-bar scheme (nativeTheme) follow | Milestone 6 (agent's design, prompt 32; owner direction prompt 29: 1980s and 1990s). Contrast is unit tested against WCAG AA. |
 | Instrument panel | Milestone 7 (owner, prompts 33 to 35): floating glass panels in the shell's overlay, leaning in with CSS perspective and drifting with the room's parallax: a right column (page readouts, browser gauges) and a bottom strip (console, network list); the page's layout leaves room for them; the desk slab hides while the strip shows. The console and network list each maximize to fill most of the window for reading (owner, prompt 36). Off by default; Settings has the main switch, one per part, and the console level; top-bar button and Ctrl/Cmd+Shift+I; "DevTools" opens the page's real DevTools | Overlay panels keep text sharp and input simple while still floating in the room. The controls (dials, meters, readouts, switches; hud/controls.ts) take the kinds from the owner's reference and the look from the themes. |
 | Instrument readouts | The main process (main/inspect/) records per tab, in memory only: request starts (from the one before-request listener, main/privacy), completions and failures (session events), console messages, the certificate Chromium checks for each host (setCertificateVerifyProc passing Chromium's own verdict through with -3), process memory and CPU (app.getAppMetrics). The shell asks once a second while the panel shows, only for what changed | No new network use and nothing stored; the certificate verdict stays Chromium's (I3 confirms an invalid certificate still fails). |
+| Zoom | Minus, level, and plus in the top bar; Ctrl/Cmd with plus, minus, 0; Ctrl + mouse wheel (the page's zoom-changed event); steps from 25% to 500%; remembered per site in settings.json (not from private tabs) | Milestone 8 (owner, prompts 36 and 37). |
+| Find in page | Ctrl/Cmd+F: a find bar under the top bar using the webview's findInPage, with count, next and previous | Milestone 8. |
+| Downloads | Saved straight to the system's Downloads folder, never over an existing file ("name (1).ext"); a Downloads panel with progress, open, show in folder, cancel, clear; Ctrl/Cmd+J; a dot on the menu while one runs; the list lasts the session | Milestone 8, owner Q2 a. |
+| Printing | Ctrl/Cmd+P and the menu open the system's print dialog for the page | Milestone 8. |
+| Private tabs | Ctrl/Cmd+Shift+N and the menu: a tab whose page uses an in-memory session (partition "hypersol-private"), with the same shield, readouts, and permissions refusal; no history; never saved for "reopen your tabs"; its cookies, storage, and cache are cleared when the last private tab closes; links from it open private; marked on its card, in the top bar, and on its start panel. The shell may only attach webviews to the default or this partition | Milestone 8, owner Q3 a. |
 | Page tilt | Settings > Page tilt, 0 to 20 degrees, default 10; a --tilt on the command line wins | Less tilt gives sharper text (milestone 1 note). |
 | Window frame, reconsidered | Standard OS frame kept | Considered in milestone 6: a custom frame would lose native dragging, snapping, and accessibility; the theme now sets the frame's light or dark scheme. |
 | Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
@@ -143,6 +151,7 @@ hypersol-websurfer-3d/
                                the rules behind those, unit tested
           security.ts          webview lock-down, allowed addresses
           launch-options.ts    command-line options
+          downloads.ts         downloads to the Downloads folder, the list
           test-hooks.ts        logs for the end-to-end tests (test runs only)
           inspect/             monitor.ts (per-tab requests, console,
                                certificates; unit tested), index.ts (session
@@ -166,6 +175,7 @@ hypersol-websurfer-3d/
           privacy.ts           privacy requests (shield, lists, DNS) and checks
           layers.ts            layers view messages between shell and page
           inspect.ts           instrument panel requests and checks
+          downloads.ts         download requests, safe unique file names
         preload/
           shell.ts             safe bridge exposed to the 3D shell
           page.ts              injected into every web page: the blocker's
@@ -187,7 +197,9 @@ hypersol-websurfer-3d/
                                shield.ts (count and popover),
                                theme-button.ts (theme switch),
                                controls.ts (dial, meter, readout, switch),
-                               instruments.ts (the instrument panel).
+                               instruments.ts (the instrument panel),
+                               find-bar.ts, downloads.ts (milestone 8).
+          zoom.ts              zoom steps (unit tested)
           instruments.ts       fills the instrument panel while it shows;
                                inspect-format.ts: its wording (unit tested)
                                Tabs are 3D cards under scene/, not a 2D strip.
@@ -217,7 +229,7 @@ hypersol-websurfer-3d/
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright drives the built app (m1 to m7 checks)
+    e2e/                       Playwright drives the built app (m1 to m8 checks)
     fixtures/                  sample pages served from 127.0.0.1
     screenshots/               progress screenshots (pnpm screenshots)
 ```
@@ -294,6 +306,9 @@ filter list changes as commands.
 | Paused sites, DNS mode, list updates switch | settings.json | Changed in the shield popover and Settings |
 | Layers view: global switch and per-site choices | settings.json | Changed in Settings and by switching the view on a page |
 | Theme and page tilt | settings.json | Changed in Settings and with the theme button |
+| Zoom per site | settings.json | Changed with the zoom buttons and shortcuts; not from private tabs |
+| Downloaded files | The system's Downloads folder | The list in the Downloads panel lasts the session |
+| Private tabs' cookies, storage, cache | Memory only (an in-memory session) | Cleared when the last private tab closes |
 | Instrument panel switches and console level | settings.json | Changed in Settings, the top-bar button, and the panel |
 | Instrument readouts (requests, console messages, certificates) | Memory only, in the main process, per tab | Capped at 300 of each; forgotten with the page or tab |
 | Image rectangles of the page in front | Memory only, in the shell | Not saved or sent anywhere |

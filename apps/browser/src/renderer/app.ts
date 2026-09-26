@@ -9,6 +9,10 @@ import type { HsSettings } from './hud/settings';
 import type { HsShield } from './hud/shield';
 import type { HsThemeButton } from './hud/theme-button';
 import type { HsInstruments } from './hud/instruments';
+import type { HsFindBar } from './hud/find-bar';
+import type { HsDownloads } from './hud/downloads';
+import { stepZoom } from './zoom';
+import type { DownloadInfo } from '../shared/downloads';
 import { InstrumentsController } from './instruments';
 import { applyThemeCss } from './themes/apply';
 import type { LayersState } from '../shared/layers';
@@ -36,10 +40,14 @@ export interface AppOptions {
   shield: HsShield;
   themeButton: HsThemeButton;
   instruments: HsInstruments;
+  findBar: HsFindBar;
+  downloads: HsDownloads;
+  /** Test runs: printing is counted instead of opening the system's dialog. */
+  testMode?: boolean;
   tabList: HTMLElement;
 }
 
-type PanelName = 'library' | 'settings';
+type PanelName = 'library' | 'settings' | 'downloads';
 
 const SNAPSHOT_DELAY_MS = 400;
 const SESSION_SAVE_DELAY_MS = 400;
@@ -84,6 +92,9 @@ export class App {
   private readonly shieldCounts = new Map<number, number>();
   /** Whether each tab's page is in the layers view, by tab id. */
   private readonly layersOn = new Map<number, boolean>();
+  /** Test runs: print requests, counted instead of opening the dialog. */
+  testPrints = 0;
+  private downloadItems: DownloadInfo[] = [];
   /** The room's parallax as the pages see it (-1 to 1, y down). */
   private parallax = { x: 0, y: 0 };
   private sessionTimer: number | undefined;
@@ -116,6 +127,8 @@ export class App {
     });
     this.store.subscribe(() => this.sync());
     options.themeButton.addEventListener('hs-theme-toggle', () => void this.toggleTheme());
+    options.downloads.bridge = options.bridge;
+    this.wireFind();
     this.instruments = new InstrumentsController(options.instruments, {
       bridge: options.bridge,
       privacy: this.privacy,
@@ -250,13 +263,17 @@ export class App {
         loading: t.state === 'loading',
         ...(t.favicon ? { favicon: t.favicon } : {}),
         focused: t.id === store.focusedId,
+        private: t.private,
       })),
     );
 
     this.updateToolbar();
     this.updateShield(store.focusedId !== this.shownFocus);
     this.instruments.setRailShown(this.room.railVisible);
-    if (store.focusedId !== this.shownFocus) this.instruments.focusChanged();
+    if (store.focusedId !== this.shownFocus) {
+      this.instruments.focusChanged();
+      this.options.findBar.close();
+    }
     if (store.focusedId !== this.shownFocus) {
       const previous = this.shownFocus;
       if (this.views.has(previous)) this.captureSnapshot(previous);
@@ -276,7 +293,10 @@ export class App {
 
   private createView(tab: Tab): void {
     const id = tab.id;
-    const view = new TabView(id, tab.url, {
+    const view = new TabView(
+      id,
+      tab.url,
+      {
       onStatus: (status) => this.onStatus(id, status),
       onNavState: (nav) => this.store.update(id, nav),
       onSettled: () => this.scheduleSnapshot(id),
@@ -291,8 +311,18 @@ export class App {
       useNetworkDns: async () => {
         await this.privacy.get({ op: 'dns.use-network' });
       },
-      onPageReady: () => this.applyLayersOnOpen(id),
-    });
+      onPageReady: () => {
+        this.applyLayersOnOpen(id);
+        this.applyZoomOnOpen(id);
+      },
+      onFound: (r) => {
+        if (id !== this.store.focusedId) return;
+        this.options.findBar.matchCount = r.matches;
+        this.options.findBar.active = r.active;
+      },
+      },
+      tab.private,
+    );
     this.views.set(id, view);
     this.room.addView(view);
   }
@@ -342,7 +372,8 @@ export class App {
   private async saveSessionNow(): Promise<void> {
     window.clearTimeout(this.sessionTimer);
     if (!this.ready) return;
-    const web = this.store.tabs.filter((t) => isWeb(t.url));
+    // Private tabs are never kept for "reopen your tabs" (milestone 8).
+    const web = this.store.tabs.filter((t) => isWeb(t.url) && !t.private);
     const focused = web.findIndex((t) => t.id === this.store.focusedId);
     try {
       await this.data.get({ op: 'session.save', tabs: web.map((t) => t.url), focused });
@@ -435,11 +466,12 @@ export class App {
     }
     this.openPanelName = name;
     if (name === 'library') this.options.library.show();
+    else if (name === 'downloads') this.options.downloads.show();
     else this.options.settingsPanel.show();
   }
 
-  private panel(name: PanelName): HsLibrary | HsSettings {
-    return name === 'library' ? this.options.library : this.options.settingsPanel;
+  private panel(name: PanelName): HsLibrary | HsSettings | HsDownloads {
+    return name === 'library' ? this.options.library : name === 'downloads' ? this.options.downloads : this.options.settingsPanel;
   }
 
   /** Focus goes back where it was before the panel opened. */
@@ -453,8 +485,8 @@ export class App {
   }
 
   private wirePanels(): void {
-    const { library, settingsPanel } = this.options;
-    for (const panel of [library, settingsPanel]) {
+    const { library, settingsPanel, downloads } = this.options;
+    for (const panel of [library, settingsPanel, downloads]) {
       panel.addEventListener('hs-panel-closed', () => this.onPanelClosed());
     }
     library.addEventListener('hs-open-url', (e) => {
@@ -484,6 +516,9 @@ export class App {
     t.canReload = tab.state !== 'start';
     t.loading = tab.state === 'loading';
     t.layers = this.layersOn.get(tab.id) ?? false;
+    t.private = tab.private;
+    t.canZoom = isWeb(tab.url) && tab.state !== 'start';
+    t.zoom = this.focusedView?.zoom ?? 1;
     t.canLayers = isWeb(tab.url) && tab.state !== 'start' && tab.state !== 'failed';
   }
 
@@ -528,6 +563,61 @@ export class App {
       return;
     }
     this.applyLook();
+  }
+
+  // ---- Zoom, find, print (milestone 8) --------------------------------------
+
+  /** A page opens at its site's saved zoom (private tabs too; their changes are not saved). */
+  private applyZoomOnOpen(tabId: number): void {
+    const view = this.views.get(tabId);
+    const url = view?.status.url ?? '';
+    if (!view || !isWeb(url)) return;
+    view.setZoom(this.settings.zoomSites[hostOf(url)] ?? 1);
+    if (tabId === this.store.focusedId) this.updateToolbar();
+  }
+
+  /** Zoom buttons and shortcuts: one step in or out, or 0 for 100%; remembered for the site. */
+  private async zoom(direction: 1 | -1 | 0): Promise<void> {
+    const tab = this.store.focusedTab;
+    const view = this.focusedView;
+    if (!tab || !view || view.isStart || !isWeb(tab.url)) return;
+    const factor = direction === 0 ? 1 : stepZoom(view.zoom, direction);
+    view.setZoom(factor);
+    this.options.toolbar.zoom = factor;
+    if (tab.private) return;
+    const site = hostOf(tab.url);
+    const sites = { ...this.settings.zoomSites };
+    if (factor === 1) delete sites[site];
+    else sites[site] = factor;
+    try {
+      this.settings = await this.data.get({ op: 'settings.set', patch: { zoomSites: sites } });
+    } catch (e) {
+      console.warn(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  private wireFind(): void {
+    const bar = this.options.findBar;
+    bar.addEventListener('hs-find', (e) => {
+      const { text, forward, next } = (e as CustomEvent<{ text: string; forward: boolean; next: boolean }>).detail;
+      this.focusedView?.find(text, forward, next);
+    });
+    bar.addEventListener('hs-find-closed', () => {
+      this.focusedView?.stopFind();
+      this.focusedView?.focusContent();
+    });
+  }
+
+  private print(): void {
+    const view = this.focusedView;
+    if (!view || view.isStart) return;
+    if (this.options.testMode) this.testPrints += 1;
+    else view.print();
+  }
+
+  /** Test hook: this session's downloads as the shell knows them. */
+  get downloadsList(): DownloadInfo[] {
+    return this.downloadItems;
   }
 
   // ---- Layers view (milestone 5) -------------------------------------------
@@ -582,6 +672,7 @@ export class App {
     t.addEventListener('hs-reload', () => this.focusedView?.reload());
     t.addEventListener('hs-bookmark', () => void this.toggleBookmark());
     t.addEventListener('hs-new-tab', () => this.store.open());
+    t.addEventListener('hs-zoom', (e) => void this.zoom((e as CustomEvent<1 | -1 | 0>).detail));
     t.addEventListener('hs-instruments', () => void this.saveSettings({ instruments: !this.settings.instruments }));
     t.addEventListener('hs-layers', () => void this.toggleLayers());
     t.addEventListener('hs-menu', (e) => this.onMenu((e as CustomEvent<MenuAction>).detail));
@@ -589,6 +680,9 @@ export class App {
 
   private onMenu(action: MenuAction): void {
     if (action === 'new-tab') this.store.open();
+    else if (action === 'private-tab') this.store.open({ private: true });
+    else if (action === 'downloads') this.togglePanel('downloads');
+    else if (action === 'print') this.print();
     else if (action === 'close-tab') this.store.close(this.store.focusedId);
     else if (action === 'library' || action === 'settings') this.togglePanel(action);
     else if (action === 'about') this.options.about.open = true;
@@ -604,6 +698,8 @@ export class App {
         this.store.open({
           url: command.url,
           background: command.background,
+          // A link from a private tab opens in a private tab.
+          private: opener !== undefined && (this.store.get(opener)?.private ?? false),
           ...(opener !== undefined ? { afterId: opener } : {}),
         });
         break;
@@ -628,6 +724,11 @@ export class App {
         if (tabId !== undefined) this.views.get(tabId)?.showBlocked(command.url);
         break;
       }
+      case 'downloads':
+        this.downloadItems = command.items;
+        this.options.downloads.items = command.items;
+        this.options.toolbar.downloading = command.items.some((d) => d.state === 'progressing');
+        break;
       case 'filters-changed':
         if (this.openPanelName === 'settings') void this.options.settingsPanel.loadPrivacy();
         break;
@@ -692,6 +793,27 @@ export class App {
         break;
       case 'instruments':
         void this.saveSettings({ instruments: !this.settings.instruments });
+        break;
+      case 'zoom-in':
+        void this.zoom(1);
+        break;
+      case 'zoom-out':
+        void this.zoom(-1);
+        break;
+      case 'zoom-reset':
+        void this.zoom(0);
+        break;
+      case 'find':
+        if (this.focusedView && !this.focusedView.isStart) this.options.findBar.show();
+        break;
+      case 'print':
+        this.print();
+        break;
+      case 'downloads':
+        this.togglePanel('downloads');
+        break;
+      case 'private-tab':
+        s.open({ private: true });
         break;
       case 'library':
       case 'settings':
