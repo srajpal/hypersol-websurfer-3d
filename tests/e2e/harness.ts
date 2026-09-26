@@ -14,9 +14,14 @@ const electronPath = createRequire(join(APP_DIR, 'package.json'))('electron') as
 /**
  * Chromium switch for every test run: no host name resolves except this
  * machine, so nothing can leave it, and any other name reports "address
- * not found" at once.
+ * not found" at once. A few names point at this machine for the privacy
+ * shield checks (milestone 4): a named test site (element hiding skips raw
+ * IP addresses), a tracker only the refreshed test lists know, and two
+ * well-known ad and tracker hosts, so a request the shield let through
+ * would reach the local test server.
  */
-export const OFFLINE_RULES = '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost';
+export const OFFLINE_RULES =
+  '--host-resolver-rules=MAP shop.test 127.0.0.1, MAP refreshed-tracker.test 127.0.0.1, MAP ad.doubleclick.net 127.0.0.1, MAP www.google-analytics.com 127.0.0.1, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost';
 
 export interface Point {
   x: number;
@@ -44,6 +49,10 @@ export interface LaunchOptions {
   userDataDir?: string;
   /** Keep running when the last window closes, as on macOS (test mode switch). */
   keepRunning?: boolean;
+  /** Download filter lists from this local address, and refresh them on schedule. */
+  filtersBase?: string;
+  /** A local stand-in for the encrypted DNS resolver's reachability check. */
+  dnsProbe?: string;
 }
 
 /**
@@ -81,6 +90,8 @@ export async function launch(startUrl: string, opts: LaunchOptions = {}): Promis
   const args = [APP_DIR, `--start-url=${startUrl}`, `--hypersol-user-data=${userDataDir}`, OFFLINE_RULES];
   if (opts.tilt !== undefined) args.push(`--tilt=${opts.tilt}`);
   if (opts.searchUrl !== undefined) args.push(`--search-url=${opts.searchUrl}`);
+  if (opts.filtersBase !== undefined) args.push(`--filters-base=${opts.filtersBase}`);
+  if (opts.dnsProbe !== undefined) args.push(`--dns-probe=${opts.dnsProbe}`);
   const app = await electron.launch({
     executablePath: electronPath,
     args,
@@ -180,6 +191,7 @@ export interface ShellHooks {
   rail(): { scroll: number; maxScroll: number; fits: number };
   animating(): boolean;
   webContentsIdOf(tabId: number): number | null;
+  shield(): { count: number; disabled: boolean; open: boolean };
 }
 
 export interface TabInfo {

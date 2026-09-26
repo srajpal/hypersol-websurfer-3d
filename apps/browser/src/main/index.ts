@@ -3,8 +3,10 @@ import { app, BrowserWindow, ipcMain, Menu, screen, session, webContents } from 
 import { defaultTheme } from '@hypersol/themes';
 import { CAPTURE_TAB_CHANNEL, CLOSE_READY_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
+import { PRIVACY_CHANNEL } from '../shared/privacy';
 import { wireGuest, wireShortcuts } from './guests';
 import { parseLaunchOptions } from './launch-options';
+import { Privacy } from './privacy';
 import { hardenShell } from './security';
 import { StorageService } from './storage/service';
 import { installTestHooks, type TestLog } from './test-hooks';
@@ -40,6 +42,7 @@ let mainWindow: BrowserWindow | null = null;
 let quitting = false;
 let testLog: TestLog | null = null;
 let storage: StorageService | null = null;
+let privacy: Privacy | null = null;
 
 /**
  * Windows and Linux: no menu bar; shortcuts are handled per web contents
@@ -118,6 +121,9 @@ function createWindow(): void {
   }
 }
 
+/** The first scheduled filter refresh waits this long, so it does not compete with the first pages. */
+const FIRST_REFRESH_DELAY_MS = 30_000;
+
 /** How long a closing window waits for the shell to save the open tabs. */
 const CLOSE_FLUSH_MS = 2000;
 
@@ -166,6 +172,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('web-contents-created', (_event, contents) => {
     if (contents.getType() !== 'webview') return;
+    privacy?.trackTab(contents);
     wireGuest(contents, {
       send: (command) => {
         const host = contents.hostWebContents;
@@ -229,6 +236,31 @@ if (!app.requestSingleInstanceLock()) {
         mainWindow.webContents.send(SHELL_COMMAND_CHANNEL, { type: 'data-changed', what } satisfies ShellCommand);
       }
     });
+
+    // Ad and tracker blocking, element hiding, filter lists, and encrypted
+    // DNS (TODO.md milestone 4). Set up before the window, so the first
+    // page is already protected. Test runs have no internet: lists are
+    // refreshed on schedule only from a local address given with
+    // --filters-base, and the DNS check asks a local stand-in (--dns-probe)
+    // or is skipped.
+    const log = testLog;
+    privacy = new Privacy(ses, storage, {
+      filtersDir: join(app.getAppPath(), 'resources', 'filters'),
+      savedDir: join(app.getPath('userData'), 'filters'),
+      ...(options.filtersBase ? { filtersBase: options.filtersBase } : {}),
+      refreshDelayMs: options.testMode ? (options.filtersBase ? 1000 : null) : FIRST_REFRESH_DELAY_MS,
+      ...(options.testMode ? { dnsProbeUrl: options.dnsProbeUrl ?? null } : {}),
+      ...(log
+        ? {
+            observe: (url: string) => log.requests.push(url),
+            onDnsApplied: (mode: string, resolver: string) => log.dnsApplied.push({ mode, resolver }),
+          }
+        : {}),
+      isShell: (contents) => mainWindow !== null && contents === mainWindow.webContents,
+    });
+    privacy.start();
+    const shield = privacy;
+    ipcMain.handle(PRIVACY_CHANNEL, (event, request: unknown) => shield.handle(event, request));
 
     setAppMenu();
     createWindow();

@@ -3,7 +3,7 @@
  * net error codes as reported by the webview's did-fail-load event.
  */
 
-export type LoadErrorKind = 'not-found' | 'connection' | 'certificate' | 'crashed' | 'other';
+export type LoadErrorKind = 'not-found' | 'connection' | 'certificate' | 'crashed' | 'blocked' | 'dns-blocked' | 'other';
 
 export interface LoadErrorCard {
   kind: LoadErrorKind;
@@ -11,9 +11,18 @@ export interface LoadErrorCard {
   message: string;
   /** Retry is offered except where retrying cannot help safely. */
   canRetry: boolean;
+  /** A way through the card: open a blocked page once, or use the network's DNS for now. */
+  action?: 'open-anyway' | 'use-network-dns';
 }
 
 const NOT_FOUND = new Set([-105, -137]); // NAME_NOT_RESOLVED, NAME_RESOLUTION_FAILED
+/** Chromium's code for a request the browser itself cancelled: here, the privacy shield. */
+export const ERR_BLOCKED_BY_CLIENT = -20;
+
+/** True for failures where the name could not be looked up (worth checking whether encrypted DNS is blocked). */
+export function isLookupFailure(code: number): boolean {
+  return NOT_FOUND.has(code);
+}
 const CONNECTION = new Set([
   -7, // TIMED_OUT
   -21, // NETWORK_CHANGED
@@ -49,6 +58,7 @@ export function describeLoadError(code: number, description: string): LoadErrorC
       canRetry: true,
     };
   }
+  if (code === ERR_BLOCKED_BY_CLIENT) return BLOCKED_CARD;
   if (isCertificateError(code)) {
     return {
       kind: 'certificate',
@@ -64,6 +74,23 @@ export function describeLoadError(code: number, description: string): LoadErrorC
     canRetry: true,
   };
 }
+
+export const BLOCKED_CARD: LoadErrorCard = {
+  kind: 'blocked',
+  title: 'The shield blocked this page',
+  message: 'This address is on a list of ad or tracking sites. You can open it anyway, just this once, in this tab.',
+  canRetry: false,
+  action: 'open-anyway',
+};
+
+export const DNS_BLOCKED_CARD: LoadErrorCard = {
+  kind: 'dns-blocked',
+  title: 'Encrypted DNS is blocked on this network',
+  message:
+    "This network won't let HyperSol WebSurfer 3D look up sites privately. You can use this network's own DNS until you close the app; the network can then see which sites you visit.",
+  canRetry: true,
+  action: 'use-network-dns',
+};
 
 export const CRASHED_CARD: LoadErrorCard = {
   kind: 'crashed',

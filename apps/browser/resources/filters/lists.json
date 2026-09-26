@@ -1,0 +1,21 @@
+{
+  "comment": "Filter lists for the privacy shield (TODO.md milestone 4, Q1 a: ads and trackers). Ghostery's copies on GitHub, one host. 'ship' marks lists whose license allows including them in the app's starter copy; the others are download-only. Read by scripts/filters-update.mjs and by the app.",
+  "base": "https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets/",
+  "lists": [
+    { "path": "easylist/easylist.txt", "name": "EasyList", "license": "GPL-3.0-or-later or CC-BY-SA-3.0-or-later", "ship": true },
+    { "path": "easylist/easyprivacy.txt", "name": "EasyPrivacy", "license": "GPL-3.0-or-later or CC-BY-SA-3.0-or-later", "ship": true },
+    { "path": "ublock-origin/filters.txt", "name": "uBlock Origin filters", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/filters-2020.txt", "name": "uBlock Origin filters 2020", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/filters-2021.txt", "name": "uBlock Origin filters 2021", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/filters-2022.txt", "name": "uBlock Origin filters 2022", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/filters-2023.txt", "name": "uBlock Origin filters 2023", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/filters-2024.txt", "name": "uBlock Origin filters 2024", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/privacy.txt", "name": "uBlock Origin privacy", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/badware.txt", "name": "uBlock Origin badware risks", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/quick-fixes.txt", "name": "uBlock Origin quick fixes", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/resource-abuse.txt", "name": "uBlock Origin resource abuse", "license": "GPL-3.0", "ship": true },
+    { "path": "ublock-origin/unbreak.txt", "name": "uBlock Origin unbreak", "license": "GPL-3.0", "ship": true },
+    { "path": "peter-lowe/serverlist.txt", "name": "Peter Lowe's ad and tracking server list", "license": "none stated", "ship": false }
+  ],
+  "resources": { "path": "ublock-origin/resources.json", "name": "uBlock Origin resources", "license": "GPL-3.0", "ship": true }
+}

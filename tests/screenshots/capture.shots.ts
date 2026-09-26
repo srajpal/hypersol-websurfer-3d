@@ -76,6 +76,24 @@ it('captures the main screens', async () => {
     await capture(h, '4-library-history');
     await pressInShell(h, ',', ['control']);
     await capture(h, '5-settings');
+    // Scroll the Settings panel to its privacy part (milestone 4).
+    await h.shell.evaluate(() => {
+      const body = document.querySelector('hs-settings')?.shadowRoot?.querySelector('.body');
+      body?.querySelector('[data-testid="set-dns-secure"]')?.scrollIntoView({ block: 'start' });
+    });
+    await capture(h, '6-settings-privacy');
+    await pressInShell(h, 'Escape');
+
+    // The privacy shield (milestone 4): a page with a tracker and an ad, on a named test host.
+    await navigateTo(h, server.url('shield.html').replace('127.0.0.1', 'shop.test'));
+    await waitForPage(h, 'shield.html');
+    await waitFor('shield count', () => h.shell.evaluate(() => (document.querySelector('hs-shield') as (Element & { count?: number }) | null)?.count ?? 0), (n) => n > 0);
+    await h.shell.click('hs-shield [data-testid="shield"]');
+    await capture(h, '7-shield-popover');
+    await pressInShell(h, 'Escape');
+    await navigateTo(h, server.url('ddm/clk/landing').replace('127.0.0.1', 'ad.doubleclick.net'));
+    await sleep(600);
+    await capture(h, '8-blocked-card');
   } finally {
     await h.close();
     await server.close();

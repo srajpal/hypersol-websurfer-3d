@@ -1,12 +1,14 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { live } from 'lit/directives/live.js';
-import { DEFAULT_SETTINGS, SEARCH_ENGINES, type SearchEngineId, type Settings, type StartupMode } from '../../shared/settings';
-import type { DataClient } from '../data';
+import type { DnsStatus, FilterStatus } from '../../shared/privacy';
+import { defaults, SEARCH_ENGINES, type DnsMode, type SearchEngineId, type Settings, type StartupMode } from '../../shared/settings';
+import type { DataClient, PrivacyClient } from '../data';
 import { panelStyles } from './panel-styles';
 
 /**
- * The Settings panel: search engine, what opens at startup, and clearing
- * browsing data. Changes save at once. Escape closes it.
+ * The Settings panel: search engine, what opens at startup, encrypted
+ * DNS, the filter lists, and clearing browsing data. Changes save at
+ * once. Escape closes it.
  *
  * Events: hs-panel-closed, hs-settings-changed (detail: Settings).
  */
@@ -19,6 +21,8 @@ export class HsSettings extends LitElement {
     sessionProblem: { type: String },
     confirming: { state: true },
     choices: { state: true },
+    filters: { state: true },
+    dns: { state: true },
   };
 
   declare open: boolean;
@@ -29,17 +33,22 @@ export class HsSettings extends LitElement {
   declare sessionProblem: string;
   declare confirming: boolean;
   declare choices: { history: boolean; cookies: boolean; cache: boolean };
+  declare filters: FilterStatus | null;
+  declare dns: DnsStatus | null;
   client: DataClient | null = null;
+  privacy: PrivacyClient | null = null;
 
   constructor() {
     super();
     this.open = false;
-    this.settings = { ...DEFAULT_SETTINGS };
+    this.settings = defaults();
     this.message = '';
     this.problem = '';
     this.sessionProblem = '';
     this.confirming = false;
     this.choices = { history: true, cookies: false, cache: false };
+    this.filters = null;
+    this.dns = null;
   }
 
   static override styles = [
@@ -77,6 +86,11 @@ export class HsSettings extends LitElement {
         height: 16px;
         margin: 0;
       }
+      .note {
+        margin: 4px 0 0 26px;
+        font-size: 12px;
+        color: var(--hs-text-muted);
+      }
       .actions {
         display: flex;
         gap: 8px;
@@ -92,6 +106,7 @@ export class HsSettings extends LitElement {
     this.confirming = false;
     this.message = '';
     void this.load();
+    void this.loadPrivacy();
     void this.updateComplete.then(() =>
       (this.renderRoot.querySelector('input[type="radio"]:checked') as HTMLInputElement | null)?.focus(),
     );
@@ -110,6 +125,19 @@ export class HsSettings extends LitElement {
       this.settings = await this.client.get({ op: 'settings.get' });
       const status = await this.client.get({ op: 'status' });
       this.problem = status.settingsProblem ?? '';
+    } catch (e) {
+      this.message = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  /** Filter list and encrypted DNS status. */
+  async loadPrivacy(): Promise<void> {
+    if (!this.privacy) return;
+    try {
+      [this.filters, this.dns] = await Promise.all([
+        this.privacy.get({ op: 'filters.status' }),
+        this.privacy.get({ op: 'dns.status' }),
+      ]);
     } catch (e) {
       this.message = e instanceof Error ? e.message : String(e);
     }
@@ -147,6 +175,35 @@ export class HsSettings extends LitElement {
             ${this.sessionProblem
               ? html`<p class="error" role="alert" data-testid="set-session-problem">${this.sessionProblem}</p>`
               : nothing}
+          </fieldset>
+          <fieldset>
+            <legend>Encrypted DNS</legend>
+            ${this.dnsMode('secure', 'Secure: look up sites only through Quad9 (recommended)')}
+            ${this.dnsMode('automatic', "Automatic: use Quad9 when possible, otherwise this network's DNS")}
+            ${this.dns?.networkForSession
+              ? html`<p class="note" data-testid="set-dns-session">Using this network's DNS until you close the app.</p>`
+              : nothing}
+          </fieldset>
+          <fieldset>
+            <legend>Ad and tracker blocking</legend>
+            <label>
+              <input
+                type="checkbox"
+                data-testid="set-filter-refresh"
+                .checked=${live(this.settings.filterRefresh)}
+                @change=${(e: Event) => this.save({ filterRefresh: (e.target as HTMLInputElement).checked })}
+              />
+              Update the filter lists every day
+            </label>
+            <p class="note" data-testid="set-filters-status">${this.filterText()}</p>
+            ${this.filters?.lastError
+              ? html`<p class="note error" role="alert" data-testid="set-filters-error">${this.filters.lastError}</p>`
+              : nothing}
+            <div class="actions">
+              <button data-testid="set-filters-update" ?disabled=${this.filters?.refreshing ?? false} @click=${this.updateFilters}>
+                ${this.filters?.refreshing ? 'Updating…' : 'Update now'}
+              </button>
+            </div>
           </fieldset>
           <fieldset>
             <legend>Clear browsing data</legend>
@@ -187,6 +244,38 @@ export class HsSettings extends LitElement {
       ${label}
     </label>`;
   }
+
+  private dnsMode(mode: DnsMode, label: string) {
+    return html`<label>
+      <input
+        type="radio"
+        name="dns"
+        data-testid=${`set-dns-${mode}`}
+        .checked=${live(this.settings.dnsMode === mode)}
+        @change=${() => this.save({ dnsMode: mode }).then(() => this.loadPrivacy())}
+      />
+      ${label}
+    </label>`;
+  }
+
+  private filterText(): string {
+    const f = this.filters;
+    if (!f) return '';
+    const when = new Date(f.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    return f.source === 'starter' ? `Lists from ${when}, included with the app.` : `Lists updated ${when}.`;
+  }
+
+  private readonly updateFilters = async () => {
+    if (!this.privacy) return;
+    if (this.filters) this.filters = { ...this.filters, refreshing: true };
+    try {
+      this.filters = await this.privacy.get({ op: 'filters.update' });
+      if (!this.filters.lastError) this.message = 'Filter lists updated.';
+    } catch (e) {
+      this.message = e instanceof Error ? e.message : String(e);
+      await this.loadPrivacy();
+    }
+  };
 
   private choice(key: 'history' | 'cookies' | 'cache', label: string) {
     return html`<label>

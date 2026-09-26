@@ -1,6 +1,6 @@
 import type { PagePanel, PageState, PageStatus } from '@hypersol/scene-core';
 import type { WebviewTag } from 'electron';
-import { CRASHED_CARD, describeLoadError, type LoadErrorCard } from '../load-errors';
+import { BLOCKED_CARD, CRASHED_CARD, DNS_BLOCKED_CARD, describeLoadError, isLookupFailure, type LoadErrorCard } from '../load-errors';
 import { StartPanel, type StartData } from './start-panel';
 
 /** Chromium's code for a load that was cancelled by a newer one. */
@@ -15,6 +15,12 @@ export interface TabViewEvents {
   onStartSubmit(text: string): void;
   /** A bookmark or history entry chosen on the start panel. */
   onStartOpen(url: string): void;
+  /** "Open anyway" on a blocked page: let this address through once in this tab. */
+  allowOnce(url: string): Promise<void>;
+  /** After a failed lookup: true if encrypted DNS is blocked on this network. */
+  isDnsBlocked(): Promise<boolean>;
+  /** "Use this network's DNS for now". */
+  useNetworkDns(): Promise<void>;
 }
 
 /**
@@ -34,6 +40,8 @@ export class TabView implements PagePanel {
   private ready = false;
   private pendingUrl: string | null = null;
   private failed = false;
+  /** Counts page loads, so a late answer about an earlier failure is ignored. */
+  private loadSeq = 0;
   private currentStatus: PageStatus;
   private w = 0;
   private h = 0;
@@ -90,8 +98,9 @@ export class TabView implements PagePanel {
     return this.webview;
   }
 
+  /** Available once the page is attached, even if its first load was blocked (no dom-ready yet). */
   get webContentsId(): number | null {
-    if (!this.webview || !this.ready) return null;
+    if (!this.webview) return null;
     try {
       return this.webview.getWebContentsId();
     } catch {
@@ -110,6 +119,7 @@ export class TabView implements PagePanel {
   }
 
   load(url: string): void {
+    this.loadSeq += 1;
     this.hideError();
     if (!this.webview) {
       this.start?.element.remove();
@@ -198,6 +208,7 @@ export class TabView implements PagePanel {
       navState();
     });
     wv.addEventListener('did-start-loading', () => {
+      this.loadSeq += 1;
       this.failed = false;
       this.emit({ ...this.currentStatus, state: 'loading', message: undefined });
     });
@@ -220,6 +231,7 @@ export class TabView implements PagePanel {
       this.showError(card, e.validatedURL);
       this.emit({ state: 'failed', url: e.validatedURL, title: this.currentStatus.title, message: card.title });
       navState();
+      if (isLookupFailure(e.errorCode)) void this.checkDns(e.validatedURL);
     });
     wv.addEventListener('did-stop-loading', () => {
       navState();
@@ -232,6 +244,27 @@ export class TabView implements PagePanel {
       this.showError(CRASHED_CARD, this.currentStatus.url);
       this.emit({ ...this.currentStatus, state: 'crashed', message: CRASHED_CARD.title });
     });
+  }
+
+  /**
+   * The privacy shield blocked a page load in this tab. Electron drops a
+   * cancelled page load without a failure event, so the main process says
+   * so directly; the tab stays on its current page behind the card.
+   */
+  showBlocked(url: string): void {
+    this.failed = true;
+    this.shimmer.removeAttribute('data-visible');
+    this.showError(BLOCKED_CARD, url);
+    this.emit({ state: 'failed', url, title: this.currentStatus.title, message: BLOCKED_CARD.title });
+  }
+
+  /** A lookup failed: if encrypted DNS is blocked on this network, say so instead of "not found". */
+  private async checkDns(url: string): Promise<void> {
+    const seq = this.loadSeq;
+    const blocked = await this.events.isDnsBlocked().catch(() => false);
+    if (!blocked || seq !== this.loadSeq || !this.failed) return;
+    this.showError(DNS_BLOCKED_CARD, url);
+    this.emit({ ...this.currentStatus, message: DNS_BLOCKED_CARD.title });
   }
 
   private showError(card: LoadErrorCard, url: string): void {
@@ -258,7 +291,36 @@ export class TabView implements PagePanel {
       });
       actions.append(retry);
     }
-    if (this.webview && this.ready && this.webview.canGoBack()) {
+    if (card.action) {
+      const through = document.createElement('button');
+      through.type = 'button';
+      through.id = card.action === 'open-anyway' ? 'panel-open-anyway' : 'panel-use-network-dns';
+      through.textContent = card.action === 'open-anyway' ? 'Open anyway' : "Use this network's DNS for now";
+      through.addEventListener('click', () => {
+        const done = card.action === 'open-anyway' ? this.events.allowOnce(url) : this.events.useNetworkDns();
+        void done.then(
+          () => this.load(url),
+          (e: unknown) => console.warn(e instanceof Error ? e.message : String(e)),
+        );
+      });
+      // The way through comes first: it is what the card is for.
+      actions.prepend(through);
+    }
+    const stayedOn = card.kind === 'blocked' && this.webview && this.ready ? this.webview.getURL() : '';
+    if (stayedOn && stayedOn !== url) {
+      // A blocked page never replaced the one the tab is on: going back
+      // means closing the card and showing that page again.
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.id = 'panel-back';
+      back.textContent = 'Go back';
+      back.addEventListener('click', () => {
+        this.hideError();
+        this.failed = false;
+        this.emit({ ...this.currentStatus, state: 'loaded', url: stayedOn, message: undefined });
+      });
+      actions.append(back);
+    } else if (this.webview && this.ready && this.webview.canGoBack()) {
       const back = document.createElement('button');
       back.type = 'button';
       back.id = 'panel-back';

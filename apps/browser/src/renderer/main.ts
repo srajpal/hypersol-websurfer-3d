@@ -3,6 +3,7 @@ import './hud/toolbar';
 import './hud/about';
 import './hud/library';
 import './hud/settings';
+import './hud/shield';
 import { DEFAULT_TILT_DEG, clampTilt } from '@hypersol/scene-core';
 import { defaultTheme } from '@hypersol/themes';
 import type { ShellBridge } from '../shared/commands';
@@ -34,6 +35,7 @@ const app = new App({
   about,
   library: document.querySelector('hs-library')!,
   settingsPanel: document.querySelector('hs-settings')!,
+  shield: document.querySelector('hs-shield')!,
   tabList: document.getElementById('tab-list') as HTMLElement,
 });
 void app.start();
@@ -76,6 +78,10 @@ if (params.get('test') === '1') {
       rail: () => room.rail,
       animating: () => room.animating,
       webContentsIdOf: (tabId: number) => app.viewOf(tabId)?.webContentsId ?? null,
+      shield: () => {
+        const s = document.querySelector('hs-shield')!;
+        return { count: s.count, disabled: s.disabled, open: s.open };
+      },
     },
   });
 }

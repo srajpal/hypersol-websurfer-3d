@@ -61,7 +61,24 @@ describe('Store', () => {
 describe('settings', () => {
   it('parses a good file and ignores unknown keys', () => {
     expect(parseSettings('{"searchEngine":"brave","onStartup":"last-tabs","later":1}')).toEqual({
-      settings: { searchEngine: 'brave', onStartup: 'last-tabs' },
+      settings: { ...DEFAULT_SETTINGS, searchEngine: 'brave', onStartup: 'last-tabs' },
+    });
+  });
+
+  it('reads and checks the privacy settings (milestone 4)', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ dnsMode: 'secure', filterRefresh: true, pausedSites: [] });
+    const text = '{"dnsMode":"automatic","filterRefresh":false,"pausedSites":["News.Example.com","[::1]"]}';
+    expect(parseSettings(text).settings).toMatchObject({
+      dnsMode: 'automatic',
+      filterRefresh: false,
+      pausedSites: ['news.example.com', '[::1]'],
+    });
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { dnsMode: 'off' })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { filterRefresh: 'yes' })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { pausedSites: ['a b'] })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { pausedSites: 'x.example' })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { pausedSites: ['x.example', 'X.example'] })).toEqual({
+      settings: { ...DEFAULT_SETTINGS, pausedSites: ['x.example'] },
     });
   });
 
@@ -145,8 +162,8 @@ describe('StorageService', () => {
     const b = new StorageService(folder, cleaner);
     expect(await b.handle({ op: 'bookmarks.list' })).toMatchObject({ ok: true, value: [{ url: 'https://a.example/' }] });
     expect(await b.handle({ op: 'history.recent', limit: 5 })).toMatchObject({ ok: true, value: [{ title: 'A' }] });
-    expect(await b.handle({ op: 'settings.get' })).toEqual({ ok: true, value: { searchEngine: 'bing', onStartup: 'new-tab' } });
-    expect(JSON.parse(readFileSync(join(folder, 'settings.json'), 'utf8'))).toEqual({ searchEngine: 'bing', onStartup: 'new-tab' });
+    expect(await b.handle({ op: 'settings.get' })).toEqual({ ok: true, value: { ...DEFAULT_SETTINGS, searchEngine: 'bing' } });
+    expect(JSON.parse(readFileSync(join(folder, 'settings.json'), 'utf8'))).toEqual({ ...DEFAULT_SETTINGS, searchEngine: 'bing' });
     b.close();
   });
 

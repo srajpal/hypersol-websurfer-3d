@@ -2,7 +2,10 @@
  * Trusted preload for every web page. The main process puts this in place
  * of any preload a webview asks for (see main/security.ts).
  *
- * A stub until milestone 5, when it gains depth layering and image
- * discovery. It deliberately exposes nothing to pages.
+ * It runs the ad blocker's page script (element hiding: it asks the main
+ * process which page elements the filter lists hide, and watches the page
+ * for new ones; main/privacy/index.ts answers only web pages, and nothing
+ * for a paused site). Depth layering and image discovery join it in
+ * milestone 5. It exposes nothing to pages.
  */
-export {};
+import '@ghostery/adblocker-electron-preload';

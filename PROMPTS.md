@@ -336,3 +336,13 @@ q3 - a
 E11 - look and feel - so far so good, i will wait to comment more after themes are introduced and the ability to make/breakdown part of the page in 3d is working. but i like the 80's/90's aesthetic, lets lean into that more.
 build the next milestone
 ```
+
+## 30 — 2026-09-26
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b35 · Tokens: not captured
+
+Sent while milestone 4 was being built.
+
+```text
+do some tests and then continue to the next milestone
+```

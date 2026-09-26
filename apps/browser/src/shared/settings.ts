@@ -13,19 +13,42 @@ export const SEARCH_ENGINES = {
 
 export type SearchEngineId = keyof typeof SEARCH_ENGINES;
 export type StartupMode = 'new-tab' | 'last-tabs';
+/**
+ * Encrypted DNS (ARCHITECTURE.md section 4): 'secure' uses only the named
+ * resolver; 'automatic' uses it where it can and falls back to the
+ * network's own DNS.
+ */
+export type DnsMode = 'secure' | 'automatic';
 
 export interface Settings {
   searchEngine: SearchEngineId;
   onStartup: StartupMode;
+  dnsMode: DnsMode;
+  /** Refresh the filter lists from the internet once a day. */
+  filterRefresh: boolean;
+  /** Sites (host names) where the privacy shield is paused. */
+  pausedSites: string[];
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   searchEngine: 'duckduckgo',
   onStartup: 'new-tab',
+  dnsMode: 'secure',
+  filterRefresh: true,
+  pausedSites: Object.freeze([]) as unknown as string[],
 });
+
+const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites'] as const;
+export const MAX_PAUSED_SITES = 1000;
+
+/** A host name as URL.hostname gives it: letters, digits, dots, hyphens, or a bracketed IPv6 address. */
+export function isHostName(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0 && v.length <= 255 && /^([a-z0-9.-]+|\[[0-9a-f:.]+\])$/i.test(v);
+}
 
 const isEngine = (v: unknown): v is SearchEngineId => typeof v === 'string' && Object.hasOwn(SEARCH_ENGINES, v);
 const isStartup = (v: unknown): v is StartupMode => v === 'new-tab' || v === 'last-tabs';
+const isDnsMode = (v: unknown): v is DnsMode => v === 'secure' || v === 'automatic';
 
 /**
  * Applies a change to settings. Unknown keys and bad values are refused
@@ -34,7 +57,7 @@ const isStartup = (v: unknown): v is StartupMode => v === 'new-tab' || v === 'la
  */
 export function applySettingsPatch(current: Settings, patch: unknown): { settings: Settings } | { error: string } {
   if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) return { error: 'Not a settings object' };
-  const next: Settings = { ...current };
+  const next: Settings = { ...current, pausedSites: [...current.pausedSites] };
   for (const [key, value] of Object.entries(patch)) {
     if (key === 'searchEngine') {
       if (!isEngine(value)) return { error: `Unknown search engine: ${String(value)}` };
@@ -42,11 +65,27 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
     } else if (key === 'onStartup') {
       if (!isStartup(value)) return { error: `Unknown startup choice: ${String(value)}` };
       next.onStartup = value;
+    } else if (key === 'dnsMode') {
+      if (!isDnsMode(value)) return { error: `Unknown DNS mode: ${String(value)}` };
+      next.dnsMode = value;
+    } else if (key === 'filterRefresh') {
+      if (typeof value !== 'boolean') return { error: 'filterRefresh must be true or false' };
+      next.filterRefresh = value;
+    } else if (key === 'pausedSites') {
+      if (!Array.isArray(value) || value.length > MAX_PAUSED_SITES || !value.every(isHostName)) {
+        return { error: 'pausedSites must be a list of host names' };
+      }
+      next.pausedSites = [...new Set(value.map((h: string) => h.toLowerCase()))];
     } else {
       return { error: `Unknown setting: ${key}` };
     }
   }
   return { settings: next };
+}
+
+/** A fresh copy of the defaults (the list inside is never shared). */
+export function defaults(): Settings {
+  return { ...DEFAULT_SETTINGS, pausedSites: [] };
 }
 
 /**
@@ -59,16 +98,16 @@ export function parseSettings(text: string): { settings: Settings; problem?: str
   try {
     data = JSON.parse(text);
   } catch {
-    return { settings: { ...DEFAULT_SETTINGS }, problem: 'not valid JSON' };
+    return { settings: defaults(), problem: 'not valid JSON' };
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    return { settings: { ...DEFAULT_SETTINGS }, problem: 'not a settings object' };
+    return { settings: defaults(), problem: 'not a settings object' };
   }
   const known = Object.fromEntries(
-    Object.entries(data).filter(([k]) => k === 'searchEngine' || k === 'onStartup'),
+    Object.entries(data).filter(([k]) => (SETTING_KEYS as readonly string[]).includes(k)),
   );
-  const result = applySettingsPatch({ ...DEFAULT_SETTINGS }, known);
-  if ('error' in result) return { settings: { ...DEFAULT_SETTINGS }, problem: result.error };
+  const result = applySettingsPatch(defaults(), known);
+  if ('error' in result) return { settings: defaults(), problem: result.error };
   return { settings: result.settings };
 }
 

@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-26 (milestone 4 approved and being built).
+Last updated 2026-09-26 (milestone 4 built, awaiting acceptance).
 
 ## Where things stand
 
@@ -16,8 +16,14 @@ clearing data, docs/privacy.md. Milestone 3 was accepted 2026-09-26
 (the owner wants a fuller look review after themes and depth layering,
 and asked to lean into the 1980s and 1990s aesthetic). GitHub issues
 #1 to #6 were handled in PR #7, merged 2026-09-26. Milestone 4 (Private
-by default) is approved and being built; its plan, decisions, and
-checks are in TODO.md. Progress
+by default) is built: ad and tracker blocking with Ghostery's engine and
+a starter copy of the lists in the app, the shield count and popover,
+element hiding, the blocked card with "open anyway", pausing per site,
+daily list refresh, and encrypted DNS through Quad9 with a
+blocked-resolver card (docs/privacy.md). F1 to F10 pass; D8 (clipboard)
+could not be checked because the machine's clipboard was unavailable.
+Waiting for the owner's look-and-feel check (F11) and acceptance; the
+live internet check (L1) needs the owner's yes. Progress
 screenshots live in docs/screenshots/<milestone>/; capture them with
 `MILESTONE=mN pnpm screenshots` when a milestone is finished.
 
@@ -55,8 +61,8 @@ browser repo for rules and the prompt log.
   1 to 7 in TODO.md make up the first result.
 - Stack: Electron (current supported stable line, 44 as of 2026-09-24),
   TypeScript, Three.js, Lit, SQLite (node:sqlite, built into
-  Electron's Node), electron-vite, Vitest, Playwright; planned and not
-  yet installed: @ghostery/adblocker-electron (milestone 4) and
+  Electron's Node), @ghostery/adblocker-electron (milestone 4),
+  electron-vite, Vitest, Playwright; planned and not yet installed:
   electron-builder (milestone 7). Reasons in ARCHITECTURE.md section 4.
   Toolchain: Node 22.13 or newer, pnpm 12.4.1 pinned.
 - Focused page is a live Chromium view (an Electron `<webview>`) placed
@@ -140,7 +146,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
 2. Do only what the prompt approves. Milestone 4 (Private by default)
-   is approved to build; see TODO.md. Tick tasks and record check results in
+   is built and awaits acceptance; milestone 5 (depth layering) has no
+   approved plan yet; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

@@ -1,11 +1,12 @@
 import type { PageStatus } from '@hypersol/scene-core';
 import type { Theme } from '@hypersol/themes';
 import type { ShellBridge, ShellCommand, ShortcutName } from '../shared/commands';
-import { DEFAULT_SETTINGS, searchUrlFor, type Settings } from '../shared/settings';
-import { DataClient } from './data';
+import { DEFAULT_SETTINGS, defaults, searchUrlFor, type Settings } from '../shared/settings';
+import { DataClient, PrivacyClient } from './data';
 import type { HsAbout } from './hud/about';
 import type { HsLibrary } from './hud/library';
 import type { HsSettings } from './hud/settings';
+import type { HsShield } from './hud/shield';
 import type { HsToolbar, MenuAction } from './hud/toolbar';
 import { Room } from './scene/room';
 import type { StartData } from './scene/start-panel';
@@ -25,6 +26,7 @@ export interface AppOptions {
   about: HsAbout;
   library: HsLibrary;
   settingsPanel: HsSettings;
+  shield: HsShield;
   tabList: HTMLElement;
 }
 
@@ -48,14 +50,17 @@ export class App {
   readonly store = new TabStore();
   readonly room: Room;
   readonly data: DataClient;
+  readonly privacy: PrivacyClient;
   /** True once saved settings and tabs have been loaded. */
   ready = false;
   /** Test runs only: ignore prepare-close, to test the main process's timeout. */
   testIgnorePrepareClose = false;
-  private settings: Settings = { ...DEFAULT_SETTINGS };
+  private settings: Settings = defaults();
   private readonly views = new Map<number, TabView>();
   private shownFocus = -1;
   private readonly snapshotTimers = new Map<number, number>();
+  /** Requests the shield blocked on each tab's page, by tab id. */
+  private readonly shieldCounts = new Map<number, number>();
   private sessionTimer: number | undefined;
   /** Whether the Enter key is held down in the shell. */
   private enterDown = false;
@@ -68,8 +73,14 @@ export class App {
 
   constructor(private readonly options: AppOptions) {
     this.data = new DataClient(options.bridge);
+    this.privacy = new PrivacyClient(options.bridge);
     options.library.client = this.data;
     options.settingsPanel.client = this.data;
+    options.settingsPanel.privacy = this.privacy;
+    options.shield.client = this.privacy;
+    options.shield.tab = () => this.focusedView?.webContentsId ?? null;
+    // Pausing or resuming the shield on a site takes effect on a fresh load.
+    options.shield.addEventListener('hs-shield-paused', () => this.focusedView?.reload());
     this.room = new Room(options.roomElement, options.theme, {
       tiltDeg: options.tiltDeg,
       callbacks: {
@@ -87,7 +98,7 @@ export class App {
 
   /** Loads settings, then opens the first tabs: the saved ones if asked, else a start tab. */
   async start(): Promise<void> {
-    this.settings = await this.data.get({ op: 'settings.get' }).catch(() => ({ ...DEFAULT_SETTINGS }));
+    this.settings = await this.data.get({ op: 'settings.get' }).catch(() => defaults());
     const saved = this.options.startUrl === '' ? await this.data.get({ op: 'startup' }).catch(() => null) : null;
     if (saved) {
       saved.tabs.forEach((url, i) => this.store.open({ url, background: i !== saved.focused }));
@@ -170,6 +181,7 @@ export class App {
         this.views.delete(id);
         window.clearTimeout(this.snapshotTimers.get(id));
         this.snapshotTimers.delete(id);
+        this.shieldCounts.delete(id);
       }
     }
 
@@ -184,6 +196,7 @@ export class App {
     );
 
     this.updateToolbar();
+    this.updateShield(store.focusedId !== this.shownFocus);
     if (store.focusedId !== this.shownFocus) {
       const previous = this.shownFocus;
       if (this.views.has(previous)) this.captureSnapshot(previous);
@@ -209,6 +222,15 @@ export class App {
       onSettled: () => this.scheduleSnapshot(id),
       onStartSubmit: (text) => this.navigate(id, text),
       onStartOpen: (url) => this.navigate(id, url),
+      allowOnce: async (url) => {
+        const page = this.views.get(id)?.webContentsId;
+        if (page === null || page === undefined) throw new Error('The page is not ready');
+        await this.privacy.get({ op: 'shield.allow-once', tab: page, url });
+      },
+      isDnsBlocked: async () => (await this.privacy.get({ op: 'dns.check' })) === 'blocked',
+      useNetworkDns: async () => {
+        await this.privacy.get({ op: 'dns.use-network' });
+      },
     });
     this.views.set(id, view);
     this.room.addView(view);
@@ -401,6 +423,15 @@ export class App {
     t.loading = tab.state === 'loading';
   }
 
+  /** The shield shows the focused page's count; a start tab has none. */
+  private updateShield(focusChanged: boolean): void {
+    const tab = this.store.focusedTab;
+    const shield = this.options.shield;
+    shield.disabled = !tab || !isWeb(tab.url) || this.focusedView?.isStart !== false;
+    shield.count = tab ? (this.shieldCounts.get(tab.id) ?? 0) : 0;
+    if (focusChanged && shield.open) void shield.refresh();
+  }
+
   private wireToolbar(): void {
     const t = this.options.toolbar;
     t.addEventListener('hs-navigate', (e) => this.navigate(this.store.focusedId, (e as CustomEvent<string>).detail));
@@ -437,6 +468,24 @@ export class App {
         if (tabId !== undefined) this.store.update(tabId, { favicon: command.dataUrl });
         break;
       }
+      case 'shield': {
+        const tabId = this.tabForWebContents(command.webContentsId);
+        if (tabId === undefined) break;
+        this.shieldCounts.set(tabId, command.count);
+        if (tabId === this.store.focusedId) {
+          this.options.shield.count = command.count;
+          if (this.options.shield.open) void this.options.shield.refresh();
+        }
+        break;
+      }
+      case 'page-blocked': {
+        const tabId = this.tabForWebContents(command.webContentsId);
+        if (tabId !== undefined) this.views.get(tabId)?.showBlocked(command.url);
+        break;
+      }
+      case 'filters-changed':
+        if (this.openPanelName === 'settings') void this.options.settingsPanel.loadPrivacy();
+        break;
       case 'prepare-close':
         if (this.testIgnorePrepareClose) break;
         void this.saveSessionNow().finally(() => this.options.bridge.closeReady());

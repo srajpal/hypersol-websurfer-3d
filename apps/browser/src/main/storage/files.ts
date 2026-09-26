@@ -4,9 +4,9 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
  * Writes a file through a temporary copy that is then renamed over the
  * original, so a crash mid-write never leaves half a file.
  */
-export function writeFileAtomic(path: string, text: string): void {
+export function writeFileAtomic(path: string, data: string | Uint8Array): void {
   const temp = `${path}.tmp`;
-  writeFileSync(temp, text, 'utf8');
+  writeFileSync(temp, data);
   renameSync(temp, path);
 }
 

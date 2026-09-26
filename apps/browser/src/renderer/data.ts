@@ -1,5 +1,6 @@
 import type { ShellBridge } from '../shared/commands';
 import type { DataOp, DataRequest, DataResults } from '../shared/data';
+import type { PrivacyOp, PrivacyRequest, PrivacyResults } from '../shared/privacy';
 
 /** Saved-data requests from the shell; errors arrive as thrown Errors with plain messages. */
 export class DataClient {
@@ -9,6 +10,17 @@ export class DataClient {
     const reply = await this.bridge.data(request);
     if (!reply.ok) throw new Error(reply.error);
     return reply.value as DataResults[K];
+  }
+}
+
+/** Privacy requests from the shell (shield, filter lists, DNS); errors arrive as thrown Errors. */
+export class PrivacyClient {
+  constructor(private readonly bridge: ShellBridge) {}
+
+  async get<K extends PrivacyOp>(request: Extract<PrivacyRequest, { op: K }>): Promise<PrivacyResults[K]> {
+    const reply = await this.bridge.privacy(request);
+    if (!reply.ok) throw new Error(reply.error);
+    return reply.value as PrivacyResults[K];
   }
 }
 

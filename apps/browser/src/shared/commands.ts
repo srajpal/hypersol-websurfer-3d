@@ -11,6 +11,7 @@ export const CAPTURE_TAB_CHANNEL = 'hypersol:capture-tab';
 export const CLOSE_READY_CHANNEL = 'hypersol:close-ready';
 
 import type { DataOp, DataReply, DataRequest } from './data';
+import type { PrivacyOp, PrivacyReply, PrivacyRequest } from './privacy';
 
 export type ShortcutName =
   | 'bookmark'
@@ -30,6 +31,12 @@ export type ShellCommand =
   | { type: 'open-tab'; url: string; background: boolean; openerWebContentsId?: number }
   | { type: 'favicon'; webContentsId: number; dataUrl: string }
   | { type: 'data-changed'; what: 'bookmarks' | 'history' | 'settings' }
+  /** How many requests the privacy shield has blocked on a tab's page. */
+  | { type: 'shield'; webContentsId: number; count: number }
+  /** The shield blocked a whole page in a tab (the tab shows the blocked card). */
+  | { type: 'page-blocked'; webContentsId: number; url: string }
+  /** The filter lists changed (refreshed, or a refresh started or failed). */
+  | { type: 'filters-changed' }
   /** The window is closing: save the open tabs now, then call closeReady(). */
   | { type: 'prepare-close' };
 
@@ -42,6 +49,8 @@ export interface ShellBridge {
   captureTab(webContentsId: number): Promise<string | null>;
   /** Saved data: bookmarks, history, settings, session (shared/data.ts). */
   data<K extends DataOp>(request: Extract<DataRequest, { op: K }>): Promise<DataReply<K>>;
+  /** Privacy shield, filter lists, and encrypted DNS (shared/privacy.ts). */
+  privacy<K extends PrivacyOp>(request: Extract<PrivacyRequest, { op: K }>): Promise<PrivacyReply<K>>;
   /** Answer to prepare-close: saving is done (or has failed), the window may close. */
   closeReady(): void;
 }

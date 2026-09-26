@@ -24,6 +24,10 @@ export interface LaunchOptions {
    * platform.
    */
   testKeepRunning: boolean;
+  /** Test mode only: download filter lists from this local address, and refresh on schedule. */
+  filtersBase?: string;
+  /** Test mode only: where the encrypted DNS reachability check asks (a local stand-in resolver). */
+  dnsProbeUrl?: string;
 }
 
 function switchValue(argv: readonly string[], name: string): string | undefined {
@@ -32,12 +36,25 @@ function switchValue(argv: readonly string[], name: string): string | undefined 
   return hit === undefined ? undefined : hit.slice(prefix.length);
 }
 
+/** Test-only addresses must point at this machine. */
+function localAddress(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname === '127.0.0.1' ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Reads the launch options:
  *   --start-url=<http(s) address>   first page (default: a start tab)
  *   --tilt=<degrees>                page tilt, clamped to 0..20 (default 10)
  *   --hypersol-user-data=<folder>   profile folder for this run
  *   --search-url=<address with %s>  search engine, test mode only
+ *   --filters-base=<address>        filter list downloads, test mode only (127.0.0.1)
+ *   --dns-probe=<address>           DNS reachability check, test mode only (127.0.0.1)
  * and HYPERSOL_TEST=1 for test mode, HYPERSOL_TEST_BACKGROUND=1 for
  * test windows that stay out of the way.
  */
@@ -50,6 +67,8 @@ export function parseLaunchOptions(
   const userDataDir = switchValue(argv, 'hypersol-user-data');
   const testMode = env['HYPERSOL_TEST'] === '1';
   const search = switchValue(argv, 'search-url');
+  const filtersBase = testMode ? localAddress(switchValue(argv, 'filters-base')) : undefined;
+  const dnsProbeUrl = testMode ? localAddress(switchValue(argv, 'dns-probe')) : undefined;
   const searchUrl =
     testMode && search !== undefined && search.includes('%s') && isAllowedPageUrl(search) && search !== ''
       ? search
@@ -62,5 +81,7 @@ export function parseLaunchOptions(
     ...(searchUrl ? { searchUrl } : {}),
     testBackground: testMode && env['HYPERSOL_TEST_BACKGROUND'] === '1',
     testKeepRunning: testMode && env['HYPERSOL_TEST_KEEP_RUNNING'] === '1',
+    ...(filtersBase ? { filtersBase } : {}),
+    ...(dnsProbeUrl ? { dnsProbeUrl } : {}),
   };
 }

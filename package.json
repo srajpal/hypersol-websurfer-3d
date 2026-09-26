@@ -15,7 +15,8 @@
     "test:e2e": "pnpm build && vitest run --config vitest.e2e.config.ts",
     "lint": "eslint .",
     "typecheck": "tsc -p packages/scene-core --noEmit && tsc -p packages/themes --noEmit && tsc -p apps/browser --noEmit && tsc -p tests --noEmit",
-    "screenshots": "pnpm build && vitest run --config vitest.shots.config.ts"
+    "screenshots": "pnpm build && vitest run --config vitest.shots.config.ts",
+    "filters:update": "pnpm --filter @hypersol/browser filters:update"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

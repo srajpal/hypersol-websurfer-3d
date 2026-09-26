@@ -1,4 +1,3 @@
-import { session } from 'electron';
 import type { AttachRecord } from './security';
 
 /**
@@ -14,6 +13,8 @@ export interface TestLog {
   menus: { labels: string[]; run(label: string): void }[];
   /** Saved-data requests from the shell, counted by op. */
   dataOps: Record<string, number>;
+  /** Every encrypted DNS mode put into effect, in order. */
+  dnsApplied: { mode: string; resolver: string }[];
 }
 
 declare global {
@@ -21,12 +22,9 @@ declare global {
 }
 
 export function installTestHooks(): TestLog {
-  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [], dataOps: {} };
+  const log: TestLog = { attaches: [], requests: [], blockedPopups: [], menus: [], dataOps: {}, dnsApplied: [] };
   globalThis.__hypersolTest = log;
-  // Every request the default session makes (the shell and web pages share it).
-  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-    log.requests.push(details.url);
-    callback({});
-  });
+  // log.requests is filled by the privacy shield's request listener
+  // (main/privacy/index.ts): Electron allows one listener per session.
   return log;
 }

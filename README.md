@@ -7,11 +7,12 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestone 3 done; milestone 4 (private by default) in progress.** A browser in a 3D room
-that remembers: tabs as cards on an arc, a top bar with address, search,
-and a bookmark star, bookmarks and history in a Library panel, a
-Settings panel, a start panel with your data, error cards, and a
-right-click menu. See [Progress](#progress), TODO.md, and
+**Status: milestone 4 (private by default) built, awaiting review.** A
+browser in a 3D room that remembers and protects: tabs as cards on an
+arc, a top bar with address, search, and a bookmark star, bookmarks and
+history in a Library panel, a Settings panel, a start panel with your
+data, error cards, a right-click menu, and now ad and tracker blocking
+with a shield, and encrypted DNS. See [Progress](#progress), TODO.md, and
 [Project documents](#project-documents).
 
 ## The story
@@ -107,6 +108,17 @@ and Settings panels, and a start panel with your data.
 
 ![The Settings panel: search engine, startup, clear browsing data](docs/screenshots/m3/5-settings.png)
 
+**Milestone 4: private by default.** Ad and tracker blocking with a
+shield that counts and lists what was blocked, element hiding, a
+"blocked" card with "Open anyway", pausing the shield per site, and
+encrypted DNS through Quad9. Details in [docs/privacy.md](docs/privacy.md).
+
+![The shield popover listing a blocked ad image and tracker script](docs/screenshots/m4/7-shield-popover.png)
+
+![The "The shield blocked this page" card with Open anyway](docs/screenshots/m4/8-blocked-card.png)
+
+![Settings: encrypted DNS and ad and tracker blocking](docs/screenshots/m4/6-settings-privacy.png)
+
 ## HoloML
 
 HoloML is the 3D markup language developed alongside the browser, in its
@@ -127,10 +139,10 @@ own repository so it stays independent and reusable:
 ## Technology
 
 In use now: Electron 44 (the current supported stable line), TypeScript,
-Three.js, Lit, and SQLite through Node's built-in node:sqlite; Vite and
+Three.js, Lit, SQLite through Node's built-in node:sqlite, and Ghostery's
+open-source ad-blocking engine with open filter lists; Vite and
 electron-vite to build; Vitest and Playwright to test.
-Planned, not yet installed: Ghostery's open-source ad-blocking engine
-(milestone 4) and electron-builder for installers (milestone 7).
+Planned, not yet installed: electron-builder for installers (milestone 7).
 Reasons for each choice are in ARCHITECTURE.md.
 
 Known limitation: Electron ships no DRM module, so video from Netflix

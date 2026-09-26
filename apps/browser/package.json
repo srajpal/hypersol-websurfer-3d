@@ -9,9 +9,13 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "filters:update": "node scripts/filters-update.mjs"
   },
   "devDependencies": {
+    "@ghostery/adblocker": "2.18.2",
+    "@ghostery/adblocker-electron": "2.18.2",
+    "@ghostery/adblocker-electron-preload": "2.18.2",
     "@hypersol/scene-core": "workspace:*",
     "@hypersol/themes": "workspace:*",
     "@types/three": "^0.186.0",

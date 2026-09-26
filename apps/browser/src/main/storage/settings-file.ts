@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { DEFAULT_SETTINGS, parseSettings, type Settings } from '../../shared/settings';
+import { defaults, parseSettings, type Settings } from '../../shared/settings';
 import type { SavedSession } from '../../shared/data';
 import { readTextIfExists, setAside, writeFileAtomic } from './files';
 
@@ -28,7 +28,7 @@ function reason(e: unknown): string {
  * change only after a save has been written (GitHub issue #2).
  */
 export class SettingsFile {
-  private current: Settings = { ...DEFAULT_SETTINGS };
+  private current: Settings = defaults();
   private setAsideName: string | null = null;
   private problemText: string | null = null;
   /** True while an existing file must be preserved before writing over it. */
@@ -60,7 +60,7 @@ export class SettingsFile {
   }
 
   get settings(): Settings {
-    return { ...this.current };
+    return { ...this.current, pausedSites: [...this.current.pausedSites] };
   }
 
   /** Where a damaged file was moved, if one was. */
@@ -83,7 +83,7 @@ export class SettingsFile {
     } catch (e) {
       throw new Error(`Couldn't save your settings (${reason(e)}). Nothing was changed.`);
     }
-    this.current = { ...settings };
+    this.current = { ...settings, pausedSites: [...settings.pausedSites] };
     this.mustPreserve = false;
     this.problemText = null;
   }

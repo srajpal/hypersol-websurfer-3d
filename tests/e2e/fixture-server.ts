@@ -93,6 +93,11 @@ function page(title: string, body: string): string {
  *   /favicon/slow.png?ms=...   answers late (favicon timeout and cancelling)
  *   /favicon/declared-huge.png declares 10 MB, then trickles data forever
  *   /favicon/error-body.png    status 500 with a body that never ends
+ *   /filters/<list>            tiny filter lists (block refreshed-tracker.test), for list refreshes
+ *   /filters-failing/<list>    the same, except one list answers 500
+ *   /dns-query?dns=...         a stand-in DNS-over-HTTPS resolver (answers every question)
+ *   /dns-portal                a captive portal's web page where the resolver should be
+ *   /ddm/...                   an "ad landing" page, served for the ad host mapped to this machine
  */
 function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
   const url = new URL(req.url ?? '/', 'http://x');
@@ -156,6 +161,37 @@ function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
       }
     }, ms);
     res.on('close', () => clearTimeout(t));
+    return;
+  }
+  if (path.startsWith('/filters/') || path.startsWith('/filters-failing/')) {
+    if (path.startsWith('/filters-failing/') && path.endsWith('/easyprivacy.txt')) {
+      res.writeHead(500, { 'content-type': 'text/plain' }).end('broken');
+      return;
+    }
+    const body = path.endsWith('.json') ? '{"scriptlets":[],"redirects":[]}' : '! Title: test list\n||refreshed-tracker.test^\n';
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(body);
+    return;
+  }
+  if (path === '/dns-query') {
+    // Echo the question back as an answer: the response bit set, no records.
+    const q = Buffer.from((url.searchParams.get('dns') ?? '').replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    if (q.length >= 12) {
+      q[2] = q[2]! | 0x80;
+      q[3] = 0x83; // no such name
+    }
+    res.writeHead(200, { 'content-type': 'application/dns-message', 'cache-control': 'no-store' });
+    res.end(q);
+    return;
+  }
+  if (path === '/dns-portal') {
+    res.writeHead(200, { 'content-type': TYPES['.html']!, 'cache-control': 'no-store' });
+    res.end(page('Sign in to the Wi-Fi', '<h1>Sign in to continue</h1>'));
+    return;
+  }
+  if (path.startsWith('/ddm/')) {
+    res.writeHead(200, { 'content-type': TYPES['.html']!, 'cache-control': 'no-store' });
+    res.end(page('Ad landing', '<h1 id="landing">Ad landing page</h1>'));
     return;
   }
   if (path === '/slow') {

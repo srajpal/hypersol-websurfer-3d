@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Shield test</title>
+    <style>
+      body { margin: 0; padding: 40px; font-family: sans-serif; font-size: 20px; background: #fff; }
+      #ad_banner, ad-slot { display: block; height: 60px; background: #fc6; }
+    </style>
+  </head>
+  <body>
+    <h1 id="content">Shield test page</h1>
+    <!-- Hidden by generic element-hiding rules in EasyList when the page is on a named host (not an IP address). -->
+    <div id="ad_banner">Advert</div>
+    <ad-slot>Ad slot</ad-slot>
+    <p id="result">loading</p>
+    <script>
+      // Ad and tracker hosts are mapped to this machine in tests, so a
+      // request the shield let through would reach the fixture server.
+      const port = location.port;
+      const results = {};
+      const done = () => {
+        if (Object.keys(results).length === 4) {
+          document.getElementById('result').textContent = JSON.stringify(results);
+          document.title = 'Shield test ready';
+        }
+      };
+      const add = (name, el) => {
+        el.onload = () => ((results[name] = 'loaded'), done());
+        el.onerror = () => ((results[name] = 'failed'), done());
+        document.body.append(el);
+      };
+      const img = (name, src) => { const i = new Image(); i.src = src; add(name, i); };
+      const script = (name, src) => { const s = document.createElement('script'); s.src = src; add(name, s); };
+      img('ownImage', `/icon.png?shield=${Date.now()}`);
+      img('adImage', `http://ad.doubleclick.net:${port}/ddm/ad.gif`);
+      img('refreshedTracker', `http://refreshed-tracker.test:${port}/ddm/pixel.gif`);
+      script('analytics', `http://www.google-analytics.com:${port}/analytics.js`);
+    </script>
+  </body>
+</html>

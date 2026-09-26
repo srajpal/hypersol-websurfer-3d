@@ -7,12 +7,14 @@ import {
   type ShellCommand,
 } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
+import { PRIVACY_CHANNEL } from '../shared/privacy';
 
 /**
  * The narrow bridge the 3D shell sees: read-only facts, commands from the
- * main process (shortcuts, new tabs, favicons, data changes), and two
- * requests: a snapshot of one of its own tabs, and saved-data requests,
- * which the main process checks one by one (shared/data.ts).
+ * main process (shortcuts, new tabs, favicons, data changes, shield
+ * counts), and requests: a snapshot of one of its own tabs, saved-data requests, and
+ * privacy requests, which the main process checks one by one
+ * (shared/data.ts, shared/privacy.ts).
  */
 const bridge: ShellBridge = {
   platform: process.platform,
@@ -32,6 +34,9 @@ const bridge: ShellBridge = {
   },
   data(request) {
     return ipcRenderer.invoke(DATA_CHANNEL, request);
+  },
+  privacy(request) {
+    return ipcRenderer.invoke(PRIVACY_CHANNEL, request);
   },
   closeReady() {
     ipcRenderer.send(CLOSE_READY_CHANNEL);

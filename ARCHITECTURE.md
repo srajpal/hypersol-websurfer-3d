@@ -78,10 +78,15 @@ touchpad, no touch screen.
 | Background tabs in 3D | Snapshot textures on WebGL cards | Cheap; lit and occluded like real objects. |
 | Upgrade path | Offscreen rendering to GPU textures | Lets pages curve, bend, and receive lighting later; hidden behind the PagePanel interface. |
 | Page depth layering | Injected preload CSS on top-level sections and images | Interactive, no copying; also reports image positions for later 3D lifting. |
-| Ad/tracker blocking | @ghostery/adblocker-electron (planned for milestone 4; not yet installed) | Open source, uBlock-compatible lists, built for Electron sessions. |
-| Filter-list updates | Fetched on a schedule through Electron's net.fetch (Chromium's network stack, so encrypted DNS applies), on by default, switchable in Settings | Keeps blocking current. Exact lists and URLs are named in docs/privacy.md in milestone 4. |
+| Ad/tracker blocking | @ghostery/adblocker-electron 2.18.2 (MPL-2.0; with @ghostery/adblocker and its page script, installed 2026-09-26). The app owns the session's request listener and asks the package's engine about each web page request; the package's page script (run from preload/page.ts) does element hiding | Open source, uBlock-compatible lists, built for Electron. The package has no allow-once or per-site switch, so the app's own listener adds "open anyway", pausing a site, and per-tab counts; only webview tabs are filtered, never the shell. |
+| Lists | Ads and trackers (EasyList, EasyPrivacy, uBlock Origin's lists, Peter Lowe's), from Ghostery's copies on GitHub; named in resources/filters/lists.json and docs/privacy.md | Owner decision 2026-09-26 (prompt 29, Q1 a). |
+| First start | A starter copy of the lists is included in the app (resources/filters/starter.bin, rebuilt by `pnpm filters:update`); a saved copy from the last refresh is used when present and valid | Pages are protected from the first one (Q2 a). Lists without a stated licence (Peter Lowe's) are download-only. |
+| Filter-list updates | Fetched once a day through Electron's net.fetch (Chromium's network stack, so encrypted DNS applies), on by default, switchable in Settings, plus "Update now"; parsed in a worker thread; a failure keeps the lists in use and retries after an hour | Keeps blocking current without holding up the main process (parsing takes about 0.8 s). |
+| Blocked pages | A page on a list is cancelled and the main process tells the shell, which shows the blocked card; "Open anyway" lets that address through once in that tab | Electron drops a cancelled page load without a failure event (found in the F5 check). |
+| Stand-in scripts | Requests the lists would redirect to a harmless stand-in (a data: address) are blocked outright | The stand-ins did not load in Electron in the F1 check. |
+| Broken sites | The shield popover's "Pause the shield on this site" (saved in settings.json by host name); the page reloads | Owner decision (Q3 a). |
 | Encrypted DNS | Electron app.configureHostResolver after app ready, secureDnsMode "secure", resolver Quad9 (https://dns.quad9.net/dns-query) | Built into Chromium. The resolver sees every hostname, so it is a named third-party service: Quad9 is a non-profit with a no-logging policy. Owner may change it. Settings offers Secure (default) or Automatic (falls back to the network's DNS). |
-| Encrypted DNS failure | Error card "Encrypted DNS is blocked on this network" with "Use this network's DNS for now", which switches to Automatic for the session | Secure mode has no fallback, so captive portals and corporate networks would otherwise fail every lookup with no explanation. |
+| Encrypted DNS failure | Error card "Encrypted DNS is blocked on this network" with "Use this network's DNS for now", which switches to Automatic for the session. Shown when a lookup fails in Secure mode and a DNS-over-HTTPS question to the resolver (about dns.quad9.net) gets no DNS answer | Secure mode has no fallback, so captive portals and corporate networks would otherwise fail every lookup with no explanation. Chromium reports both cases as "name not resolved", so the app asks the resolver. |
 | Spellchecker | Off by default | Electron otherwise downloads dictionaries from a CDN on Windows and Linux, contradicting the privacy statement. |
 | Default search engine | DuckDuckGo | Privacy-respecting default; changeable in Settings. |
 | Telemetry | None. No analytics, no crash reporter. | Brief requirement. |
@@ -129,7 +134,13 @@ hypersol-websurfer-3d/
           security.ts          webview lock-down, allowed addresses
           launch-options.ts    command-line options
           test-hooks.ts        logs for the end-to-end tests (test runs only)
-          privacy/             (milestone 4) blocker, DoH, session defaults
+          privacy/             index.ts (the session's request listener,
+                               element hiding answers, the shell's privacy
+                               requests), shield.ts (per-tab decisions and
+                               counts), filters.ts (starter and saved lists,
+                               refresh), filters-worker.ts (builds the
+                               engine off the main thread), dns.ts
+                               (encrypted DNS mode and reachability check)
           storage/             database.ts (node:sqlite bookmarks and
                                history, schema version), settings-file.ts
                                (settings.json, session.json), files.ts
@@ -139,10 +150,12 @@ hypersol-websurfer-3d/
           commands.ts          messages between main and the shell
           data.ts              saved-data requests and their checks
           settings.ts          settings, search engines, their checks
+          privacy.ts           privacy requests (shield, lists, DNS) and checks
         preload/
           shell.ts             safe bridge exposed to the 3D shell
-          page.ts              injected into every web page: depth layering,
-                               image and model discovery, no Node access
+          page.ts              injected into every web page: the blocker's
+                               element-hiding script now; depth layering and
+                               image discovery later; no Node access
         renderer/              the 3D shell (one Chromium page)
           index.html, main.ts
           app.ts               controller: tabs, pages, room, top bar, commands
@@ -152,14 +165,19 @@ hypersol-websurfer-3d/
                                start-panel.ts
           hud/                 Lit components: toolbar.ts (nav buttons,
                                address bar, bookmark star, menu, loading
-                               strip), library.ts, settings.ts, about.ts.
+                               strip), library.ts, settings.ts, about.ts,
+                               shield.ts (count and popover).
                                Tabs are 3D cards under scene/, not a 2D strip.
           state/               tabs.ts: the tab list and focus
           url.ts, load-errors.ts
                                address-or-search, error card wording
           themes/              applies @hypersol/themes values to CSS
                                variables and Three.js materials
-      resources/               (planned) icons, default filter list snapshot
+      resources/filters/       lists.json (which lists, from where),
+                               starter.bin and starter.json (the starter
+                               copy), NOTICE.md (sources and licences)
+      scripts/filters-update.mjs
+                               rebuilds the starter copy (pnpm filters:update)
   packages/
     scene-core/                @hypersol/scene-core: room layout math,
                                PagePanel interface, camera rig. No Electron
@@ -175,7 +193,7 @@ hypersol-websurfer-3d/
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright drives the built app (m1 to m3 checks)
+    e2e/                       Playwright drives the built app (m1 to m4 checks)
     fixtures/                  sample pages served from 127.0.0.1
     screenshots/               progress screenshots (pnpm screenshots)
 ```
@@ -202,8 +220,10 @@ package with one passing test. Language design itself is a later milestone.
 1. The user types in the address bar or the start panel. The shell
    decides between an address and a search (DuckDuckGo) and loads it in
    the tab's webview.
-2. Chromium loads the page. From milestone 4, the blocker inspects
-   every request and the named DoH resolver resolves the host name.
+2. Chromium loads the page. The shield (main/privacy/) checks every
+   request from a web page against the filter lists and blocks listed
+   ones; the page preload asks for element hiding; Quad9 resolves the
+   host name over DNS over HTTPS.
 3. The webview's events update the tab list, which updates the address
    bar, loading strip, title, and card.
 4. The main process sends the shell what only it sees: shortcut key
@@ -220,7 +240,13 @@ process. It exposes read-only facts (platform, versions) and:
 - data: saved-data requests (bookmarks, history, settings, open tabs,
   clearing data), each checked in the main process by parseDataRequest
   (shared/data.ts) and accepted only from the shell;
+- privacy: shield reports, "open anyway", pausing a site, filter list
+  status and "Update now", encrypted DNS status, the reachability check,
+  and "use this network's DNS", each checked by parsePrivacyRequest
+  (shared/privacy.ts) and accepted only from the shell;
 - closeReady: the answer to prepare-close, once the open tabs are saved.
+The main process also sends shield counts per tab, blocked pages, and
+filter list changes as commands.
 6. From milestone 5, the page preload measures top-level sections and
    images and applies depth offsets; it reports image rectangles.
 7. The main process writes a history entry when a tab arrives at a web
@@ -237,12 +263,14 @@ process. It exposes read-only facts (platform, versions) and:
 | History, bookmarks | hypersol.sqlite in the app data folder | Delete-able from the Library panel and Settings |
 | Open tabs | session.json in the app data folder | Used only when startup is set to reopen them |
 | Cookies, cache, site storage | Chromium profile folder managed by Electron | Standard browser behaviour |
-| Filter lists | cached file in the app data folder | Refreshed on a schedule; switchable in Settings |
+| Filter lists | filters/engine.bin and engine.json in the app data folder (the last refresh); the starter copy in the app otherwise | Refreshed daily; switchable in Settings; "Update now" |
+| Paused sites, DNS mode, list updates switch | settings.json | Changed in the shield popover and Settings |
 
 Nothing leaves the machine except user-initiated page loads (including
 the favicon a page names, fetched through that page's own session, as a
-browser tab does), encrypted DNS lookups to the named resolver, and
-filter-list refreshes. The
+browser tab does), encrypted DNS lookups to the named resolver
+(including the one reachability question after a failed lookup in
+Secure mode), and filter-list refreshes (docs/privacy.md). The
 spellchecker dictionary download is turned off. Any future update check
 would be a fourth item here and needs the owner's approval first.
 

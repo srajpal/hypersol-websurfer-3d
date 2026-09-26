@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CRASHED_CARD, describeLoadError } from './load-errors';
+import { CRASHED_CARD, DNS_BLOCKED_CARD, describeLoadError, isLookupFailure } from './load-errors';
 
 describe('describeLoadError', () => {
   it('names address-not-found errors', () => {
@@ -28,6 +28,20 @@ describe('describeLoadError', () => {
     const card = describeLoadError(-3001, 'ERR_SOMETHING');
     expect(card.kind).toBe('other');
     expect(card.message).toBe('ERR_SOMETHING (-3001)');
+  });
+
+  it('offers "open anyway" for a page the shield blocked', () => {
+    const card = describeLoadError(-20, 'ERR_BLOCKED_BY_CLIENT');
+    expect(card.kind).toBe('blocked');
+    expect(card.action).toBe('open-anyway');
+    expect(card.canRetry).toBe(false);
+  });
+
+  it('has a card for blocked encrypted DNS, offering the network DNS', () => {
+    expect(DNS_BLOCKED_CARD.title).toBe('Encrypted DNS is blocked on this network');
+    expect(DNS_BLOCKED_CARD.action).toBe('use-network-dns');
+    expect(isLookupFailure(-105)).toBe(true);
+    expect(isLookupFailure(-102)).toBe(false);
   });
 
   it('has a crash card', () => {

@@ -5,8 +5,45 @@ usage counts. This page lists everything it keeps on your computer and
 everything it sends over the network. It is updated whenever that
 changes (AGENTS.md rule 9).
 
-Status: as of milestone 3 (2026-09-25). Ad and tracker blocking and
-encrypted DNS arrive in milestone 4 and will be added here.
+Status: as of milestone 4 (2026-09-26): ad and tracker blocking and
+encrypted DNS are on by default.
+
+## Blocked by default
+
+The privacy shield blocks ad and tracker requests on every page, using
+open filter lists and Ghostery's open-source blocking engine
+(`@ghostery/adblocker`, MPL-2.0). It also hides page elements the lists
+name as ads (element hiding). A page whose address is itself on a list
+shows "The shield blocked this page", with "Open anyway" (that address,
+once, in that tab). The shield at the bottom right counts what was
+blocked on the page in front; click it to see the list and to pause the
+shield on that site.
+
+The lists (ads and trackers; no cookie-banner or annoyance lists),
+downloaded from Ghostery's copies on GitHub, all under
+`https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets/`:
+
+| List | Path | Licence | In the app's starter copy |
+|---|---|---|---|
+| EasyList | `easylist/easylist.txt` | GPL-3.0-or-later or CC BY-SA 3.0 or later | Yes |
+| EasyPrivacy | `easylist/easyprivacy.txt` | same | Yes |
+| uBlock Origin filters, and its 2020 to 2024 additions | `ublock-origin/filters.txt`, `filters-2020.txt` to `filters-2024.txt` | GPL-3.0 | Yes |
+| uBlock Origin privacy | `ublock-origin/privacy.txt` | GPL-3.0 | Yes |
+| uBlock Origin badware risks | `ublock-origin/badware.txt` | GPL-3.0 | Yes |
+| uBlock Origin quick fixes, resource abuse, unbreak | `ublock-origin/quick-fixes.txt`, `resource-abuse.txt`, `unbreak.txt` | GPL-3.0 | Yes |
+| Peter Lowe's ad and tracking server list | `peter-lowe/serverlist.txt` | None stated | No: downloaded only |
+| uBlock Origin resources | `ublock-origin/resources.json` | GPL-3.0 | Yes |
+
+The app includes a starter copy (`apps/browser/resources/filters/`,
+rebuilt before each release with `pnpm filters:update`, which records
+each list's address, size, and SHA-256 in `starter.json`), so pages are
+protected from the first one, before anything is downloaded. Peter
+Lowe's list states no licence, so it is not included in the app; it is
+only downloaded by a refresh.
+
+Known limit: some list entries replace a tracker's script with a
+harmless stand-in. The stand-in did not load in Electron in our checks,
+so those requests are blocked outright instead.
 
 ## Stored on your computer
 
@@ -23,7 +60,8 @@ one.)
 |---|---|---|---|
 | Bookmarks | `hypersol.sqlite` | When you press the star or Ctrl+D | Remove them in the Library, or press the star again |
 | History: each page's address, title, and time of visit | `hypersol.sqlite` | When a tab arrives at a page; the same page again in the same tab (a reload) adds nothing | Delete entries in the Library, "Clear all history", or Settings > Clear browsing data |
-| Settings: search engine, what opens at startup | `settings.json` | When you change a setting | Delete the file; the defaults return |
+| Settings: search engine, what opens at startup, encrypted DNS mode, daily list updates on or off, sites where the shield is paused | `settings.json` | When you change a setting, or pause the shield on a site | Delete the file; the defaults return |
+| Filter lists from the last update, and when they were downloaded | `filters/engine.bin`, `filters/engine.json` | After a list update | Delete the folder; the starter copy included in the app is used |
 | Open tabs: their addresses and which one is in front | `session.json` | While you browse, shortly after tabs change | Reopened only when Settings > On startup is "Reopen your tabs from last time"; delete the file to forget them |
 | Cookies, site storage, and cache | Chromium's profile files in the same folder | By the sites you visit, as in any browser | Settings > Clear browsing data |
 
@@ -32,12 +70,17 @@ If `settings.json` is damaged, it is renamed to
 defaults are used. If `hypersol.sqlite` cannot be opened, nothing is
 recorded until it can be, and the Library says so.
 
+The shield's per-page lists of what was blocked are kept in memory only,
+and forgotten when the page or tab closes. If the saved filter lists are
+damaged or were built by another version, the starter copy is used.
+
 Not stored: form entries, passwords, downloads, and anything about how
 you use the browser itself.
 
 ## Sent over the network
 
-Only these, all started by you:
+Only these. Everything except the list updates is started by you, and
+the list updates can be turned off:
 
 - The pages you open, including the images, scripts, and the favicon each
   page names (fetched through that page's own session, as a browser tab
@@ -45,9 +88,23 @@ Only these, all started by you:
   leave the page).
 - Searches typed in the address bar or start panel go to the search engine
   chosen in Settings (DuckDuckGo by default).
-- DNS lookups for the sites you open. Until milestone 4 these use your
-  network's normal DNS; from milestone 4 they go encrypted to the named
-  resolver.
+- DNS lookups for the sites you open go encrypted (DNS over HTTPS) to
+  Quad9, `https://dns.quad9.net/dns-query`, a non-profit with a
+  no-logging policy. Quad9 sees the names of the sites you visit; your
+  network does not. Settings > Encrypted DNS: Secure (the default: Quad9
+  only) or Automatic (Quad9 where possible, otherwise your network's
+  DNS).
+- If a site cannot be found while in Secure mode, the app asks Quad9 one
+  question (about its own name, dns.quad9.net) to see whether Quad9 can
+  be reached. If not, the page says "Encrypted DNS is blocked on this
+  network" and offers "Use this network's DNS for now", which uses
+  Automatic until you close the app.
+- Filter list updates, when Settings > "Update the filter lists every
+  day" is on (the default): once a day, the addresses in the table
+  above, through the same encrypted DNS; a failed update keeps the lists
+  in use and is tried again an hour later. "Update now" in Settings
+  fetches them at once. Turn the switch off and nothing is downloaded
+  unless you press "Update now".
 
-Nothing else: no update checks, no dictionary downloads (the spell
+Nothing else: no app update checks, no dictionary downloads (the spell
 checker is off), no account, no sync.

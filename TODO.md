@@ -12,7 +12,7 @@ Plan approved 2026-09-24.
 | 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Done (accepted 2026-09-25 with C2 as a known issue) |
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
-| 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Current (plan and build approved 2026-09-26) |
+| 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Built; awaiting owner acceptance (F11) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Later |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Later |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
@@ -559,9 +559,11 @@ Pull request #7 review (prompt 26), two findings, both fixed:
 
 ## Milestone 4 — Private by default
 
-Status: Current. Plan and build approved 2026-09-26 (prompt 29), with
-the owner's answers Q1 a, Q2 a, Q3 a. Electron security check done at
-the start (ARCHITECTURE.md section 3).
+Status: Built 2026-09-26. Plan and build approved 2026-09-26 (prompt 29),
+with the owner's answers Q1 a, Q2 a, Q3 a. Electron security check done
+at the start (ARCHITECTURE.md section 3). All tasks done; waiting for
+the owner's look-and-feel check (F11), the optional live check (L1), and
+acceptance. Screenshots: docs/screenshots/m4/.
 
 Goal: ads and trackers are blocked on every page and website lookups
 are encrypted, with no setup; you can see what was blocked on each page
@@ -605,28 +607,28 @@ New, from the owner's answers:
 
 ### Tasks
 
-- [ ] 1. Trial and license check: requests blocked in our webview tabs
+- [x] 1. Trial and license check: requests blocked in our webview tabs
       on Electron 44; element hiding alongside our page preload; the
       build packages the blocker's page script; per-tab counts. Check
       every list's license. Report before building on it.
-- [ ] 2. Filter service in the main process: load from the saved copy,
+- [x] 2. Filter service in the main process: load from the saved copy,
       else the starter copy (missing or damaged); refresh daily when
       switched on; a failure keeps the current lists; saved atomically.
-- [ ] 3. Starter copy: `pnpm filters:update` downloads the lists and
+- [x] 3. Starter copy: `pnpm filters:update` downloads the lists and
       builds the included copy with the license notices.
-- [ ] 4. Request blocking: block and count per tab; a blocked page
+- [x] 4. Request blocking: block and count per tab; a blocked page
       shows the blocked card; "open anyway" allows it once in that tab;
       nothing is blocked on a paused site.
-- [ ] 5. Shield: count at the bottom right; popover with the list and
+- [x] 5. Shield: count at the bottom right; popover with the list and
       the per-site switch; keyboard access; Escape closes it.
-- [ ] 6. Encrypted DNS: on at startup, follows the setting; detect a
+- [x] 6. Encrypted DNS: on at startup, follows the setting; detect a
       blocked resolver, show the card, "Use this network's DNS for now".
-- [ ] 7. Settings: DNS mode, refresh switch, lists updated date, "Update
+- [x] 7. Settings: DNS mode, refresh switch, lists updated date, "Update
       now".
-- [ ] 8. docs/privacy.md: exact lists and addresses, the resolver,
+- [x] 8. docs/privacy.md: exact lists and addresses, the resolver,
       everything the app sends.
-- [ ] 9. Tests: unit; end-to-end F1 to F10; C, D, E as regression.
-- [ ] 10. Docs and screenshots (MILESTONE=m4 pnpm screenshots).
+- [x] 9. Tests: unit; end-to-end F1 to F10; C, D, E as regression.
+- [x] 10. Docs and screenshots (MILESTONE=m4 pnpm screenshots).
 
 ### Checks
 
@@ -645,6 +647,72 @@ New, from the owner's answers:
 | F11 | Look and feel | Owner review; screenshots saved |
 | L1 | Live check (only with the owner's yes to use the real internet) | Lookups go to Quad9; a known tracker on a real page is blocked |
 | C, D, E | Regression | Still pass |
+
+### Check results (Windows 11, 2026-09-26)
+
+Task 1 (trial and license check): the package works with our webview
+tabs on Electron 44.4.5; the engine loads the starter copy in 16 ms and
+answers a request in about 9 microseconds; parsing the full lists takes
+about 0.8 s, so refreshes build in a worker thread. Every package the
+blocker brings is MPL-2.0 or MIT. The lists' own licence lines were
+checked by `pnpm filters:update`: EasyList and EasyPrivacy (GPL-3.0 or
+CC BY-SA 3.0), uBlock Origin (GPL-3.0); Peter Lowe's list states no
+licence, so it is download-only. The starter copy is 6.8 MB (2.9 MB
+compressed). @ghostery/adblocker and @ghostery/adblocker-electron-preload
+were added as direct dependencies (same version, already installed with
+the approved package) so the worker and the page preload can import
+them.
+
+Unit: 148 tests in 15 files pass (shield decisions, filter service,
+DNS messages, request checks, settings, the starter copy). Lint and type
+check clean.
+
+End-to-end (`pnpm test:e2e`, 102 checks): F1 to F10 (14 checks) passed
+in four runs in a row, the last two on the finished code. Full suite on
+the finished code: 99 of 102; the 3 failures are the D8 clipboard checks, because the Windows clipboard was unavailable to
+every program on the machine during the runs (PowerShell's
+Set-Clipboard failed too, with no program holding it). D8 is not
+checked for this milestone yet; rerun it when the clipboard works.
+
+| # | Result |
+|---|---|
+| F1 | Pass: ad image and tracker script never reach the server; the page's own image loads; an unlisted host goes through |
+| F2 | Pass |
+| F3 | Pass |
+| F4 | Pass: two generic EasyList rules hide their elements on a named host |
+| F5 | Pass, including "Go back" to the page the tab was on |
+| F6 | Pass, including after a restart |
+| F7 | Pass (checked through the settings the app applies; tests have no internet) |
+| F8 | Pass, with a local stand-in resolver and a captive-portal page |
+| F9 | Pass: starter copy, "Update now" from a local server (15 downloads, nothing else), kept after restart, failed refresh, damaged saved copy, scheduled refresh |
+| F10 | Pass |
+| F11 | Not checked yet (owner) |
+| L1 | Not run (needs the owner's yes to use the real internet) |
+| C, D, E | Pass except D8 (clipboard unavailable, see above) |
+
+Found and fixed during the build:
+- Electron drops a page load the shield cancels without any failure
+  event, so the tab showed nothing. The main process now tells the shell,
+  which shows the blocked card.
+- The lists' stand-in scripts (redirects to data: addresses) did not load
+  in Electron; those requests are now blocked outright.
+- "Go back" on the blocked card went back one page too far (the blocked
+  page never replaced the current one); it now just returns to it.
+- The first test run mapped every *.test name to this machine, which
+  broke D7's "address not found"; only the names the checks need are
+  mapped now.
+
+Changed requirement: settings.json gains dnsMode, filterRefresh, and
+pausedSites, so the two storage tests that compare the whole settings
+object now include them.
+
+Test switches added (test mode only): --filters-base (lists from a local
+address, with the schedule's first check after 1 s; without it, test
+runs never refresh on their own) and --dns-probe (a local stand-in for
+the resolver check; without it the check is skipped).
+
+Not checked: native macOS and Linux; real Quad9 and real list downloads
+from inside the app (L1).
 
 ### Done when
 
