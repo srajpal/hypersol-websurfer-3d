@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-25 (milestone 3 built, awaiting acceptance).
+Last updated 2026-09-26 (milestone 4 approved and being built).
 
 ## Where things stand
 
@@ -12,9 +12,12 @@ The shell owns the tabs (confirmed). The Electron security check is
 done (44.4.5 is current, no security fixes pending). Milestone 3
 (Memory and Settings) is built: bookmarks and history in node:sqlite,
 Library and Settings panels, start panel with data, reopening tabs,
-clearing data, docs/privacy.md. All 72 end-to-end checks pass (test
-windows now run off screen, out of the owner's way); waiting
-for the owner's look-and-feel check (E11) and acceptance. Progress
+clearing data, docs/privacy.md. Milestone 3 was accepted 2026-09-26
+(the owner wants a fuller look review after themes and depth layering,
+and asked to lean into the 1980s and 1990s aesthetic). GitHub issues
+#1 to #6 were handled in PR #7, merged 2026-09-26. Milestone 4 (Private
+by default) is approved and being built; its plan, decisions, and
+checks are in TODO.md. Progress
 screenshots live in docs/screenshots/<milestone>/; capture them with
 `MILESTONE=mN pnpm screenshots` when a milestone is finished.
 
@@ -136,8 +139,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestone 3 awaits acceptance;
-   milestone 4 (Private by default) has no plan yet. Tick tasks and record check results in
+2. Do only what the prompt approves. Milestone 4 (Private by default)
+   is approved to build; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

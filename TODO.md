@@ -11,8 +11,8 @@ Plan approved 2026-09-24.
 |---|---|---|---|
 | 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Done (accepted 2026-09-25 with C2 as a known issue) |
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
-| 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Built; awaiting owner acceptance (E11) |
-| 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Later |
+| 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
+| 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Current (plan and build approved 2026-09-26) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Later |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Later |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
@@ -376,9 +376,11 @@ milestone.
 
 ## Milestone 3 — Memory and Settings
 
-Status: Built 2026-09-25. Plan and build approved 2026-09-25 (prompts 21
-and 22). All tasks done; waiting for the owner's look-and-feel check
-(E11) and acceptance. Screenshots: docs/screenshots/m3/.
+Status: Done. Plan and build approved 2026-09-25 (prompts 21 and 22);
+built 2026-09-25; accepted 2026-09-26 (prompt 29). E11: "so far so
+good"; the owner will review the look more fully once themes (6) and
+depth layering (5) are in, and asked to lean further into the 1980s and
+1990s aesthetic. Screenshots: docs/screenshots/m3/.
 
 Goal: the browser remembers bookmarks, history, and settings across
 restarts, with a Library panel, a Settings panel, and a start panel that
@@ -469,7 +471,7 @@ field; D1 then passed five times in a row alone).
 | E8 | Pass: history and a test cookie cleared |
 | E9 | Pass: damaged settings.json set aside with defaults; a blocked database shows "Couldn't open your saved data" and browsing works |
 | E10 | Pass |
-| E11 | Not checked yet (owner) |
+| E11 | Pass for now (owner, 2026-09-26): "so far so good"; fuller review after milestones 5 and 6 |
 | C1–C11, D1–D11 | Pass |
 
 Found and fixed during the build:
@@ -554,3 +556,98 @@ Pull request #7 review (prompt 26), two findings, both fixed:
   checks failed with the resume switched off. Native macOS not tested.
 - Results after the fixes: 123 unit tests; 88 of 88 end-to-end checks in
   two runs.
+
+## Milestone 4 — Private by default
+
+Status: Current. Plan and build approved 2026-09-26 (prompt 29), with
+the owner's answers Q1 a, Q2 a, Q3 a. Electron security check done at
+the start (ARCHITECTURE.md section 3).
+
+Goal: ads and trackers are blocked on every page and website lookups
+are encrypted, with no setup; you can see what was blocked on each page
+and let it through when a site breaks.
+
+### Decisions (2026-09-26, prompt 29)
+
+Already settled in ARCHITECTURE.md: @ghostery/adblocker-electron; lists
+refreshed through Chromium's network (so encrypted DNS applies) with a
+switch in Settings; encrypted DNS in Secure mode with Quad9, Settings
+offers Secure or Automatic; a "blocked on this network" card with "Use
+this network's DNS for now" (Automatic until the app closes); a shield
+with a per-page count and a popover; a "blocked" card with "open
+anyway".
+
+New, from the owner's answers:
+- Lists (Q1 a): ads and trackers. EasyList, EasyPrivacy, uBlock
+  Origin's filters, privacy, and badware lists, and Peter Lowe's list,
+  from Ghostery's copies on GitHub (one host). No cookie-banner or
+  annoyance lists.
+- First start (Q2 a): the app includes a starter copy of the lists, so
+  pages are protected from the first one. `pnpm filters:update` rebuilds
+  the starter copy before each release; the app then refreshes from the
+  internet. Each list's license notice ships with it; a list whose terms
+  do not allow shipping is download-only.
+- Broken sites (Q3 a): the shield popover lists what was blocked and has
+  a "Pause on this site" switch, remembered per site.
+- Assumptions accepted: refresh at most once a day; a failed refresh
+  keeps the current lists; "open anyway" lets that one address through
+  in that tab; the count resets on a new page; Settings gains the DNS
+  mode, the refresh switch, "Lists updated <date>", and "Update now".
+- Technical approach: the package has no allow-once or per-site
+  mechanism, so the app owns the request listener, asks the package's
+  engine for each request, and counts per tab; the package's page
+  script handles element hiding.
+
+### Software to install (approved with the build, prompt 29)
+
+@ghostery/adblocker-electron (MPL-2.0; brings @ghostery/adblocker,
+@ghostery/adblocker-electron-preload, tldts-experimental).
+
+### Tasks
+
+- [ ] 1. Trial and license check: requests blocked in our webview tabs
+      on Electron 44; element hiding alongside our page preload; the
+      build packages the blocker's page script; per-tab counts. Check
+      every list's license. Report before building on it.
+- [ ] 2. Filter service in the main process: load from the saved copy,
+      else the starter copy (missing or damaged); refresh daily when
+      switched on; a failure keeps the current lists; saved atomically.
+- [ ] 3. Starter copy: `pnpm filters:update` downloads the lists and
+      builds the included copy with the license notices.
+- [ ] 4. Request blocking: block and count per tab; a blocked page
+      shows the blocked card; "open anyway" allows it once in that tab;
+      nothing is blocked on a paused site.
+- [ ] 5. Shield: count at the bottom right; popover with the list and
+      the per-site switch; keyboard access; Escape closes it.
+- [ ] 6. Encrypted DNS: on at startup, follows the setting; detect a
+      blocked resolver, show the card, "Use this network's DNS for now".
+- [ ] 7. Settings: DNS mode, refresh switch, lists updated date, "Update
+      now".
+- [ ] 8. docs/privacy.md: exact lists and addresses, the resolver,
+      everything the app sends.
+- [ ] 9. Tests: unit; end-to-end F1 to F10; C, D, E as regression.
+- [ ] 10. Docs and screenshots (MILESTONE=m4 pnpm screenshots).
+
+### Checks
+
+| # | Check | Expected result |
+|---|---|---|
+| F1 | Tracker and ad requests | A test page's tracker script and ad image are blocked; the page still works |
+| F2 | Shield count | Per tab; resets on a new page |
+| F3 | Popover | Lists what was blocked; keyboard reachable; Escape closes |
+| F4 | Element hiding | An element matched by a hiding rule is not shown |
+| F5 | Blocked page | The card shows; "open anyway" loads it in that tab only |
+| F6 | Pause on this site | Nothing blocked there; remembered after restart |
+| F7 | Encrypted DNS setting | Secure with Quad9 at startup; Automatic applies at once |
+| F8 | Encrypted DNS blocked | The card shows; "Use this network's DNS" works until the app closes |
+| F9 | Lists | Work with no network (starter copy); refresh uses only the named addresses (served locally in tests); a failed refresh keeps the lists; a damaged saved copy falls back to the starter copy |
+| F10 | No unexpected traffic | With refresh off, only the page's own requests |
+| F11 | Look and feel | Owner review; screenshots saved |
+| L1 | Live check (only with the owner's yes to use the real internet) | Lookups go to Quad9; a known tracker on a real page is blocked |
+| C, D, E | Regression | Still pass |
+
+### Done when
+
+F1 to F10 and the regression checks pass, the owner accepts F11 (and L1
+if run), the docs and screenshots are updated, and the owner approves
+the milestone.

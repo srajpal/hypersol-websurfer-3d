@@ -7,7 +7,7 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestone 3 built, awaiting review.** A browser in a 3D room
+**Status: milestone 3 done; milestone 4 (private by default) in progress.** A browser in a 3D room
 that remembers: tabs as cards on an arc, a top bar with address, search,
 and a bookmark star, bookmarks and history in a Library panel, a
 Settings panel, a start panel with your data, error cards, and a

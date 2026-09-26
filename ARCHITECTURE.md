@@ -58,6 +58,10 @@ Rule 13 check, 2026-09-25 (before milestone 3, at the owner's request):
 "backported fixes from upstream ANGLE, Chromium, Dawn, PDFium and V8".
 No upgrade needed.
 
+Rule 13 check, 2026-09-26 (start of milestone 4): 44.4.5 is still the
+newest stable release (npm "latest"); no newer stable major line. No
+upgrade needed.
+
 Graphics on the build machine: NVIDIA GeForce RTX 4050 Laptop GPU and
 AMD Radeon integrated graphics; one 1920×1080 display at 100% scaling;
 touchpad, no touch screen.
@@ -317,7 +321,10 @@ fonts, sound design, VR.
 
 1. Theme look: Nebula (dark) default and Daylight (light) are the working
    proposal. Exact colours, accent, and any owner sketches are still to
-   be confirmed in the theme milestone.
+   be confirmed in the theme milestone. Owner direction (2026-09-26,
+   prompt 29): lean further into the 1980s and 1990s aesthetic; the
+   owner will review the look more fully once themes and depth layering
+   are in.
 2. Live-panel input on a rotated page: answered by the milestone 1
    spike (TODO.md task 8). Clicks, hover, scrolling, links, and real
    keyboard typing work at the default tilt (owner check 2026-09-25),

@@ -315,3 +315,24 @@ Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b3
 One P2 blocker remains: the new favicon test helper, line 195 leaves a timer running after stream cancellation. It produces five uncaught Controller is already closed errors. Although 123 assertions pass, the unit-test command fails; I reproduced this in isolation.
 Cancel the pending timer and settle its promise when the stream closes, then rerun the unit suite. That is the only remaining blocker I found. Native macOS/Linux remain untested.
 ```
+
+## 28 — 2026-09-26
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b35 · Tokens: not captured
+
+```text
+merged the PR, continue with milestone 4
+```
+
+## 29 — 2026-09-26
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b35 · Tokens: not captured
+
+```text
+q1 - a
+q2 - a
+q3 - a
+
+E11 - look and feel - so far so good, i will wait to comment more after themes are introduced and the ability to make/breakdown part of the page in 3d is working. but i like the 80's/90's aesthetic, lets lean into that more.
+build the next milestone
+```
