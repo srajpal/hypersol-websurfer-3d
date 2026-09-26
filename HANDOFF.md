@@ -69,12 +69,13 @@ browser repo for rules and the prompt log.
 - First result: open any normal site in a 3D interface on Windows, macOS,
   Linux, with tabs, address bar, bookmarks, history, two themes, and
   privacy on by default. Desktop only. Mouse, keyboard, touch. Milestones
-  1 to 7 in TODO.md make up the first result.
+  1 to 8 in TODO.md make up the first result (the instrument panel
+  became milestone 7 on 2026-09-26; the first release is 8).
 - Stack: Electron (current supported stable line, 44 as of 2026-09-24),
   TypeScript, Three.js, Lit, SQLite (node:sqlite, built into
   Electron's Node), @ghostery/adblocker-electron (milestone 4),
   electron-vite, Vitest, Playwright; planned and not yet installed:
-  electron-builder (milestone 7). Reasons in ARCHITECTURE.md section 4.
+  electron-builder (milestone 8). Reasons in ARCHITECTURE.md section 4.
   Toolchain: Node 22.13 or newer, pnpm 12.4.1 pinned.
 - Focused page is a live Chromium view (an Electron `<webview>`) placed
   with CSS 3D transforms; background tabs are snapshot textures;
@@ -114,10 +115,10 @@ These are recommendations that survived adversarial verification but
 change scope, add a service, or cost money. None is applied.
 
 - Three-OS continuous integration (GitHub Actions) as a milestone 1 task,
-  so macOS and Linux get signal before milestone 7. Needs approval as a
+  so macOS and Linux get signal before milestone 8. Needs approval as a
   service under rule 3.
 - Code signing and notarisation: Apple Developer Program and a Windows
-  signing route. Paid accounts with lead time; start before milestone 7.
+  signing route. Paid accounts with lead time; start before milestone 8.
 - An update channel (for example a version check against GitHub
   Releases) so Chromium security fixes reach users. Needs a privacy
   statement amendment.
@@ -157,8 +158,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
 2. Do only what the prompt approves. Milestones 4 to 6 are done (accepted
-   2026-09-26, prompt 33). Next: smaller tab cards (owner request) and a
-   plan for the instrument-panel UI upgrade; see TODO.md. Tick tasks and record check results in
+   2026-09-26, prompt 33); the smaller tab cards are in. Milestone 7
+   (Instrument panel) is approved and being built; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The
@@ -203,7 +204,7 @@ repo's PROMPTS.md.
   to build.
 - No code in the holoml repo yet.
 - Nothing owed from earlier milestones.
-- No SPEC.md in holoml (outline is part of milestone 7).
+- No SPEC.md in holoml (outline is part of milestone 8).
 - No git tags, branches, CI, issue templates, SECURITY.md, CONTRIBUTING.md,
   or GitHub settings.
 - No memory files saved outside the repo; everything is in these docs.

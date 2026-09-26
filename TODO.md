@@ -15,17 +15,21 @@ Plan approved 2026-09-24.
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Done (accepted 2026-09-26) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
-| 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
-| 8 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
-| 9 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
-| 10 | Car showroom demo | Demo site with walk-around 3D cars | Later |
-| 11 | Free camera and room navigation | Move freely around the room | Later |
-| 12 | Lift to 3D | Images and 3D models on 2D pages become objects | Later |
-| 13 | Everyday browser features | Downloads panel, find in page, zoom, print, private window | Later |
-| 14 | Polish | Custom font, sound design, theme editor, motion tuning | Later |
+| 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Current (plan and build approved 2026-09-26) |
+| 8 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
+| 9 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
+| 10 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
+| 11 | Car showroom demo | Demo site with walk-around 3D cars | Later |
+| 12 | Free camera and room navigation | Move freely around the room | Later |
+| 13 | Lift to 3D | Images and 3D models on 2D pages become objects | Later |
+| 14 | Everyday browser features | Downloads panel, find in page, zoom, print, private window | Later |
+| 15 | Polish | Custom font, sound design, theme editor, motion tuning | Later |
 | — | Further out | HoloML scripting, extensions, sync, theme marketplace, Tor or VPN, VR, iOS and Android | Later |
 
-Milestones 1 to 7 make up the first useful result in BRIEF.md.
+Milestones 1 to 8 make up the first useful result in BRIEF.md. The
+instrument panel was added as milestone 7 on 2026-09-26 (prompt 35); the
+first release and everything after it moved down by one. Earlier
+entries below that say "milestone 7" for the release now mean 8.
 
 ### Where design work belongs
 
@@ -517,11 +521,11 @@ merged refreshes) and #5 (toolchain pinned and documented).
 Follow-ups, proposed and not approved to build:
 - #4: move database work to a worker off the main process; indexed
   search and history aggregation; latency benchmarks with budgets.
-  Proposed as a task in milestone 7 (first release), before real users
+  Proposed as a task in milestone 8 (first release), before real users
   build up large histories.
 - #5: continuous integration for build, lint, types, and tests needs the
   owner's approval of a service (AGENTS.md rule 3, for example GitHub
-  Actions). Windows, macOS, and Linux coverage belongs with milestone 7's
+  Actions). Windows, macOS, and Linux coverage belongs with milestone 8's
   per-OS checks.
 
 New checks added with the fixes: D13 (favicon limits); E6 (tabs saved
@@ -884,7 +888,7 @@ for sharper text.
   systems; the theme now sets its light or dark scheme.
 - Small labels (section headings, counters) use a monospace face, the
   one typographic retro touch; body text stays the system font (a custom
-  font is milestone 14).
+  font is milestone 15).
 
 ### Tasks
 
@@ -975,4 +979,93 @@ Owner request: the tab cards took too much of the screen. Done:
 - Results: 164 unit tests; 117 of 117 end-to-end checks (D8 included,
   the clipboard works again). Screenshots in docs/screenshots/m6
   retaken.
+
+## Milestone 7 — Instrument panel
+
+Status: Current. Plan and build approved 2026-09-26 (prompts 33 to 35),
+with the owner's answers Q1 a (a new milestone before the first
+release), Q2 all, "with settings to manage all", Q3 floating panels
+along the sides and bottom. The owner's reference image shows the kinds
+of controls wanted (round dials, meters, digital readouts, toggles); the
+look stays ours (prompt 34: "create controls that match the
+aesthetic").
+
+Goal: a busier, more informative interface. Floating panels in the room
+show live readouts about the page in front and the browser, a console,
+and a network list, like a light DevTools, each part switchable in
+Settings.
+
+### Decisions (2026-09-26, prompts 33 to 35)
+
+- What it shows (Q2, all):
+  - Page readouts: load time, requests, data transferred, requests
+    blocked, the connection (secure or not; certificate issuer and
+    expiry), the DNS service in use, and the page's memory and CPU.
+  - Console: the page's console messages and errors.
+  - Network list: the page's requests (address, type, status, size,
+    time), filterable.
+  - Browser gauges: tabs open, total memory, frame rate, filter-list age,
+    encrypted DNS status, clock.
+- Where (Q3): floating glass panels in the room, a column along the
+  right side and a strip along the bottom; the page makes room for them
+  while they show. They lean toward the viewer and drift a little with
+  the room's parallax.
+- Settings (Q2, "settings to manage all"): "Show the instrument panel"
+  (off by default), and a switch for each part (page readouts, console,
+  network list, browser gauges), plus which console messages to show
+  (all, warnings and errors, errors only).
+- Assumptions accepted: off by default; turned on in Settings, with a
+  top-bar button, or Ctrl/Cmd+Shift+I; an "Open full DevTools" button
+  for the page in front.
+- Controls in our style: round dials, segmented meters, LCD-style
+  readouts, and toggle switches, drawn from the theme's colours and
+  monospace labels, in Nebula and Daylight alike.
+- Data stays in the app: every readout comes from what the browser
+  already sees (its own request listener, console events, certificate
+  checks it already makes, process metrics). Nothing new goes over the
+  network; nothing is stored on disk; it is kept per tab in memory and
+  forgotten with the page. Certificate details are read by passing
+  Chromium's own verification result through unchanged.
+
+### Tasks
+
+- [ ] 1. Page monitor in the main process: per-tab requests (with
+      status, size, time, from the session's request events), console
+      messages, certificate details per host, page memory and CPU;
+      capped, in memory only; a checked request channel for the shell.
+- [ ] 2. Control components in our style: dial, segmented meter, LCD
+      readout, toggle switch; both themes; reduced motion respected.
+- [ ] 3. Floating panels: right column (page readouts, browser gauges)
+      and bottom strip (console, network list); the page's space
+      adjusts; parallax drift; keyboard reachable.
+- [ ] 4. Console view (levels, clear, filter) and network list (type
+      filter, text filter, totals).
+- [ ] 5. Settings: the main switch, a switch per part, console level;
+      top-bar button and Ctrl/Cmd+Shift+I; "Open full DevTools".
+- [ ] 6. docs/privacy.md: what the panel reads and that it stays in
+      memory.
+- [ ] 7. Tests: unit (monitor records, caps, checks, formatting);
+      end-to-end I1 to I9; C to H as regression.
+- [ ] 8. Docs and screenshots in both themes (MILESTONE=m7).
+
+### Checks
+
+| # | Check | Expected result |
+|---|---|---|
+| I1 | Switching on and off | Settings, the button, and the shortcut show and hide the panels; the page takes the space back; off by default; remembered after a restart |
+| I2 | Page readouts | A test page's request count, data size, blocked count, load time, and secure or not match what happened; they follow the tab in front |
+| I3 | Certificate | An HTTPS test page shows its certificate issuer and expiry; verification is unchanged (an invalid certificate still fails) |
+| I4 | Console | A test page's log, warning, and error appear with their levels; the level setting and clear work |
+| I5 | Network list | The test page's requests appear with status, type, and size; filters work |
+| I6 | Browser gauges | Tabs open, memory, filter-list age, and DNS status shown and current |
+| I7 | Settings per part | Each part hides and shows on its own; remembered |
+| I8 | DevTools | "Open full DevTools" opens the page's DevTools |
+| I9 | Efficiency and input | While off, no polling and no frames drawn; while on, idle work stays small; clicks on the page still land |
+| I10 | Look and feel | Owner review in both themes; screenshots saved |
+| C to H | Regression | Still pass |
+
+### Done when
+
+I1 to I9 and the regression checks pass, the owner accepts I10, the
+docs and screenshots are updated, and the owner approves the milestone.
 

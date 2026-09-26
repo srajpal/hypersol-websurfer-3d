@@ -172,7 +172,7 @@ milestone; the current milestone's checks are defined in TODO.md):
   Theme with "Match the system", the room and window following the
   theme, page tilt, the layers view's outline; H5 (contrast) and H8 (no
   hard-coded colours) are unit tests.
-- Later milestones add: per-OS installers (7).
+- Later milestones add: instrument panel (7), per-OS installers (8).
 
 Rules for tests: a failing test is reported, not deleted. A test is
 changed only when the requirement it checks has changed, and the doc that
