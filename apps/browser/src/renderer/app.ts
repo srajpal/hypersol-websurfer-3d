@@ -8,6 +8,8 @@ import type { HsLibrary } from './hud/library';
 import type { HsSettings } from './hud/settings';
 import type { HsShield } from './hud/shield';
 import type { HsThemeButton } from './hud/theme-button';
+import type { HsInstruments } from './hud/instruments';
+import { InstrumentsController } from './instruments';
 import { applyThemeCss } from './themes/apply';
 import type { LayersState } from '../shared/layers';
 import type { HsToolbar, MenuAction } from './hud/toolbar';
@@ -33,6 +35,7 @@ export interface AppOptions {
   settingsPanel: HsSettings;
   shield: HsShield;
   themeButton: HsThemeButton;
+  instruments: HsInstruments;
   tabList: HTMLElement;
 }
 
@@ -70,6 +73,7 @@ export class App {
   /** The theme in use (Settings > Theme, resolved for "Match the system"). */
   theme: Theme;
   private readonly systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+  readonly instruments: InstrumentsController;
   /** Test runs only: ignore prepare-close, to test the main process's timeout. */
   testIgnorePrepareClose = false;
   private settings: Settings = defaults();
@@ -112,11 +116,22 @@ export class App {
     });
     this.store.subscribe(() => this.sync());
     options.themeButton.addEventListener('hs-theme-toggle', () => void this.toggleTheme());
+    this.instruments = new InstrumentsController(options.instruments, {
+      bridge: options.bridge,
+      privacy: this.privacy,
+      focusedPage: () => (this.focusedView?.isStart === false ? this.focusedView.webContentsId : null),
+      focusedHost: () => hostOf(this.store.focusedTab?.url ?? ''),
+      tabCount: () => this.store.tabs.length,
+      frames: () => this.room.frames,
+      onInsets: (insets) => this.room.setExtraInsets(insets),
+      saveSetting: (patch) => void this.saveSettings(patch),
+    });
     // "Match the system" follows the system's light or dark setting as it changes.
     this.systemDark.addEventListener('change', () => this.applyLook());
     // The layers view's vanishing point follows the room's parallax.
     this.room.onCameraMove = (offset) => {
       this.parallax = { x: offset.x, y: -offset.y };
+      this.instruments.drift(this.parallax);
       const id = this.store.focusedId;
       if (this.layersOn.get(id)) this.views.get(id)?.sendLayers(this.layersState(id, false));
     };
@@ -240,6 +255,8 @@ export class App {
 
     this.updateToolbar();
     this.updateShield(store.focusedId !== this.shownFocus);
+    this.instruments.setRailShown(this.room.railVisible);
+    if (store.focusedId !== this.shownFocus) this.instruments.focusChanged();
     if (store.focusedId !== this.shownFocus) {
       const previous = this.shownFocus;
       if (this.views.has(previous)) this.captureSnapshot(previous);
@@ -486,6 +503,19 @@ export class App {
     this.options.themeButton.scheme = theme.scheme;
     this.options.themeButton.themeName = theme.name;
     if (!this.options.tiltFixed) this.room.setTilt(this.settings.pageTilt);
+    this.instruments.setSettings(this.settings);
+    this.options.toolbar.instruments = this.settings.instruments;
+  }
+
+  /** Saves a change to Settings and puts it into effect. */
+  private async saveSettings(patch: Partial<Settings>): Promise<void> {
+    try {
+      this.settings = await this.data.get({ op: 'settings.set', patch });
+    } catch (e) {
+      console.warn(e instanceof Error ? e.message : String(e));
+      return;
+    }
+    this.applyLook();
   }
 
   /** The theme button: Nebula and Daylight in turn. */
@@ -552,6 +582,7 @@ export class App {
     t.addEventListener('hs-reload', () => this.focusedView?.reload());
     t.addEventListener('hs-bookmark', () => void this.toggleBookmark());
     t.addEventListener('hs-new-tab', () => this.store.open());
+    t.addEventListener('hs-instruments', () => void this.saveSettings({ instruments: !this.settings.instruments }));
     t.addEventListener('hs-layers', () => void this.toggleLayers());
     t.addEventListener('hs-menu', (e) => this.onMenu((e as CustomEvent<MenuAction>).detail));
   }
@@ -658,6 +689,9 @@ export class App {
         break;
       case 'layers':
         void this.toggleLayers();
+        break;
+      case 'instruments':
+        void this.saveSettings({ instruments: !this.settings.instruments });
         break;
       case 'library':
       case 'settings':

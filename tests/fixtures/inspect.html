@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Inspect test</title>
+    <style>body { margin: 0; padding: 40px; font-family: sans-serif; font-size: 20px; background: #fff; }</style>
+  </head>
+  <body>
+    <h1>Instrument panel test page</h1>
+    <p id="done">loading</p>
+    <script>
+      console.log('hello from the page');
+      console.warn('a warning from the page');
+      console.error('an error from the page');
+      const port = location.port;
+      Promise.allSettled([
+        fetch('/icon.png?inspect=1'),
+        fetch('/missing-file.js'),
+        new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = `http://ad.doubleclick.net:${port}/ddm/ad.gif`; }),
+      ]).then(() => { document.getElementById('done').textContent = 'done'; document.title = 'Inspect test ready'; });
+    </script>
+  </body>
+</html>

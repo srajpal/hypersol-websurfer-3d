@@ -1,0 +1,141 @@
+import { app, webContents, type IpcMainInvokeEvent, type Session, type WebContents } from 'electron';
+import {
+  parseInspectRequest,
+  type BrowserReadout,
+  type ConsoleLevel,
+  type InspectOp,
+  type InspectReply,
+  type InspectRequest,
+  type InspectSnapshot,
+} from '../../shared/inspect';
+import { declaredBytes, PageMonitor } from './monitor';
+
+/** Chromium's own certificate verdict, passed through unchanged (setCertificateVerifyProc). */
+const USE_CHROMIUM_RESULT = -3;
+
+const LEVELS: readonly ConsoleLevel[] = ['debug', 'info', 'warning', 'error'];
+
+export interface InspectorOptions {
+  /** Is this the app's own shell (the only one allowed to ask)? */
+  isShell(contents: WebContents): boolean;
+}
+
+/**
+ * The instrument panel's side of the main process (milestone 7). It
+ * listens to what the browser already sees for its web pages (request
+ * completions and failures on the session, console messages, the
+ * certificates Chromium checks, process metrics) and answers the shell.
+ * Nothing is stored on disk or sent anywhere.
+ */
+export class Inspector {
+  readonly monitor = new PageMonitor();
+  private readonly tabs = new Set<number>();
+  private lastPage = new Map<number, number>();
+
+  constructor(
+    private readonly ses: Session,
+    private readonly options: InspectorOptions,
+  ) {}
+
+  start(): void {
+    this.ses.webRequest.onCompleted({ urls: ['<all_urls>'] }, (d) => {
+      if (d.webContentsId === undefined || !this.tabs.has(d.webContentsId)) return;
+      this.monitor.completed(d.webContentsId, d.id, d.statusCode, declaredBytes(d.responseHeaders), d.fromCache, d.timestamp);
+    });
+    this.ses.webRequest.onErrorOccurred({ urls: ['<all_urls>'] }, (d) => {
+      if (d.webContentsId === undefined || !this.tabs.has(d.webContentsId)) return;
+      this.monitor.failed(d.webContentsId, d.id, d.error, d.timestamp);
+    });
+    // Records each certificate Chromium checks; the verdict stays Chromium's.
+    this.ses.setCertificateVerifyProc((request, callback) => {
+      const c = request.certificate;
+      this.monitor.certificate({
+        host: request.hostname,
+        subject: c.subject?.commonName || c.subjectName,
+        issuer: c.issuer?.commonName || c.issuerName,
+        validExpiry: c.validExpiry,
+        verification: request.verificationResult,
+      });
+      callback(USE_CHROMIUM_RESULT);
+    });
+  }
+
+  /** A web request from a tab is starting (from the session's one before-request listener, main/privacy). */
+  requestStarted(tab: number, details: { id: number; url: string; resourceType: string; method: string; timestamp: number }): void {
+    if (!this.tabs.has(tab)) return;
+    this.monitor.request(tab, details.id, details.url, details.resourceType, details.method, details.timestamp);
+  }
+
+  trackTab(contents: WebContents): void {
+    const id = contents.id;
+    this.tabs.add(id);
+    contents.on('did-stop-loading', () => this.monitor.pageFinished(id, Date.now()));
+    contents.on('console-message', (event) => {
+      const level = LEVELS.includes(event.level) ? event.level : 'info';
+      this.monitor.console(id, level, event.message, event.sourceId, event.lineNumber, Date.now());
+    });
+    contents.once('destroyed', () => {
+      this.tabs.delete(id);
+      this.monitor.forget(id);
+      this.lastPage.delete(id);
+    });
+  }
+
+  /** Answers one request from the shell. Never throws. */
+  async handle(event: IpcMainInvokeEvent, raw: unknown): Promise<InspectReply<InspectOp>> {
+    if (!this.options.isShell(event.sender)) return { ok: false, error: 'Not allowed' };
+    const parsed = parseInspectRequest(raw);
+    if ('error' in parsed) return { ok: false, error: parsed.error };
+    try {
+      return { ok: true, value: this.run(event.sender, parsed.request) } as InspectReply<InspectOp>;
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  private run(shell: WebContents, r: InspectRequest): unknown {
+    const contents = webContents.fromId(r.tab);
+    if (!contents || !this.tabs.has(r.tab) || contents.hostWebContents !== shell) throw new Error('Not one of your tabs');
+    switch (r.op) {
+      case 'inspect.snapshot':
+        return this.snapshot(contents, r.sinceNet, r.sinceConsole);
+      case 'inspect.clear-console':
+        this.monitor.clearConsole(r.tab);
+        return null;
+      case 'inspect.devtools':
+        contents.openDevTools({ mode: 'detach' });
+        return null;
+    }
+  }
+
+  private snapshot(contents: WebContents, sinceNet: number, sinceConsole: number): InspectSnapshot {
+    const id = contents.id;
+    const known = this.lastPage.get(id);
+    const s = this.monitor.snapshot(id, sinceNet, sinceConsole);
+    // A new page since the shell last asked: the shell starts its lists afresh.
+    // (Numbers keep rising across pages, so the new page's entries are all included.)
+    const reset = known !== undefined && known !== s.pageNumber;
+    const fresh = s;
+    this.lastPage.set(id, s.pageNumber);
+    const metrics = app.getAppMetrics();
+    const pid = contents.getOSProcessId();
+    const own = metrics.find((m) => m.pid === pid);
+    const browser: BrowserReadout = {
+      memoryKB: metrics.reduce((sum, m) => sum + (m.memory?.workingSetSize ?? 0), 0),
+      processes: metrics.length,
+      cpuPercent: Math.round(metrics.reduce((sum, m) => sum + (m.cpu?.percentCPUUsage ?? 0), 0) * 10) / 10,
+      uptime: Math.round(process.uptime()),
+    };
+    return {
+      page: {
+        ...fresh.page,
+        cpuPercent: Math.round((own?.cpu?.percentCPUUsage ?? 0) * 10) / 10,
+        memoryKB: own?.memory?.workingSetSize ?? 0,
+      },
+      net: fresh.net,
+      console: fresh.console,
+      reset,
+      browser,
+    };
+  }
+}

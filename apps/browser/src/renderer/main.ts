@@ -5,6 +5,7 @@ import './hud/library';
 import './hud/settings';
 import './hud/shield';
 import './hud/theme-button';
+import './hud/instruments';
 import { DEFAULT_TILT_DEG, clampTilt } from '@hypersol/scene-core';
 import { defaultTheme } from '@hypersol/themes';
 import type { ShellBridge } from '../shared/commands';
@@ -40,6 +41,7 @@ const app = new App({
   settingsPanel: document.querySelector('hs-settings')!,
   shield: document.querySelector('hs-shield')!,
   themeButton: document.querySelector('hs-theme-button')!,
+  instruments: document.querySelector('hs-instruments')!,
   tabList: document.getElementById('tab-list') as HTMLElement,
 });
 void app.start();
@@ -85,6 +87,18 @@ if (params.get('test') === '1') {
       webContentsIdOf: (tabId: number) => app.viewOf(tabId)?.webContentsId ?? null,
       layersOf: (tabId: number) => app.layersState(tabId),
       theme: () => app.theme.id,
+      instruments: () => {
+        const el = document.querySelector('hs-instruments')!;
+        return {
+          open: el.open,
+          polling: app.instruments.running,
+          parts: el.parts,
+          page: el.page,
+          net: el.net.length,
+          console: el.consoleEntries.map((e) => `${e.level}:${e.message}`),
+          gauges: el.gauges,
+        };
+      },
       tilt: () => room.tiltDeg,
       layers: () => {
         const id = store.focusedId;

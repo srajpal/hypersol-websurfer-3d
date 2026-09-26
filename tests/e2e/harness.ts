@@ -195,6 +195,15 @@ export interface ShellHooks {
   shield(): { count: number; disabled: boolean; open: boolean };
   layersOf(tabId: number): boolean;
   theme(): string;
+  instruments(): {
+    open: boolean;
+    polling: boolean;
+    parts: { readouts: boolean; gauges: boolean; console: boolean; network: boolean };
+    page: { url: string; secure: boolean; loadMs: number; requests: number; bytes: number; blocked: number; failed: number; cert: { issuer: string; verification: string } | null; memoryKB: number } | null;
+    net: number;
+    console: string[];
+    gauges: { tabs: number; fps: number; filtersAge: string; dns: string; clock: string; uptime: string };
+  };
   tilt(): number;
   layers(): { on: boolean; images: { x: number; y: number; width: number; height: number; src: string; alt: string; kind: string }[] };
 }

@@ -209,7 +209,8 @@ function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
     return;
   }
   if (path === '/icon.png') {
-    res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
+    // Sizes declared, as most servers do (the instrument panel's data readout, milestone 7).
+    res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store', 'content-length': String(ICON_PNG.length) });
     res.end(ICON_PNG);
     return;
   }
@@ -220,7 +221,7 @@ function handler(req: IncomingMessage, res: ServerResponse, c: Counters): void {
   }
   readFile(file).then(
     (body) => {
-      res.writeHead(200, { 'content-type': TYPES[extname(file)]!, 'cache-control': 'no-store' });
+      res.writeHead(200, { 'content-type': TYPES[extname(file)]!, 'cache-control': 'no-store', 'content-length': String(body.length) });
       res.end(body);
     },
     () => res.writeHead(404).end(),

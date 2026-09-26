@@ -8,6 +8,7 @@ import {
 } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
 import { PRIVACY_CHANNEL } from '../shared/privacy';
+import { INSPECT_CHANNEL } from '../shared/inspect';
 
 /**
  * The narrow bridge the 3D shell sees: read-only facts, commands from the
@@ -37,6 +38,9 @@ const bridge: ShellBridge = {
   },
   privacy(request) {
     return ipcRenderer.invoke(PRIVACY_CHANNEL, request);
+  },
+  inspect(request) {
+    return ipcRenderer.invoke(INSPECT_CHANNEL, request);
   },
   closeReady() {
     ipcRenderer.send(CLOSE_READY_CHANNEL);

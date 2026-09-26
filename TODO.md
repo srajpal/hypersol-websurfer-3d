@@ -15,7 +15,7 @@ Plan approved 2026-09-24.
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Done (accepted 2026-09-26) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
-| 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Current (plan and build approved 2026-09-26) |
+| 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Built; awaiting owner review (I10) |
 | 8 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 9 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
 | 10 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
@@ -982,7 +982,10 @@ Owner request: the tab cards took too much of the screen. Done:
 
 ## Milestone 7 — Instrument panel
 
-Status: Current. Plan and build approved 2026-09-26 (prompts 33 to 35),
+Status: Built 2026-09-26; waiting for the owner's review (I10) and
+acceptance. Screenshots: docs/screenshots/m7/ (16 to 18 show the panel).
+Electron security check at the start: 44.4.5 still newest. Plan and
+build approved 2026-09-26 (prompts 33 to 35),
 with the owner's answers Q1 a (a new milestone before the first
 release), Q2 all, "with settings to manage all", Q3 floating panels
 along the sides and bottom. The owner's reference image shows the kinds
@@ -1029,24 +1032,24 @@ Settings.
 
 ### Tasks
 
-- [ ] 1. Page monitor in the main process: per-tab requests (with
+- [x] 1. Page monitor in the main process: per-tab requests (with
       status, size, time, from the session's request events), console
       messages, certificate details per host, page memory and CPU;
       capped, in memory only; a checked request channel for the shell.
-- [ ] 2. Control components in our style: dial, segmented meter, LCD
+- [x] 2. Control components in our style: dial, segmented meter, LCD
       readout, toggle switch; both themes; reduced motion respected.
-- [ ] 3. Floating panels: right column (page readouts, browser gauges)
+- [x] 3. Floating panels: right column (page readouts, browser gauges)
       and bottom strip (console, network list); the page's space
       adjusts; parallax drift; keyboard reachable.
-- [ ] 4. Console view (levels, clear, filter) and network list (type
+- [x] 4. Console view (levels, clear, filter) and network list (type
       filter, text filter, totals).
-- [ ] 5. Settings: the main switch, a switch per part, console level;
+- [x] 5. Settings: the main switch, a switch per part, console level;
       top-bar button and Ctrl/Cmd+Shift+I; "Open full DevTools".
-- [ ] 6. docs/privacy.md: what the panel reads and that it stays in
+- [x] 6. docs/privacy.md: what the panel reads and that it stays in
       memory.
-- [ ] 7. Tests: unit (monitor records, caps, checks, formatting);
+- [x] 7. Tests: unit (monitor records, caps, checks, formatting);
       end-to-end I1 to I9; C to H as regression.
-- [ ] 8. Docs and screenshots in both themes (MILESTONE=m7).
+- [x] 8. Docs and screenshots in both themes (MILESTONE=m7).
 
 ### Checks
 
@@ -1063,6 +1066,43 @@ Settings.
 | I9 | Efficiency and input | While off, no polling and no frames drawn; while on, idle work stays small; clicks on the page still land |
 | I10 | Look and feel | Owner review in both themes; screenshots saved |
 | C to H | Regression | Still pass |
+
+### Check results (Windows 11, 2026-09-26)
+
+Unit: 176 tests pass (the monitor's records, change numbers, caps,
+certificates, sizes; request checks; the panel's wording and filters;
+settings). Lint and type check clean.
+
+End-to-end (`pnpm test:e2e`, 126 checks): I1 to I9 (9 checks) pass, in
+the last three runs. Full suite: 123 of 126; the 3 failures are the D8
+clipboard checks, with the Windows clipboard unavailable to every
+program on the machine again during the run (PowerShell's Set-Clipboard
+failed too); D8 passed earlier the same day when it worked.
+
+| # | Result |
+|---|---|
+| I1 | Pass: off by default; button, Ctrl+Shift+I, and Settings; the page gives up and takes back its room; kept after a restart |
+| I2 | Pass: 4 requests, 1 blocked, data at least the page's size, load time, memory; follows the tab in front |
+| I3 | Pass: the self-signed test certificate's issuer and a failed verdict show; the page still gets the certificate card |
+| I4 | Pass: log, warning, and error with their levels; the level from Settings and from the panel; Clear stays cleared |
+| I5 | Pass: statuses 200, 404, BLOCKED; type and text filters; totals |
+| I6 | Pass |
+| I7 | Pass, including after a restart |
+| I8 | Pass |
+| I9 | Pass: nothing asked while off; about once a second while on; no 3D frames while idle; clicks on the page land |
+| I10 | Not checked yet (owner) |
+| C to H | Pass except D8 (clipboard unavailable during the run) |
+
+Known limits: the data readout adds up the sizes servers declare
+(content-length); responses without one count as unknown ("—"). The
+test server now declares its sizes, as most servers do. Frame rate
+counts the 3D room's frames, which is 0 while nothing moves (the room
+only draws when something changes).
+
+Adjusted after the first screenshots: the desk slab under the page is
+hidden while the bottom strip shows (the raised page left it floating,
+covering the tab rail's lowest card); the console's level tags read
+ERR, WARN, INFO, DBG; the network list no longer scrolls sideways.
 
 ### Done when
 

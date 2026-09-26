@@ -28,6 +28,7 @@ describe('matchShortcut on Windows and Linux', () => {
     expect(m(key('d', { control: true }))).toBe('bookmark');
     expect(m(key('O', { control: true, shift: true }))).toBe('library');
     expect(m(key('L', { control: true, shift: true }))).toBe('layers');
+    expect(m(key('I', { control: true, shift: true }))).toBe('instruments');
     expect(m(key('l', { control: true }))).toBe('focus-address');
     expect(m(key(',', { control: true }))).toBe('settings');
     expect(m(key('o', { control: true }))).toBeNull();

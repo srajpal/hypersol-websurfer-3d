@@ -62,6 +62,9 @@ Rule 13 check, 2026-09-26 (start of milestone 4): 44.4.5 is still the
 newest stable release (npm "latest"); no newer stable major line. No
 upgrade needed.
 
+Rule 13 check, 2026-09-26 (start of milestone 7, the instrument panel):
+44.4.5 still the newest stable release. No upgrade needed.
+
 Graphics on the build machine: NVIDIA GeForce RTX 4050 Laptop GPU and
 AMD Radeon integrated graphics; one 1920×1080 display at 100% scaling;
 touchpad, no touch screen.
@@ -105,6 +108,8 @@ touchpad, no touch screen.
 | Damaged saved data | A damaged settings.json is renamed aside and defaults are used; if the database cannot open, browsing continues and nothing is recorded | The app always starts. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
 | Themes | Nebula (dark, default) and Daylight (light) in packages/themes; each sets the HUD's CSS variables, the room (sky decorations, grid, desk, glow, fog, lights), the cards, and the layers view's outline, and switches at run time. Settings > Theme: Nebula, Daylight, or Match the system; a button at the bottom right switches the two. The window's background and title-bar scheme (nativeTheme) follow | Milestone 6 (agent's design, prompt 32; owner direction prompt 29: 1980s and 1990s). Contrast is unit tested against WCAG AA. |
+| Instrument panel | Milestone 7 (owner, prompts 33 to 35): floating glass panels in the shell's overlay, leaning in with CSS perspective and drifting with the room's parallax: a right column (page readouts, browser gauges) and a bottom strip (console, network list); the page's layout leaves room for them; the desk slab hides while the strip shows. Off by default; Settings has the main switch, one per part, and the console level; top-bar button and Ctrl/Cmd+Shift+I; "DevTools" opens the page's real DevTools | Overlay panels keep text sharp and input simple while still floating in the room. The controls (dials, meters, readouts, switches; hud/controls.ts) take the kinds from the owner's reference and the look from the themes. |
+| Instrument readouts | The main process (main/inspect/) records per tab, in memory only: request starts (from the one before-request listener, main/privacy), completions and failures (session events), console messages, the certificate Chromium checks for each host (setCertificateVerifyProc passing Chromium's own verdict through with -3), process memory and CPU (app.getAppMetrics). The shell asks once a second while the panel shows, only for what changed | No new network use and nothing stored; the certificate verdict stays Chromium's (I3 confirms an invalid certificate still fails). |
 | Page tilt | Settings > Page tilt, 0 to 20 degrees, default 10; a --tilt on the command line wins | Less tilt gives sharper text (milestone 1 note). |
 | Window frame, reconsidered | Standard OS frame kept | Considered in milestone 6: a custom frame would lose native dragging, snapping, and accessibility; the theme now sets the frame's light or dark scheme. |
 | Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
@@ -139,6 +144,9 @@ hypersol-websurfer-3d/
           security.ts          webview lock-down, allowed addresses
           launch-options.ts    command-line options
           test-hooks.ts        logs for the end-to-end tests (test runs only)
+          inspect/             monitor.ts (per-tab requests, console,
+                               certificates; unit tested), index.ts (session
+                               events, metrics, the shell's requests)
           privacy/             index.ts (the session's request listener,
                                element hiding answers, the shell's privacy
                                requests), shield.ts (per-tab decisions and
@@ -157,6 +165,7 @@ hypersol-websurfer-3d/
           settings.ts          settings, search engines, their checks
           privacy.ts           privacy requests (shield, lists, DNS) and checks
           layers.ts            layers view messages between shell and page
+          inspect.ts           instrument panel requests and checks
         preload/
           shell.ts             safe bridge exposed to the 3D shell
           page.ts              injected into every web page: the blocker's
@@ -176,7 +185,11 @@ hypersol-websurfer-3d/
                                address bar, bookmark star, menu, loading
                                strip), library.ts, settings.ts, about.ts,
                                shield.ts (count and popover),
-                               theme-button.ts (theme switch).
+                               theme-button.ts (theme switch),
+                               controls.ts (dial, meter, readout, switch),
+                               instruments.ts (the instrument panel).
+          instruments.ts       fills the instrument panel while it shows;
+                               inspect-format.ts: its wording (unit tested)
                                Tabs are 3D cards under scene/, not a 2D strip.
           state/               tabs.ts: the tab list and focus
           url.ts, load-errors.ts
@@ -204,7 +217,7 @@ hypersol-websurfer-3d/
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright drives the built app (m1 to m6 checks)
+    e2e/                       Playwright drives the built app (m1 to m7 checks)
     fixtures/                  sample pages served from 127.0.0.1
     screenshots/               progress screenshots (pnpm screenshots)
 ```
@@ -281,6 +294,8 @@ filter list changes as commands.
 | Paused sites, DNS mode, list updates switch | settings.json | Changed in the shield popover and Settings |
 | Layers view: global switch and per-site choices | settings.json | Changed in Settings and by switching the view on a page |
 | Theme and page tilt | settings.json | Changed in Settings and with the theme button |
+| Instrument panel switches and console level | settings.json | Changed in Settings, the top-bar button, and the panel |
+| Instrument readouts (requests, console messages, certificates) | Memory only, in the main process, per tab | Capped at 300 of each; forgotten with the page or tab |
 | Image rectangles of the page in front | Memory only, in the shell | Not saved or sent anywhere |
 
 Nothing leaves the machine except user-initiated page loads (including

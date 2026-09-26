@@ -127,6 +127,24 @@ it('captures the main screens', async () => {
     await waitForPage(h, 'shield.html');
     await h.shell.click('hs-shield [data-testid="shield"]');
     await capture(h, '15-daylight-shield');
+    await pressInShell(h, 'Escape');
+
+    // The instrument panel (milestone 7), in Daylight and then Nebula.
+    await navigateTo(h, server.url('inspect.html'));
+    await waitForPage(h, 'inspect.html');
+    await pressInShell(h, 'L', ['control', 'shift']); // flat page, to see the readouts beside it
+    await pressInShell(h, 'I', ['control', 'shift']);
+    await sleep(2500);
+    await capture(h, '16-daylight-instruments');
+    await h.shell.click('hs-theme-button [data-testid="theme"]');
+    await sleep(1500);
+    await capture(h, '17-nebula-instruments');
+    await pressInShell(h, ',', ['control']);
+    await h.shell.evaluate(() => {
+      const body = document.querySelector('hs-settings')?.shadowRoot?.querySelector('.body');
+      body?.querySelector('[data-testid="set-instruments"]')?.scrollIntoView({ block: 'start' });
+    });
+    await capture(h, '18-settings-instruments');
   } finally {
     await h.close();
     await server.close();

@@ -5,9 +5,9 @@ usage counts. This page lists everything it keeps on your computer and
 everything it sends over the network. It is updated whenever that
 changes (AGENTS.md rule 9).
 
-Status: as of milestone 5 (2026-09-26): ad and tracker blocking and
-encrypted DNS are on by default. The layers view (milestone 5) sends
-nothing anywhere.
+Status: as of milestone 7 (2026-09-26): ad and tracker blocking and
+encrypted DNS are on by default. The layers view (milestone 5) and the
+instrument panel (milestone 7) send nothing anywhere.
 
 ## Blocked by default
 
@@ -61,7 +61,7 @@ one.)
 |---|---|---|---|
 | Bookmarks | `hypersol.sqlite` | When you press the star or Ctrl+D | Remove them in the Library, or press the star again |
 | History: each page's address, title, and time of visit | `hypersol.sqlite` | When a tab arrives at a page; the same page again in the same tab (a reload) adds nothing | Delete entries in the Library, "Clear all history", or Settings > Clear browsing data |
-| Settings: search engine, what opens at startup, encrypted DNS mode, daily list updates on or off, sites where the shield is paused, whether pages open in the layers view, and the sites where you switched the layers view, the theme, and the page tilt | `settings.json` | When you change a setting, pause the shield on a site, or switch the layers view on a page | Delete the file; the defaults return. Settings > "Forget site choices" clears the layers view choices |
+| Settings: search engine, what opens at startup, encrypted DNS mode, daily list updates on or off, sites where the shield is paused, whether pages open in the layers view, and the sites where you switched the layers view, the theme, the page tilt, and the instrument panel's switches | `settings.json` | When you change a setting, pause the shield on a site, or switch the layers view on a page | Delete the file; the defaults return. Settings > "Forget site choices" clears the layers view choices |
 | Filter lists from the last update, and when they were downloaded | `filters/engine.bin`, `filters/engine.json` | After a list update | Delete the folder; the starter copy included in the app is used |
 | Open tabs: their addresses and which one is in front | `session.json` | While you browse, shortly after tabs change | Reopened only when Settings > On startup is "Reopen your tabs from last time"; delete the file to forget them |
 | Cookies, site storage, and cache | Chromium's profile files in the same folder | By the sites you visit, as in any browser | Settings > Clear browsing data |
@@ -71,9 +71,13 @@ If `settings.json` is damaged, it is renamed to
 defaults are used. If `hypersol.sqlite` cannot be opened, nothing is
 recorded until it can be, and the Library says so.
 
-The shield's per-page lists of what was blocked, and the positions of
-the images on the page in front (found for a later 3D feature), are
-kept in memory only, and forgotten when the page or tab closes. If the saved filter lists are
+The shield's per-page lists of what was blocked, the positions of the
+images on the page in front (found for a later 3D feature), and the
+instrument panel's readouts (each page's requests, console messages,
+and the certificates Chromium checked, at most 300 of each) are kept in
+memory only, and forgotten when the page or tab closes. The instrument
+panel reads what the browser already sees; it makes no requests of its
+own, and it leaves certificate checking to Chromium unchanged. If the saved filter lists are
 damaged or were built by another version, the starter copy is used.
 
 Not stored: form entries, passwords, downloads, and anything about how

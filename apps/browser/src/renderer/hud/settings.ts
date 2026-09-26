@@ -97,6 +97,20 @@ export class HsSettings extends LitElement {
         height: 16px;
         margin: 0;
       }
+      .parts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-left: 26px;
+      }
+      select {
+        margin-left: auto;
+        padding: 3px 6px;
+        border-radius: 6px;
+        border: 1px solid color-mix(in srgb, var(--hs-accent) 45%, transparent);
+        background: var(--hs-panel-glass);
+        font: inherit;
+        color: inherit;
+      }
       .tilt input {
         flex: 1;
         accent-color: var(--hs-accent);
@@ -193,6 +207,24 @@ export class HsSettings extends LitElement {
               <output data-testid="set-tilt-value">${this.settings.pageTilt}°</output>
             </label>
             <p class="note">Less tilt gives sharper text.</p>
+          </fieldset>
+          <fieldset>
+            <legend>Instrument panel</legend>
+            ${this.check('instruments', 'Show the instrument panel')}
+            <div class="parts">
+              ${this.check('instrumentsReadouts', 'Page readouts')} ${this.check('instrumentsGauges', 'Browser gauges')}
+              ${this.check('instrumentsConsole', 'Console')} ${this.check('instrumentsNetwork', 'Network list')}
+            </div>
+            <label>
+              Console shows
+              <select data-testid="set-console-level" .value=${live(this.settings.consoleLevel)}
+                @change=${(e: Event) => this.save({ consoleLevel: (e.target as HTMLSelectElement).value as Settings['consoleLevel'] })}>
+                <option value="all">All messages</option>
+                <option value="warnings">Warnings and errors</option>
+                <option value="errors">Errors only</option>
+              </select>
+            </label>
+            <p class="note">Readouts about the page and the browser, kept in memory only.</p>
           </fieldset>
           <fieldset>
             <legend>Search engine</legend>
@@ -302,6 +334,18 @@ export class HsSettings extends LitElement {
         data-testid=${`set-startup-${mode}`}
         .checked=${live(this.settings.onStartup === mode)}
         @change=${() => this.save({ onStartup: mode })}
+      />
+      ${label}
+    </label>`;
+  }
+
+  private check(key: 'instruments' | 'instrumentsReadouts' | 'instrumentsGauges' | 'instrumentsConsole' | 'instrumentsNetwork', label: string) {
+    return html`<label>
+      <input
+        type="checkbox"
+        data-testid=${`set-${key}`}
+        .checked=${live(this.settings[key])}
+        @change=${(e: Event) => this.save({ [key]: (e.target as HTMLInputElement).checked })}
       />
       ${label}
     </label>`;

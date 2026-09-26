@@ -12,8 +12,10 @@ export const CLOSE_READY_CHANNEL = 'hypersol:close-ready';
 
 import type { DataOp, DataReply, DataRequest } from './data';
 import type { PrivacyOp, PrivacyReply, PrivacyRequest } from './privacy';
+import type { InspectOp, InspectReply, InspectRequest } from './inspect';
 
 export type ShortcutName =
+  | 'instruments'
   | 'layers'
   | 'bookmark'
   | 'library'
@@ -52,6 +54,8 @@ export interface ShellBridge {
   data<K extends DataOp>(request: Extract<DataRequest, { op: K }>): Promise<DataReply<K>>;
   /** Privacy shield, filter lists, and encrypted DNS (shared/privacy.ts). */
   privacy<K extends PrivacyOp>(request: Extract<PrivacyRequest, { op: K }>): Promise<PrivacyReply<K>>;
+  /** The instrument panel's readouts (shared/inspect.ts). */
+  inspect<K extends InspectOp>(request: Extract<InspectRequest, { op: K }>): Promise<InspectReply<K>>;
   /** Answer to prepare-close: saving is done (or has failed), the window may close. */
   closeReady(): void;
 }

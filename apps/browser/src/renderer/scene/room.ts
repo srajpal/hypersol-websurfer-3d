@@ -126,6 +126,7 @@ export class Room {
   private hoveredCard: TabCard | null = null;
   /** Whether the tab rail shows: only with two or more tabs. */
   private railShown = false;
+  private extra = { right: 0, bottom: 0 };
   /** The last few parallax decisions, for diagnosing test failures. */
   readonly pointerLog: { x: number; y: number; target: string; overPage: boolean }[] = [];
   private readonly raycaster = new Raycaster();
@@ -275,6 +276,14 @@ export class Room {
     this.requestRender();
   }
 
+  /** Room the page leaves for the instrument panel (milestone 7), in CSS pixels. */
+  setExtraInsets(extra: { right: number; bottom: number }): void {
+    if (extra.right === this.extra.right && extra.bottom === this.extra.bottom) return;
+    this.extra = { ...extra };
+    this.layout();
+    this.requestRender();
+  }
+
   /** Whether the tab rail is showing (two or more tabs). */
   get railVisible(): boolean {
     return this.railShown;
@@ -324,6 +333,11 @@ export class Room {
 
   // ---- Layout -------------------------------------------------------------
 
+  private pageInsets(): Insets {
+    const base = this.railShown ? PAGE_INSETS : PAGE_INSETS_NO_RAIL;
+    return { ...base, right: base.right + this.extra.right, bottom: base.bottom + this.extra.bottom };
+  }
+
   get tiltDeg(): number {
     return this.options.tiltDeg;
   }
@@ -345,7 +359,7 @@ export class Room {
       viewportHeight: h,
       fovDeg: this.options.fovDeg ?? 40,
       tiltDeg: this.options.tiltDeg,
-      insets: this.railShown ? PAGE_INSETS : PAGE_INSETS_NO_RAIL,
+      insets: this.pageInsets(),
     });
     const layout = this.currentLayout;
 
@@ -366,6 +380,9 @@ export class Room {
     this.desk.scale.set(layout.panelWidth * 1.1, 14, DESK_DEPTH);
     this.desk.rotation.set(0, layout.rotationY, 0);
     this.desk.position.set(layout.position.x, bottom - 22, layout.position.z + DESK_DEPTH / 2 - 60);
+    // The instrument panel's bottom strip takes the desk's place (it would
+    // otherwise float under the raised page and cover the tab rail's lowest card).
+    this.desk.visible = this.extra.bottom === 0;
     this.grid.position.set(0, bottom - 120, 0);
 
     // The horizon is at the camera's height, far away; the glow and sun sit on it.

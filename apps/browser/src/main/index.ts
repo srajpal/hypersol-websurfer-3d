@@ -5,6 +5,8 @@ import type { ThemeChoice } from '../shared/settings';
 import { CAPTURE_TAB_CHANNEL, CLOSE_READY_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
 import { PRIVACY_CHANNEL } from '../shared/privacy';
+import { INSPECT_CHANNEL } from '../shared/inspect';
+import { Inspector } from './inspect';
 import { wireGuest, wireShortcuts } from './guests';
 import { parseLaunchOptions } from './launch-options';
 import { Privacy } from './privacy';
@@ -44,6 +46,7 @@ let quitting = false;
 let testLog: TestLog | null = null;
 let storage: StorageService | null = null;
 let privacy: Privacy | null = null;
+let inspector: Inspector | null = null;
 
 /**
  * Windows and Linux: no menu bar; shortcuts are handled per web contents
@@ -190,6 +193,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('web-contents-created', (_event, contents) => {
     if (contents.getType() !== 'webview') return;
     privacy?.trackTab(contents);
+    inspector?.trackTab(contents);
     wireGuest(contents, {
       send: (command) => {
         const host = contents.hostWebContents;
@@ -262,7 +266,20 @@ if (!app.requestSingleInstanceLock()) {
     // --filters-base, and the DNS check asks a local stand-in (--dns-probe)
     // or is skipped.
     const log = testLog;
+    // The instrument panel's readouts (milestone 7): in memory only.
+    const isShell = (contents: Electron.WebContents) => mainWindow !== null && contents === mainWindow.webContents;
+    const inspect = new Inspector(ses, { isShell });
+    inspector = inspect;
+    inspect.start();
+    ipcMain.handle(INSPECT_CHANNEL, (event, request: unknown) => {
+      if (testLog && typeof request === 'object' && request !== null) {
+        const op = String((request as { op?: unknown }).op);
+        testLog.dataOps[op] = (testLog.dataOps[op] ?? 0) + 1;
+      }
+      return inspect.handle(event, request);
+    });
     privacy = new Privacy(ses, storage, {
+      onTabRequest: (tab, details) => inspect.requestStarted(tab, details),
       filtersDir: join(app.getAppPath(), 'resources', 'filters'),
       savedDir: join(app.getPath('userData'), 'filters'),
       ...(options.filtersBase ? { filtersBase: options.filtersBase } : {}),
@@ -274,7 +291,7 @@ if (!app.requestSingleInstanceLock()) {
             onDnsApplied: (mode: string, resolver: string) => log.dnsApplied.push({ mode, resolver }),
           }
         : {}),
-      isShell: (contents) => mainWindow !== null && contents === mainWindow.webContents,
+      isShell,
     });
     privacy.start();
     const shield = privacy;

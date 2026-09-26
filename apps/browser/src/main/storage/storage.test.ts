@@ -65,6 +65,24 @@ describe('settings', () => {
     });
   });
 
+  it('reads and checks the instrument panel settings (milestone 7)', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({
+      instruments: false,
+      instrumentsReadouts: true,
+      instrumentsGauges: true,
+      instrumentsConsole: true,
+      instrumentsNetwork: true,
+      consoleLevel: 'all',
+    });
+    expect(parseSettings('{"instruments":true,"instrumentsNetwork":false,"consoleLevel":"errors"}').settings).toMatchObject({
+      instruments: true,
+      instrumentsNetwork: false,
+      consoleLevel: 'errors',
+    });
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { instruments: 'on' })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { consoleLevel: 'verbose' })).toHaveProperty('error');
+  });
+
   it('reads and checks the theme and page tilt settings (milestone 6)', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({ theme: 'nebula', pageTilt: 10 });
     expect(parseSettings('{"theme":"system","pageTilt":0}').settings).toMatchObject({ theme: 'system', pageTilt: 0 });

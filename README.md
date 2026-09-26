@@ -7,7 +7,8 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestones 1 to 6 done.** A browser in a 3D room that remembers and protects:
+**Status: milestones 1 to 6 done; milestone 7 (instrument panel) built,
+awaiting review.** A browser in a 3D room that remembers and protects:
 tabs as cards on an arc, a top bar with address, search, and a bookmark
 star, bookmarks and history in a Library panel, a Settings panel, a
 start panel with your data, error cards, a right-click menu, ad and
@@ -145,6 +146,18 @@ tilt trades the lean for sharper text.
 
 ![Daylight: Settings with the theme choice and page tilt](docs/screenshots/m6/14-daylight-settings.png)
 
+**Milestone 7: instrument panel.** Floating panels with live readouts,
+like a light DevTools in the room: dials and meters for the page in
+front (load time, requests, data, blocked, CPU, memory, connection and
+certificate) and for the browser (tabs, memory, frame rate, filter
+lists, encrypted DNS, clock), plus the page's console and network list.
+Off by default: Ctrl+Shift+I, the gauge button in the top bar, or
+Settings, where each part can be switched on its own.
+
+![The instrument panel in Nebula](docs/screenshots/m7/17-nebula-instruments.png)
+
+![The instrument panel in Daylight](docs/screenshots/m7/16-daylight-instruments.png)
+
 ## HoloML
 
 HoloML is the 3D markup language developed alongside the browser, in its
@@ -197,7 +210,8 @@ PATH, which Git for Windows provides.
 in the top bar; Ctrl+T opens a tab, Ctrl+W closes one, Ctrl+Tab moves
 between them, and the cards on the left switch tabs. Ctrl+D bookmarks a
 page, Ctrl+Shift+O opens the Library, Ctrl+, opens Settings, and
-Ctrl+Shift+L (or the layers button) switches the layers view. What
+Ctrl+Shift+L (or the layers button) switches the layers view, and
+Ctrl+Shift+I the instrument panel. What
 the browser stores and sends is listed in [docs/privacy.md](docs/privacy.md). Development runs use a
 throwaway profile in the `userData/` folder, never your normal browser
 data.

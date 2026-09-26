@@ -21,6 +21,8 @@ export type StartupMode = 'new-tab' | 'last-tabs';
 export type DnsMode = 'secure' | 'automatic';
 /** A built-in theme, or follow the system's light or dark setting (milestone 6). */
 export type ThemeChoice = 'nebula' | 'daylight' | 'system';
+/** Which console messages the instrument panel shows (milestone 7). */
+export type ConsoleFilter = 'all' | 'warnings' | 'errors';
 export const MIN_TILT = 0;
 export const MAX_TILT = 20;
 
@@ -39,6 +41,14 @@ export interface Settings {
   theme: ThemeChoice;
   /** How far the page leans back, in whole degrees (less tilt, sharper text). */
   pageTilt: number;
+  /** Show the instrument panel (milestone 7); off by default. */
+  instruments: boolean;
+  /** Its parts, each switchable. */
+  instrumentsReadouts: boolean;
+  instrumentsGauges: boolean;
+  instrumentsConsole: boolean;
+  instrumentsNetwork: boolean;
+  consoleLevel: ConsoleFilter;
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -51,9 +61,17 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   layersSites: Object.freeze({}) as Record<string, boolean>,
   theme: 'nebula',
   pageTilt: 10,
+  instruments: false,
+  instrumentsReadouts: true,
+  instrumentsGauges: true,
+  instrumentsConsole: true,
+  instrumentsNetwork: true,
+  consoleLevel: 'all',
 });
 
-const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites', 'layersOnOpen', 'layersSites', 'theme', 'pageTilt'] as const;
+const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites', 'layersOnOpen', 'layersSites', 'theme', 'pageTilt',
+  'instruments', 'instrumentsReadouts', 'instrumentsGauges', 'instrumentsConsole', 'instrumentsNetwork', 'consoleLevel'] as const;
+const INSTRUMENT_SWITCHES = ['instruments', 'instrumentsReadouts', 'instrumentsGauges', 'instrumentsConsole', 'instrumentsNetwork'] as const;
 export const MAX_PAUSED_SITES = 1000;
 export const MAX_LAYERS_SITES = 1000;
 
@@ -92,6 +110,12 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
         return { error: 'pausedSites must be a list of host names' };
       }
       next.pausedSites = [...new Set(value.map((h: string) => h.toLowerCase()))];
+    } else if ((INSTRUMENT_SWITCHES as readonly string[]).includes(key)) {
+      if (typeof value !== 'boolean') return { error: `${key} must be true or false` };
+      next[key as (typeof INSTRUMENT_SWITCHES)[number]] = value;
+    } else if (key === 'consoleLevel') {
+      if (value !== 'all' && value !== 'warnings' && value !== 'errors') return { error: `Unknown console level: ${String(value)}` };
+      next.consoleLevel = value;
     } else if (key === 'theme') {
       if (value !== 'nebula' && value !== 'daylight' && value !== 'system') return { error: `Unknown theme: ${String(value)}` };
       next.theme = value;

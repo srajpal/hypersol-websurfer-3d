@@ -3,6 +3,9 @@ import { LitElement, css, html, nothing, type PropertyValues } from 'lit';
 export type MenuAction = 'new-tab' | 'close-tab' | 'library' | 'settings' | 'about';
 
 const icon = {
+  gauge: html`<svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4.5 17a8.5 8.5 0 1 1 15 0" /><path d="M12 13.5l4-4.5" /><circle cx="12" cy="14" r="1.3" />
+  </svg>`,
   plus: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>`,
   back: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>`,
   forward: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>`,
@@ -22,7 +25,7 @@ const icon = {
  * controller does the work.
  *
  * Events (bubbling, composed): hs-navigate (detail: typed text), hs-back,
- * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-new-tab, hs-menu (detail: MenuAction).
+ * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-instruments, hs-new-tab, hs-menu (detail: MenuAction).
  */
 export class HsToolbar extends LitElement {
   static override properties = {
@@ -34,6 +37,7 @@ export class HsToolbar extends LitElement {
     bookmarked: { type: Boolean },
     canBookmark: { type: Boolean },
     layers: { type: Boolean },
+    instruments: { type: Boolean },
     canLayers: { type: Boolean },
     menuOpen: { state: true },
     strip: { state: true },
@@ -49,6 +53,8 @@ export class HsToolbar extends LitElement {
   /** The layers view is on for the page in front (milestone 5). */
   declare layers: boolean;
   declare canLayers: boolean;
+  /** The instrument panel is showing (milestone 7). */
+  declare instruments: boolean;
   declare menuOpen: boolean;
   declare strip: 'idle' | 'loading' | 'done';
   private stripTimer: number | undefined;
@@ -64,6 +70,7 @@ export class HsToolbar extends LitElement {
     this.canBookmark = false;
     this.layers = false;
     this.canLayers = false;
+    this.instruments = false;
     this.menuOpen = false;
     this.strip = 'idle';
   }
@@ -130,6 +137,7 @@ export class HsToolbar extends LitElement {
     .menu-button svg {
       stroke-width: 3.2;
     }
+    .instruments-button[aria-pressed='true'],
     .layers-button[aria-pressed='true'] {
       color: var(--hs-accent);
       background: color-mix(in srgb, var(--hs-accent) 18%, transparent);
@@ -301,6 +309,16 @@ export class HsToolbar extends LitElement {
           @focus=${(e: FocusEvent) => (e.target as HTMLInputElement).select()}
           @keydown=${this.onKey}
         />
+        <button
+          class="instruments-button"
+          data-testid="instruments"
+          aria-label="Instrument panel"
+          title=${`Instrument panel (${mod}+Shift+I)`}
+          aria-pressed=${this.instruments ? 'true' : 'false'}
+          @click=${() => this.fire('hs-instruments')}
+        >
+          ${icon.gauge}
+        </button>
         <button
           class="layers-button"
           data-testid="layers"

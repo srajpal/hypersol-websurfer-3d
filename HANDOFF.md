@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-26 (milestones 4 to 6 accepted).
+Last updated 2026-09-26 (milestone 7 built, awaiting review).
 
 ## Where things stand
 
@@ -159,7 +159,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    below.
 2. Do only what the prompt approves. Milestones 4 to 6 are done (accepted
    2026-09-26, prompt 33); the smaller tab cards are in. Milestone 7
-   (Instrument panel) is approved and being built; see TODO.md. Tick tasks and record check results in
+   (Instrument panel) is built and awaits the owner's review; milestone
+   8 (First release) has no plan yet; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

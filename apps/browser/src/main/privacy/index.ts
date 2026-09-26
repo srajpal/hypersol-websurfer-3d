@@ -43,6 +43,8 @@ export interface PrivacyOptions {
   dnsProbeUrl?: string | null;
   /** Every request the session makes (test log). */
   observe?: (url: string) => void;
+  /** A web page's request is starting (the instrument panel's monitor, main/inspect). */
+  onTabRequest?: (tab: number, details: { id: number; url: string; resourceType: string; method: string; timestamp: number }) => void;
   /** Every DNS mode put into effect (test log). */
   onDnsApplied?: (mode: 'secure' | 'automatic', resolver: string) => void;
   /** Is this the app's own shell (the only one allowed to ask)? */
@@ -179,6 +181,7 @@ export class Privacy {
         callback({});
         return;
       }
+      this.options.onTabRequest?.(tab, details);
       callback(this.shield.decide({ url: details.url, resourceType: details.resourceType, tab }));
     });
     // Filter lists can add a content security policy to pages (for example to stop pop-unders).
