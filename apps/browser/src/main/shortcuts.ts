@@ -29,6 +29,7 @@ export function matchShortcut(input: KeyInput, platform: string): ShortcutName |
   if (plainMod && key === 'd') return 'bookmark';
   if (plainMod && key === ',') return 'settings';
   if (mod && input.shift && !input.alt && key === 'o') return 'library';
+  if (mod && input.shift && !input.alt && key === 'l') return 'layers';
   if (plainMod && key === 'w') return 'close-tab';
   if (plainMod && key === 'l') return 'focus-address';
   if (!mac && input.alt && !input.control && !input.shift && key === 'd') return 'focus-address';

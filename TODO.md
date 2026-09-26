@@ -13,7 +13,7 @@ Plan approved 2026-09-24.
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Built; awaiting owner acceptance (F11) |
-| 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Current (plan and build approved 2026-09-26) |
+| 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Built; awaiting owner acceptance (G10) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Later |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 8 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
@@ -722,7 +722,9 @@ the milestone.
 
 ## Milestone 5 — Depth layering
 
-Status: Current. Plan and build approved 2026-09-26 (prompt 31), with
+Status: Built 2026-09-26; waiting for the owner's look-and-feel check
+(G10) and acceptance. Screenshots: docs/screenshots/m5/. Plan and build
+approved 2026-09-26 (prompt 31), with
 the owner's answers Q1 b ("to start"), Q2 (on by default for now, with a
 per-site and a global setting), Q3 a. Electron security check: done the
 same day for milestone 4 (ARCHITECTURE.md section 3). Milestone 4 still
@@ -760,24 +762,24 @@ New, from the owner's answers:
 
 ### Tasks
 
-- [ ] 1. Trial: the layering approach on the test pages and a variety
+- [x] 1. Trial: the layering approach on the test pages and a variety
       of layouts: pinned headers, click accuracy, text sharpness, frame
       rate. Report before building on it.
-- [ ] 2. Page preload: find the top-level sections and images, lift them
+- [x] 2. Page preload: find the top-level sections and images, lift them
       into layers, keep them current as the page changes, scrolls, and
       resizes; skip risky elements; cap the count; animate in and out
       (instant with reduced motion).
-- [ ] 3. Shell: the layers button in the top bar and a shortcut; the
+- [x] 3. Shell: the layers button in the top bar and a shortcut; the
       view per tab; sent to the page, and the vanishing point with the
       room's parallax.
-- [ ] 4. Settings: "Open pages in the layers view" (default on), the
+- [x] 4. Settings: "Open pages in the layers view" (default on), the
       per-site choices (remembered when the view is switched on a page),
       and clearing them.
-- [ ] 5. Image rectangles reported from the page to the shell, checked
+- [x] 5. Image rectangles reported from the page to the shell, checked
       there, kept per tab; exposed to the tests.
-- [ ] 6. Tests: unit (section choice, settings); end-to-end G1 to G9; C,
+- [x] 6. Tests: unit (section choice, settings); end-to-end G1 to G9; C,
       D, E, F as regression.
-- [ ] 7. Docs and screenshots (MILESTONE=m5 pnpm screenshots).
+- [x] 7. Docs and screenshots (MILESTONE=m5 pnpm screenshots).
 
 ### Checks
 
@@ -794,6 +796,45 @@ New, from the owner's answers:
 | G9 | Efficiency | Idle and scrolling stay within the milestone 1 budget with the view on |
 | G10 | Look and feel | Owner review; screenshots saved |
 | C, D, E, F | Regression | Still pass |
+
+### Check results (Windows 11, 2026-09-26)
+
+Task 1 (trial, on the layers test page with the finished code path): the
+button inside a lifted section takes the click (the page's own hit test
+finds it); the fixed header stays at the top, also after scrolling; a
+section the page transforms itself is left alone; switching off removes
+every layer. Scrolling with the view on: 7.5 ms per frame on average,
+8.8 to 12.6 ms at most, in two runs. Not tried on real websites: test
+runs have no internet, so a variety of real layouts is still to be seen
+(G10, the owner's review, is the first look at real sites).
+
+Unit: 159 tests pass (section choice, lift transform, vanishing point,
+messages, settings, shortcut). Lint and type check clean.
+
+End-to-end (`pnpm test:e2e`, 111 checks): G1 to G9 pass (9 checks, in
+the last three runs). Full suite: 108 of 111, with the layers view on by
+default for every earlier check; the 3 failures are again the D8
+clipboard checks, with the Windows clipboard unavailable to every
+program on the machine (see milestone 4).
+
+| # | Result |
+|---|---|
+| G1 | Pass: sections and images lifted; page positions identical after switching off |
+| G2 | Pass: click, typing, and wheel scrolling |
+| G3 | Pass |
+| G4 | Pass |
+| G5 | Pass, including after a restart |
+| G6 | Pass: within 1 CSS pixel of the page's own rectangle (page offsets are whole pixels); updated after scrolling and resizing; unchanged by the lift |
+| G7 | Pass |
+| G8 | Pass (reduced motion requested through Chromium's media emulation) |
+| G9 | Pass: no frames drawn while idle; scrolling under 20 ms per frame on average |
+| G10 | Not checked yet (owner) |
+| C, D, E, F | Pass except D8 (clipboard unavailable) |
+
+Changed while building: the checks first read the page before the
+switch-off animation had finished (G4) and compared whole-pixel offsets
+with fractional rectangles (G6); both checks now wait or allow under one
+pixel. "1 site has their own choice" now reads "its own choice".
 
 ### Done when
 

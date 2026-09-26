@@ -73,11 +73,13 @@ touchpad, no touch screen.
 | App framework | Electron, current supported stable line (44 as of 2026-09-24) | Bundles Chromium; one codebase for three desktop OSes; huge ecosystem; matches "embed an existing engine". Electron ships no Widevine DRM module, so DRM video (Netflix, Disney+, Spotify web) does not play; documented limitation, not planned. |
 | Language | TypeScript everywhere | One language for shell, main process, HoloML parser; easiest for contributors. |
 | 3D library | Three.js | Most used open-source web 3D library; supports both WebGL objects and live DOM in one scene. |
-| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer), using an Electron `<webview>` element in the shell | Sharp text, native input, zero pixel copying. `WebContentsView` is a flat native layer and cannot be transformed in 3D. On attach, any page-requested preload is replaced by the trusted page preload (page.ts, a stub until milestone 5) and safe web preferences are forced. |
+| Focused page in 3D | Live panel via CSS 3D transform (Three.js CSS3DRenderer), using an Electron `<webview>` element in the shell | Sharp text, native input, zero pixel copying. `WebContentsView` is a flat native layer and cannot be transformed in 3D. On attach, any page-requested preload is replaced by the trusted page preload (page.ts: element hiding and the layers view) and safe web preferences are forced. |
 | Fallback if tilted input fails | Focused page faces the viewer flat, room stays 3D around it | Keeps sharp text and native input; tab cards and transitions still tilt. Decided 2026-09-24. |
 | Background tabs in 3D | Snapshot textures on WebGL cards | Cheap; lit and occluded like real objects. |
 | Upgrade path | Offscreen rendering to GPU textures | Lets pages curve, bend, and receive lighting later; hidden behind the PagePanel interface. |
-| Page depth layering | Injected preload CSS on top-level sections and images | Interactive, no copying; also reports image positions for later 3D lifting. |
+| Page depth layering | A layers view (milestone 5): the page preload lifts the page's top-level sections and its images into separate depths. Each lifted element gets its own CSS perspective transform around one shared vanishing point, which follows the room's parallax; styles go in through webFrame.insertCSS. Elements that are fixed or sticky or contain such parts, and elements the page already transforms or animates, are skipped; at most 24 sections and 24 images | Interactive, no copying: clicks and typing land where they appear. No ancestor gains a transform, so the page's pinned parts stay pinned (a transform on the body would unpin them). The page's 3D cannot share the room's 3D space, so the view happens inside the page panel. |
+| Layers view on or off | On by default (owner, prompt 31). Settings: "Open pages in the layers view" (global); switching the view on a page (button in the top bar, Ctrl/Cmd+Shift+L) is remembered for its site and wins over the global switch; Settings clears the site choices | Owner decision Q2. A switch applies to the tab in front at once, and to other tabs on their next page load. |
+| Shell and page messages | The shell sends the layers state with the webview's own send; the page preload reports image rectangles with sendToHost; both checked (shared/layers.ts) | The main process is not needed, and the page's own scripts cannot see either message. |
 | Ad/tracker blocking | @ghostery/adblocker-electron 2.18.2 (MPL-2.0; with @ghostery/adblocker and its page script, installed 2026-09-26). The app owns the session's request listener and asks the package's engine about each web page request; the package's page script (run from preload/page.ts) does element hiding | Open source, uBlock-compatible lists, built for Electron. The package has no allow-once or per-site switch, so the app's own listener adds "open anyway", pausing a site, and per-tab counts; only webview tabs are filtered, never the shell. |
 | Lists | Ads and trackers (EasyList, EasyPrivacy, uBlock Origin's lists, Peter Lowe's), from Ghostery's copies on GitHub; named in resources/filters/lists.json and docs/privacy.md | Owner decision 2026-09-26 (prompt 29, Q1 a). |
 | First start | A starter copy of the lists is included in the app (resources/filters/starter.bin, rebuilt by `pnpm filters:update`); a saved copy from the last refresh is used when present and valid | Pages are protected from the first one (Q2 a). Lists without a stated licence (Peter Lowe's) are download-only. |
@@ -151,11 +153,15 @@ hypersol-websurfer-3d/
           data.ts              saved-data requests and their checks
           settings.ts          settings, search engines, their checks
           privacy.ts           privacy requests (shield, lists, DNS) and checks
+          layers.ts            layers view messages between shell and page
         preload/
           shell.ts             safe bridge exposed to the 3D shell
           page.ts              injected into every web page: the blocker's
-                               element-hiding script now; depth layering and
-                               image discovery later; no Node access
+                               element-hiding script and the layers view;
+                               no Node access
+          layers.ts            the layers view and image rectangles in the
+                               page; layers-plan.ts: its arithmetic (unit
+                               tested)
         renderer/              the 3D shell (one Chromium page)
           index.html, main.ts
           app.ts               controller: tabs, pages, room, top bar, commands
@@ -193,7 +199,7 @@ hypersol-websurfer-3d/
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright drives the built app (m1 to m4 checks)
+    e2e/                       Playwright drives the built app (m1 to m5 checks)
     fixtures/                  sample pages served from 127.0.0.1
     screenshots/               progress screenshots (pnpm screenshots)
 ```
@@ -247,8 +253,11 @@ process. It exposes read-only facts (platform, versions) and:
 - closeReady: the answer to prepare-close, once the open tabs are saved.
 The main process also sends shield counts per tab, blocked pages, and
 filter list changes as commands.
-6. From milestone 5, the page preload measures top-level sections and
-   images and applies depth offsets; it reports image rectangles.
+6. The page preload (preload/layers.ts) lifts sections and images when
+   the shell turns the layers view on, keeps them current as the page
+   changes, scrolls, and resizes, and reports the rectangles of the
+   images in view (untransformed layout, CSS pixels) to the shell, which
+   keeps them per tab for a later lift-to-3D milestone.
 7. The main process writes a history entry when a tab arrives at a web
    page. Bookmarks and settings are written when the user acts, and the
    open tabs shortly after they change. The main process tells the shell
@@ -265,6 +274,8 @@ filter list changes as commands.
 | Cookies, cache, site storage | Chromium profile folder managed by Electron | Standard browser behaviour |
 | Filter lists | filters/engine.bin and engine.json in the app data folder (the last refresh); the starter copy in the app otherwise | Refreshed daily; switchable in Settings; "Update now" |
 | Paused sites, DNS mode, list updates switch | settings.json | Changed in the shield popover and Settings |
+| Layers view: global switch and per-site choices | settings.json | Changed in Settings and by switching the view on a page |
+| Image rectangles of the page in front | Memory only, in the shell | Not saved or sent anywhere |
 
 Nothing leaves the machine except user-initiated page loads (including
 the favicon a page names, fetched through that page's own session, as a
@@ -289,7 +300,7 @@ The window uses the standard OS title bar.
   title and favicon. Click to focus; the cards animate as the focused
   page slides into the centre. Close on hover. "+" card at the end.
 - Top HUD (2D overlay, always sharp): back, forward, reload, address and
-  search bar, menu button. Loading progress is a thin strip under the bar.
+  search bar, layers view button, bookmark star, menu button. Loading progress is a thin strip under the bar.
 - Right side, on demand: a slide-in Library panel (bookmarks, history) or
   Settings panel. Only one open at a time. Escape closes it.
 - Bottom-right: theme switch and privacy shield (count of blocked

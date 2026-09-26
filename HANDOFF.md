@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-26 (milestone 4 built, awaiting acceptance).
+Last updated 2026-09-26 (milestones 4 and 5 built, awaiting acceptance).
 
 ## Where things stand
 
@@ -23,7 +23,13 @@ daily list refresh, and encrypted DNS through Quad9 with a
 blocked-resolver card (docs/privacy.md). F1 to F10 pass; D8 (clipboard)
 could not be checked because the machine's clipboard was unavailable.
 Waiting for the owner's look-and-feel check (F11) and acceptance; the
-live internet check (L1) needs the owner's yes. Progress
+live internet check (L1) needs the owner's yes. Milestone 5 (Depth
+layering) is built: a layers view, on by default, lifts each page's
+sections and images into separate depths (preload/layers.ts), with a
+top-bar button, Ctrl/Cmd+Shift+L, a global switch in Settings, and a
+choice remembered per site; image rectangles are reported to the shell
+for a later lift-to-3D milestone. G1 to G9 pass; waiting for the owner's
+look (G10) on real sites and acceptance. Progress
 screenshots live in docs/screenshots/<milestone>/; capture them with
 `MILESTONE=mN pnpm screenshots` when a milestone is finished.
 
@@ -145,9 +151,9 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestone 4 (Private by default)
-   is built and awaits acceptance; milestone 5 (depth layering) is
-   approved and being built; see TODO.md. Tick tasks and record check results in
+2. Do only what the prompt approves. Milestones 4 (Private by default)
+   and 5 (Depth layering) are built and await acceptance; milestone 6
+   (Themes and look) has no plan yet; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

@@ -177,6 +177,28 @@ export class HsSettings extends LitElement {
               : nothing}
           </fieldset>
           <fieldset>
+            <legend>Layers view</legend>
+            <label>
+              <input
+                type="checkbox"
+                data-testid="set-layers-on-open"
+                .checked=${live(this.settings.layersOnOpen)}
+                @change=${(e: Event) => this.save({ layersOnOpen: (e.target as HTMLInputElement).checked })}
+              />
+              Open pages in the layers view
+            </label>
+            <p class="note" data-testid="set-layers-sites">${this.siteChoicesText()}</p>
+            <div class="actions">
+              <button
+                data-testid="set-layers-forget"
+                ?disabled=${Object.keys(this.settings.layersSites).length === 0}
+                @click=${() => this.save({ layersSites: {} })}
+              >
+                Forget site choices
+              </button>
+            </div>
+          </fieldset>
+          <fieldset>
             <legend>Encrypted DNS</legend>
             ${this.dnsMode('secure', 'Secure: look up sites only through Quad9 (recommended)')}
             ${this.dnsMode('automatic', "Automatic: use Quad9 when possible, otherwise this network's DNS")}
@@ -256,6 +278,14 @@ export class HsSettings extends LitElement {
       />
       ${label}
     </label>`;
+  }
+
+  private siteChoicesText(): string {
+    const n = Object.keys(this.settings.layersSites).length;
+    if (n === 0) return 'Switching the view on a page (the layers button in the top bar, or its shortcut) is remembered for its site.';
+    return n === 1
+      ? '1 site has its own choice, remembered when you switched the view there.'
+      : `${n} sites have their own choice, remembered when you switched the view there.`;
   }
 
   private filterText(): string {

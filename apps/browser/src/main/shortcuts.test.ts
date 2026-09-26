@@ -27,6 +27,8 @@ describe('matchShortcut on Windows and Linux', () => {
   it('maps bookmark, library, and settings', () => {
     expect(m(key('d', { control: true }))).toBe('bookmark');
     expect(m(key('O', { control: true, shift: true }))).toBe('library');
+    expect(m(key('L', { control: true, shift: true }))).toBe('layers');
+    expect(m(key('l', { control: true }))).toBe('focus-address');
     expect(m(key(',', { control: true }))).toBe('settings');
     expect(m(key('o', { control: true }))).toBeNull();
   });

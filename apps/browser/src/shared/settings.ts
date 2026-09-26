@@ -28,6 +28,10 @@ export interface Settings {
   filterRefresh: boolean;
   /** Sites (host names) where the privacy shield is paused. */
   pausedSites: string[];
+  /** Pages open in the layers view (milestone 5), unless the site has its own choice. */
+  layersOnOpen: boolean;
+  /** Per-site choice for the layers view, by host name; set when the view is switched on a page. */
+  layersSites: Record<string, boolean>;
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -36,10 +40,13 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   dnsMode: 'secure',
   filterRefresh: true,
   pausedSites: Object.freeze([]) as unknown as string[],
+  layersOnOpen: true,
+  layersSites: Object.freeze({}) as Record<string, boolean>,
 });
 
-const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites'] as const;
+const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites', 'layersOnOpen', 'layersSites'] as const;
 export const MAX_PAUSED_SITES = 1000;
+export const MAX_LAYERS_SITES = 1000;
 
 /** A host name as URL.hostname gives it: letters, digits, dots, hyphens, or a bracketed IPv6 address. */
 export function isHostName(v: unknown): v is string {
@@ -57,7 +64,7 @@ const isDnsMode = (v: unknown): v is DnsMode => v === 'secure' || v === 'automat
  */
 export function applySettingsPatch(current: Settings, patch: unknown): { settings: Settings } | { error: string } {
   if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) return { error: 'Not a settings object' };
-  const next: Settings = { ...current, pausedSites: [...current.pausedSites] };
+  const next: Settings = { ...current, pausedSites: [...current.pausedSites], layersSites: { ...current.layersSites } };
   for (const [key, value] of Object.entries(patch)) {
     if (key === 'searchEngine') {
       if (!isEngine(value)) return { error: `Unknown search engine: ${String(value)}` };
@@ -76,6 +83,16 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
         return { error: 'pausedSites must be a list of host names' };
       }
       next.pausedSites = [...new Set(value.map((h: string) => h.toLowerCase()))];
+    } else if (key === 'layersOnOpen') {
+      if (typeof value !== 'boolean') return { error: 'layersOnOpen must be true or false' };
+      next.layersOnOpen = value;
+    } else if (key === 'layersSites') {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) return { error: 'layersSites must map host names to true or false' };
+      const entries = Object.entries(value as Record<string, unknown>);
+      if (entries.length > MAX_LAYERS_SITES || !entries.every(([h, v]) => isHostName(h) && typeof v === 'boolean')) {
+        return { error: 'layersSites must map host names to true or false' };
+      }
+      next.layersSites = Object.fromEntries(entries.map(([h, v]) => [h.toLowerCase(), v as boolean]));
     } else {
       return { error: `Unknown setting: ${key}` };
     }
@@ -85,7 +102,7 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
 
 /** A fresh copy of the defaults (the list inside is never shared). */
 export function defaults(): Settings {
-  return { ...DEFAULT_SETTINGS, pausedSites: [] };
+  return { ...DEFAULT_SETTINGS, pausedSites: [], layersSites: {} };
 }
 
 /**

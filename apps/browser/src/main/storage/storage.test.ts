@@ -65,6 +65,18 @@ describe('settings', () => {
     });
   });
 
+  it('reads and checks the layers view settings (milestone 5)', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ layersOnOpen: true, layersSites: {} });
+    expect(parseSettings('{"layersOnOpen":false,"layersSites":{"News.Example":true}}').settings).toMatchObject({
+      layersOnOpen: false,
+      layersSites: { 'news.example': true },
+    });
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { layersOnOpen: 1 })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { layersSites: { 'a b': true } })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { layersSites: { 'a.example': 'yes' } })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { layersSites: ['a.example'] })).toHaveProperty('error');
+  });
+
   it('reads and checks the privacy settings (milestone 4)', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({ dnsMode: 'secure', filterRefresh: true, pausedSites: [] });
     const text = '{"dnsMode":"automatic","filterRefresh":false,"pausedSites":["News.Example.com","[::1]"]}';

@@ -60,7 +60,7 @@ export class SettingsFile {
   }
 
   get settings(): Settings {
-    return { ...this.current, pausedSites: [...this.current.pausedSites] };
+    return { ...this.current, pausedSites: [...this.current.pausedSites], layersSites: { ...this.current.layersSites } };
   }
 
   /** Where a damaged file was moved, if one was. */
@@ -83,7 +83,7 @@ export class SettingsFile {
     } catch (e) {
       throw new Error(`Couldn't save your settings (${reason(e)}). Nothing was changed.`);
     }
-    this.current = { ...settings, pausedSites: [...settings.pausedSites] };
+    this.current = { ...settings, pausedSites: [...settings.pausedSites], layersSites: { ...settings.layersSites } };
     this.mustPreserve = false;
     this.problemText = null;
   }

@@ -7,6 +7,9 @@ const icon = {
   forward: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>`,
   reload: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" /></svg>`,
   menu: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6h.01M12 12h.01M12 18h.01" /></svg>`,
+  layers: html`<svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3 3 8l9 5 9-5-9-5Z" /><path d="m3 12.5 9 5 9-5" /><path d="m3 17 9 5 9-5" />
+  </svg>`,
   star: html`<svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.85L12 16.9l-5.25 2.75 1-5.85L3.5 9.7l5.9-.9z" />
   </svg>`,
@@ -18,7 +21,7 @@ const icon = {
  * controller does the work.
  *
  * Events (bubbling, composed): hs-navigate (detail: typed text), hs-back,
- * hs-forward, hs-reload, hs-bookmark, hs-menu (detail: MenuAction).
+ * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-menu (detail: MenuAction).
  */
 export class HsToolbar extends LitElement {
   static override properties = {
@@ -29,6 +32,8 @@ export class HsToolbar extends LitElement {
     loading: { type: Boolean },
     bookmarked: { type: Boolean },
     canBookmark: { type: Boolean },
+    layers: { type: Boolean },
+    canLayers: { type: Boolean },
     menuOpen: { state: true },
     strip: { state: true },
   };
@@ -40,6 +45,9 @@ export class HsToolbar extends LitElement {
   declare loading: boolean;
   declare bookmarked: boolean;
   declare canBookmark: boolean;
+  /** The layers view is on for the page in front (milestone 5). */
+  declare layers: boolean;
+  declare canLayers: boolean;
   declare menuOpen: boolean;
   declare strip: 'idle' | 'loading' | 'done';
   private stripTimer: number | undefined;
@@ -53,6 +61,8 @@ export class HsToolbar extends LitElement {
     this.loading = false;
     this.bookmarked = false;
     this.canBookmark = false;
+    this.layers = false;
+    this.canLayers = false;
     this.menuOpen = false;
     this.strip = 'idle';
   }
@@ -118,6 +128,10 @@ export class HsToolbar extends LitElement {
     }
     .menu-button svg {
       stroke-width: 3.2;
+    }
+    .layers-button[aria-pressed='true'] {
+      color: var(--hs-accent);
+      background: color-mix(in srgb, var(--hs-accent) 18%, transparent);
     }
     .star[aria-pressed='true'] {
       color: var(--hs-accent);
@@ -283,6 +297,17 @@ export class HsToolbar extends LitElement {
           @focus=${(e: FocusEvent) => (e.target as HTMLInputElement).select()}
           @keydown=${this.onKey}
         />
+        <button
+          class="layers-button"
+          data-testid="layers"
+          aria-label="Layers view"
+          title=${`Layers view (${mod}+Shift+L)`}
+          aria-pressed=${this.layers ? 'true' : 'false'}
+          ?disabled=${!this.canLayers}
+          @click=${() => this.fire('hs-layers')}
+        >
+          ${icon.layers}
+        </button>
         <button
           class="star"
           data-testid="star"

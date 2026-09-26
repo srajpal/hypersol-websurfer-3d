@@ -192,6 +192,8 @@ export interface ShellHooks {
   animating(): boolean;
   webContentsIdOf(tabId: number): number | null;
   shield(): { count: number; disabled: boolean; open: boolean };
+  layersOf(tabId: number): boolean;
+  layers(): { on: boolean; images: { x: number; y: number; width: number; height: number; src: string; alt: string; kind: string }[] };
 }
 
 export interface TabInfo {

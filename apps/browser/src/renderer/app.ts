@@ -37,6 +37,14 @@ const SESSION_SAVE_DELAY_MS = 400;
 const isWeb = (url: string) => /^https?:\/\//i.test(url);
 
 /** Same page apart from the #fragment (an in-page jump keeps the favicon). */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 function isSamePage(a: string, b: string): boolean {
   return a.split('#')[0] === b.split('#')[0];
 }
@@ -61,6 +69,10 @@ export class App {
   private readonly snapshotTimers = new Map<number, number>();
   /** Requests the shield blocked on each tab's page, by tab id. */
   private readonly shieldCounts = new Map<number, number>();
+  /** Whether each tab's page is in the layers view, by tab id. */
+  private readonly layersOn = new Map<number, boolean>();
+  /** The room's parallax as the pages see it (-1 to 1, y down). */
+  private parallax = { x: 0, y: 0 };
   private sessionTimer: number | undefined;
   /** Whether the Enter key is held down in the shell. */
   private enterDown = false;
@@ -89,6 +101,12 @@ export class App {
       },
     });
     this.store.subscribe(() => this.sync());
+    // The layers view's vanishing point follows the room's parallax.
+    this.room.onCameraMove = (offset) => {
+      this.parallax = { x: offset.x, y: -offset.y };
+      const id = this.store.focusedId;
+      if (this.layersOn.get(id)) this.views.get(id)?.sendLayers({ on: true, animate: false, parallax: this.parallax });
+    };
     document.addEventListener('keydown', (e) => e.key === 'Enter' && (this.enterDown = true), true);
     document.addEventListener('keyup', (e) => e.key === 'Enter' && (this.enterDown = false), true);
     this.wireToolbar();
@@ -117,6 +135,11 @@ export class App {
 
   get openPanel(): PanelName | null {
     return this.openPanelName;
+  }
+
+  /** Test hook: whether a tab's page is in the layers view. */
+  layersState(tabId: number): boolean {
+    return this.layersOn.get(tabId) ?? false;
   }
 
   viewOf(tabId: number): TabView | undefined {
@@ -182,6 +205,7 @@ export class App {
         window.clearTimeout(this.snapshotTimers.get(id));
         this.snapshotTimers.delete(id);
         this.shieldCounts.delete(id);
+        this.layersOn.delete(id);
       }
     }
 
@@ -231,6 +255,7 @@ export class App {
       useNetworkDns: async () => {
         await this.privacy.get({ op: 'dns.use-network' });
       },
+      onPageReady: () => this.applyLayersOnOpen(id),
     });
     this.views.set(id, view);
     this.room.addView(view);
@@ -421,6 +446,43 @@ export class App {
     t.canGoForward = tab.canGoForward;
     t.canReload = tab.state !== 'start';
     t.loading = tab.state === 'loading';
+    t.layers = this.layersOn.get(tab.id) ?? false;
+    t.canLayers = isWeb(tab.url) && tab.state !== 'start' && tab.state !== 'failed';
+  }
+
+  // ---- Layers view (milestone 5) -------------------------------------------
+
+  /** A new page opens in the layers view if its site's choice, or the global setting, says so. */
+  private applyLayersOnOpen(tabId: number): void {
+    const view = this.views.get(tabId);
+    const url = view?.status.url ?? '';
+    if (!view || !isWeb(url)) return;
+    const site = hostOf(url);
+    const on = this.settings.layersSites[site] ?? this.settings.layersOnOpen;
+    this.layersOn.set(tabId, on);
+    view.sendLayers({ on, animate: false, parallax: this.parallax });
+    if (tabId === this.store.focusedId) this.updateToolbar();
+  }
+
+  /** The layers button and shortcut: switch the view for the page in front, and remember it for the site. */
+  private async toggleLayers(): Promise<void> {
+    const tab = this.store.focusedTab;
+    const view = this.focusedView;
+    if (!tab || !view || view.isStart || !isWeb(tab.url)) return;
+    const on = !(this.layersOn.get(tab.id) ?? false);
+    this.layersOn.set(tab.id, on);
+    view.sendLayers({ on, animate: true, parallax: this.parallax });
+    this.updateToolbar();
+    const site = hostOf(tab.url);
+    if (!site) return;
+    try {
+      this.settings = await this.data.get({
+        op: 'settings.set',
+        patch: { layersSites: { ...this.settings.layersSites, [site]: on } },
+      });
+    } catch (e) {
+      console.warn(e instanceof Error ? e.message : String(e));
+    }
   }
 
   /** The shield shows the focused page's count; a start tab has none. */
@@ -439,6 +501,7 @@ export class App {
     t.addEventListener('hs-forward', () => this.focusedView?.goForward());
     t.addEventListener('hs-reload', () => this.focusedView?.reload());
     t.addEventListener('hs-bookmark', () => void this.toggleBookmark());
+    t.addEventListener('hs-layers', () => void this.toggleLayers());
     t.addEventListener('hs-menu', (e) => this.onMenu((e as CustomEvent<MenuAction>).detail));
   }
 
@@ -535,6 +598,9 @@ export class App {
         break;
       case 'bookmark':
         void this.toggleBookmark();
+        break;
+      case 'layers':
+        void this.toggleLayers();
         break;
       case 'library':
       case 'settings':

@@ -23,6 +23,7 @@ import {
 } from 'three';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import {
+  DEFAULT_PARALLAX,
   Parallax,
   clampScroll,
   computePanelLayout,
@@ -93,6 +94,8 @@ export class Room {
   /** Frames drawn so far; read by the idle-efficiency check (C9). */
   frames = 0;
   readonly parallax = new Parallax();
+  /** Called on each frame the camera's parallax moves, with the offset as -1 to 1 on each axis (y up). */
+  onCameraMove: ((offset: { x: number; y: number }) => void) | null = null;
   private readonly webgl: WebGLRenderer;
   private readonly css: CSS3DRenderer;
   private readonly cameraElement: HTMLElement;
@@ -405,6 +408,10 @@ export class Room {
     this.lastFrameTime = time;
 
     const moving = this.parallax.step(dt);
+    if (moving && this.onCameraMove) {
+      const { x, y } = this.parallax.offset;
+      this.onCameraMove({ x: x / DEFAULT_PARALLAX.maxOffset, y: y / DEFAULT_PARALLAX.maxOffset });
+    }
     this.stepTweens(performance.now());
     let spinning = false;
     for (const card of this.cards.values()) {

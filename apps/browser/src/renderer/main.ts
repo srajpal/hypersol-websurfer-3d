@@ -78,6 +78,11 @@ if (params.get('test') === '1') {
       rail: () => room.rail,
       animating: () => room.animating,
       webContentsIdOf: (tabId: number) => app.viewOf(tabId)?.webContentsId ?? null,
+      layersOf: (tabId: number) => app.layersState(tabId),
+      layers: () => {
+        const id = store.focusedId;
+        return { on: app.layersState(id), images: app.focusedView?.images ?? [] };
+      },
       shield: () => {
         const s = document.querySelector('hs-shield')!;
         return { count: s.count, disabled: s.disabled, open: s.open };

@@ -7,12 +7,13 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestone 4 (private by default) built, awaiting review.** A
-browser in a 3D room that remembers and protects: tabs as cards on an
-arc, a top bar with address, search, and a bookmark star, bookmarks and
-history in a Library panel, a Settings panel, a start panel with your
-data, error cards, a right-click menu, and now ad and tracker blocking
-with a shield, and encrypted DNS. See [Progress](#progress), TODO.md, and
+**Status: milestones 4 (private by default) and 5 (depth layering) built,
+awaiting review.** A browser in a 3D room that remembers and protects:
+tabs as cards on an arc, a top bar with address, search, and a bookmark
+star, bookmarks and history in a Library panel, a Settings panel, a
+start panel with your data, error cards, a right-click menu, ad and
+tracker blocking with a shield, encrypted DNS, and a layers view that
+breaks pages apart into depth. See [Progress](#progress), TODO.md, and
 [Project documents](#project-documents).
 
 ## The story
@@ -119,6 +120,19 @@ encrypted DNS through Quad9. Details in [docs/privacy.md](docs/privacy.md).
 
 ![Settings: encrypted DNS and ad and tracker blocking](docs/screenshots/m4/6-settings-privacy.png)
 
+**Milestone 5: depth layering.** A layers view breaks a page's main
+sections and images apart into separate depths, following the room's
+parallax; the page stays fully usable. It is on by default, with a
+global switch in Settings and a choice remembered per site. The page
+also reports where its images are, groundwork for lifting them into 3D
+later.
+
+![A page in the layers view: sections and images lifted at different depths](docs/screenshots/m5/9-layers-view.png)
+
+![The same page with the layers view off](docs/screenshots/m5/10-layers-off.png)
+
+![Settings: the layers view switch and per-site choices](docs/screenshots/m5/11-settings-layers.png)
+
 ## HoloML
 
 HoloML is the 3D markup language developed alongside the browser, in its
@@ -170,7 +184,8 @@ PATH, which Git for Windows provides.
 `pnpm dev` opens the app on a start tab. Type an address or a search
 in the top bar; Ctrl+T opens a tab, Ctrl+W closes one, Ctrl+Tab moves
 between them, and the cards on the left switch tabs. Ctrl+D bookmarks a
-page, Ctrl+Shift+O opens the Library, and Ctrl+, opens Settings. What
+page, Ctrl+Shift+O opens the Library, Ctrl+, opens Settings, and
+Ctrl+Shift+L (or the layers button) switches the layers view. What
 the browser stores and sends is listed in [docs/privacy.md](docs/privacy.md). Development runs use a
 throwaway profile in the `userData/` folder, never your normal browser
 data.

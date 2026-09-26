@@ -1,6 +1,7 @@
 import type { PagePanel, PageState, PageStatus } from '@hypersol/scene-core';
 import type { WebviewTag } from 'electron';
 import { BLOCKED_CARD, CRASHED_CARD, DNS_BLOCKED_CARD, describeLoadError, isLookupFailure, type LoadErrorCard } from '../load-errors';
+import { LAYERS_CHANNEL, PAGE_IMAGES_CHANNEL, parseImageReport, type LayersState, type PageImage } from '../../shared/layers';
 import { StartPanel, type StartData } from './start-panel';
 
 /** Chromium's code for a load that was cancelled by a newer one. */
@@ -21,6 +22,8 @@ export interface TabViewEvents {
   isDnsBlocked(): Promise<boolean>;
   /** "Use this network's DNS for now". */
   useNetworkDns(): Promise<void>;
+  /** A new document is ready in the page: time to tell it the layers view's state. */
+  onPageReady(): void;
 }
 
 /**
@@ -42,6 +45,7 @@ export class TabView implements PagePanel {
   private failed = false;
   /** Counts page loads, so a late answer about an earlier failure is ignored. */
   private loadSeq = 0;
+  private pageImages: PageImage[] = [];
   private currentStatus: PageStatus;
   private w = 0;
   private h = 0;
@@ -105,6 +109,21 @@ export class TabView implements PagePanel {
       return this.webview.getWebContentsId();
     } catch {
       return null;
+    }
+  }
+
+  /** The page's images in view, as its preload last reported them (milestone 5). */
+  get images(): PageImage[] {
+    return this.pageImages.map((i) => ({ ...i }));
+  }
+
+  /** Tells the page's preload the layers view's state. */
+  sendLayers(state: LayersState): void {
+    if (!this.webview || !this.ready) return;
+    try {
+      this.webview.send(LAYERS_CHANNEL, state);
+    } catch {
+      // The page is between documents; it asks again when ready.
     }
   }
 
@@ -206,9 +225,16 @@ export class TabView implements PagePanel {
         }
       }
       navState();
+      this.events.onPageReady();
+    });
+    wv.addEventListener('ipc-message', (e) => {
+      if (e.channel !== PAGE_IMAGES_CHANNEL) return;
+      const images = parseImageReport(e.args[0]);
+      if (images) this.pageImages = images;
     });
     wv.addEventListener('did-start-loading', () => {
       this.loadSeq += 1;
+      this.pageImages = [];
       this.failed = false;
       this.emit({ ...this.currentStatus, state: 'loading', message: undefined });
     });

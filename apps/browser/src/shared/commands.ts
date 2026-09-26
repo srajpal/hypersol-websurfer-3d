@@ -14,6 +14,7 @@ import type { DataOp, DataReply, DataRequest } from './data';
 import type { PrivacyOp, PrivacyReply, PrivacyRequest } from './privacy';
 
 export type ShortcutName =
+  | 'layers'
   | 'bookmark'
   | 'library'
   | 'settings'

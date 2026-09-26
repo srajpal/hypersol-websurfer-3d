@@ -94,6 +94,22 @@ it('captures the main screens', async () => {
     await navigateTo(h, server.url('ddm/clk/landing').replace('127.0.0.1', 'ad.doubleclick.net'));
     await sleep(600);
     await capture(h, '8-blocked-card');
+
+    // The layers view (milestone 5): a page broken apart into layers, then flat.
+    await navigateTo(h, server.url('layers.html'));
+    await waitForPage(h, 'layers.html');
+    await sleep(800);
+    await capture(h, '9-layers-view');
+    await pressInShell(h, 'L', ['control', 'shift']);
+    await sleep(600);
+    await capture(h, '10-layers-off');
+    await pressInShell(h, 'L', ['control', 'shift']);
+    await pressInShell(h, ',', ['control']);
+    await h.shell.evaluate(() => {
+      const body = document.querySelector('hs-settings')?.shadowRoot?.querySelector('.body');
+      body?.querySelector('[data-testid="set-layers-on-open"]')?.scrollIntoView({ block: 'start' });
+    });
+    await capture(h, '11-settings-layers');
   } finally {
     await h.close();
     await server.close();

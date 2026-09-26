@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Layers test</title>
+    <style>
+      body { margin: 0; font-family: sans-serif; font-size: 18px; background: #eef1f6; color: #123; }
+      #pinned { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: #1a2b4c; color: #fff;
+                display: flex; align-items: center; padding: 0 20px; z-index: 5; }
+      main { padding: 70px 30px 30px; }
+      section { background: #fff; border-radius: 10px; margin: 0 0 24px; padding: 20px; }
+      #hero { text-align: center; }
+      .row { display: flex; gap: 16px; }
+      .row img { width: 160px; height: 110px; background: #cde; border-radius: 6px; }
+      #target { width: 180px; height: 60px; font-size: 18px; }
+      #spin { transform: rotate(3deg); }
+    </style>
+  </head>
+  <body>
+    <header id="pinned">Pinned header</header>
+    <main>
+      <section id="hero">
+        <h1>Layers test page</h1>
+        <img id="hero-img" src="/icon.png?hero" alt="Hero picture" width="240" height="150" />
+      </section>
+      <section id="cards">
+        <h2>Cards</h2>
+        <div class="row">
+          <img src="/icon.png?a" alt="Card A" /><img src="/icon.png?b" alt="Card B" /><img src="/icon.png?c" alt="Card C" />
+        </div>
+      </section>
+      <section id="form">
+        <h2>Form</h2>
+        <input id="field" type="text" aria-label="Field" />
+        <button id="target" type="button" onclick="this.textContent = 'Clicked ' + (++window.clicks)">Click me</button>
+      </section>
+      <section id="spin"><h2>Already transformed</h2><p>The page turns this one itself; it is left alone.</p></section>
+      <section id="long"><h2>More</h2><p style="height: 900px">Long content, so the page scrolls.</p></section>
+    </main>
+    <script>
+      window.clicks = 0;
+      // Adds a section later, like pages that load content as you go.
+      window.addSection = () => {
+        const s = document.createElement('section');
+        s.id = 'late';
+        s.innerHTML = '<h2>Added later</h2><p>Loaded after the page.</p>';
+        document.querySelector('main').append(s);
+      };
+    </script>
+  </body>
+</html>
