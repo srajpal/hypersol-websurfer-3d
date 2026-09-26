@@ -16,8 +16,8 @@ Plan approved 2026-09-24.
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
 | 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Done (accepted 2026-09-26) |
-| 8 | Everyday browser features | Zoom (buttons, shortcuts, per site), find in page, downloads panel, printing, private tabs | Built; awaiting owner review (J9) |
-| 9 | Passwords | A password manager: offer to save on sign-in, fill on return, view and delete; encrypted with the system's keychain | Later |
+| 8 | Everyday browser features | Zoom (buttons, shortcuts, per site), find in page, downloads panel, printing, private tabs | Done (accepted 2026-09-26, with follow-ups below) |
+| 9 | Passwords | A password manager: offer to save on sign-in, fill on return, view and delete; encrypted with the system's keychain | Later (questions answered, prompt 38; plan waits for the owner's GitHub issues) |
 | 10 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 11 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
 | 12 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
@@ -1133,8 +1133,9 @@ just keep track if it is not time yet."
 
 ## Milestone 8 — Everyday browser features
 
-Status: Built 2026-09-26; waiting for the owner's review (J9) and
-acceptance. Screenshots: docs/screenshots/m8/ (20 to 22). Electron
+Status: Done. Accepted by the owner 2026-09-26 (prompt 38), after
+testing downloads, printing, and private tabs; follow-ups recorded
+below. Screenshots: docs/screenshots/m8/ (20 to 22). Electron
 security check at the start: 44.4.5 still newest. Plan and build
 approved 2026-09-26 (prompt 37), with
 the owner's answers Q1 a (this milestone next, then Passwords, then the
@@ -1218,7 +1219,7 @@ to watch.
 | J6 | Pass |
 | J7 | Pass |
 | J8 | Pass: the find bar and Downloads panel take the keyboard; Escape closes them |
-| J9 | Not checked yet (owner) |
+| J9 | Pass (owner, 2026-09-26, prompt 38), with the follow-ups below |
 | C to I | Pass |
 
 Found and fixed during the build: Electron's findInPage option
@@ -1237,4 +1238,32 @@ and recent history (it only shows them; nothing new is recorded).
 
 J1 to J8 and the regression checks pass, the owner accepts J9, the docs
 and screenshots are updated, and the owner approves the milestone.
+
+### Owner feedback on milestone 8 (2026-09-26, prompt 38), not yet planned
+
+To be used when planning the next work ("Use my feed back before making
+plans"); nothing here is approved to build yet.
+
+- Downloads: no visible sign that a download finished. Proposed: a
+  short notice when a download completes (and when one fails), with
+  Open and Show in folder.
+- Printing to PDF works but the result does not look good. To look into
+  later (likely the tilted 3D page or the layers view reaching the
+  printout; print the page flat and without the layers styles).
+- Private tabs: "New private tab" should also be offered from the "+"
+  button in the top bar.
+
+## Milestone 9 — Passwords: owner's answers (2026-09-26, prompt 38)
+
+Not planned yet: the owner will post GitHub issues first and asked that
+their feedback shape the plan. Answers already given:
+
+- Q1 a: passwords encrypted with the system's own keychain (Electron's
+  safeStorage), unlocked by the system sign-in; no master password.
+- Q2 a: managed in a Passwords tab in the Library (search, view, copy,
+  delete).
+- Q3 a: no import for now; passwords are saved as you sign in.
+- Assumptions shown with the questions (not yet confirmed or refused):
+  offer to save on sign-in; fill only on the same site; never in
+  private tabs; no sync.
 
