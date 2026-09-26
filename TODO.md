@@ -14,7 +14,7 @@ Plan approved 2026-09-24.
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Built; awaiting owner acceptance (F11) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Built; awaiting owner acceptance (G10) |
-| 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Later |
+| 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Current (approved 2026-09-26) |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 8 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
 | 9 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
@@ -840,3 +840,81 @@ pixel. "1 site has their own choice" now reads "its own choice".
 
 G1 to G9 and the regression checks pass, the owner accepts G10, the
 docs and screenshots are updated, and the owner approves the milestone.
+
+## Milestone 6 — Themes and look
+
+Status: Current. Approved 2026-09-26 (prompt 32: "Go ahead with
+milestone 6 and then give a concise list of what to test and approve").
+The owner asked for the build without a question round, so the design
+choices below are the agent's, recorded here for the owner's review
+(H9). Owner direction from prompt 29: lean into the 1980s and 1990s
+aesthetic.
+
+Goal: two finished themes with a switch, the 3D room matching the
+theme, a design pass over every screen, and the page tilt adjustable
+for sharper text.
+
+### Design choices (agent, for owner review)
+
+- Nebula (dark, default): a synthwave night. Deep indigo sky over a
+  magenta horizon glow, a striped retro sun low behind the page, a
+  magenta neon floor grid, cyan as the accent. Faint scanlines over the
+  room (never over pages).
+- Daylight (light): a 1990s pastel day. Pale blue sky over a pink and
+  lavender horizon, a teal accent, a lavender grid, near-white glass
+  panels, dark navy text, no scanlines.
+- Theme tokens gain: a second accent (grid, highlights), the horizon
+  colour, a warning colour (replacing hard-coded error colours), and
+  room options (sun, scanlines). Text contrast is checked against WCAG
+  AA (4.5:1 for text, 3:1 for secondary text) in unit tests.
+- Theme switch: a button at the bottom right beside the shield
+  (ARCHITECTURE.md section 9), and Settings > Theme: Nebula, Daylight,
+  or Match the system. Saved in settings.json; the window's title bar
+  follows the theme's light or dark scheme.
+- Page tilt: Settings > Page tilt, 0 to 20 degrees (default 10). Less
+  tilt gives sharper text (milestone 1 note: text slightly soft when
+  tilted). The --tilt launch option still wins, for tests.
+- Custom window frame: considered and not built. The standard frame
+  keeps native dragging, snapping, and accessibility on all three
+  systems; the theme now sets its light or dark scheme.
+- Small labels (section headings, counters) use a monospace face, the
+  one typographic retro touch; body text stays the system font (a custom
+  font is milestone 14).
+
+### Tasks
+
+- [ ] 1. Theme schema additions and the final Nebula and Daylight
+      values; contrast tests.
+- [ ] 2. The room: sky, horizon glow, retro sun, grid, desk, glow, fog,
+      and lights from the theme, and switchable at run time; cards
+      redraw.
+- [ ] 3. The HUD: every hard-coded colour replaced by theme values;
+      design pass over the top bar, panels, cards, start panel, error
+      cards, shield, About; scanlines.
+- [ ] 4. Theme switch button and Settings > Theme (with Match the
+      system); saved; the title bar and window background follow.
+- [ ] 5. Settings > Page tilt; applied at once.
+- [ ] 6. The layers view's outline uses the theme's accent.
+- [ ] 7. Tests: unit (tokens, contrast, settings); end-to-end H1 to H8;
+      C, D, E, F, G as regression.
+- [ ] 8. Docs and screenshots in both themes (MILESTONE=m6).
+
+### Checks
+
+| # | Check | Expected result |
+|---|---|---|
+| H1 | Theme switch | The button switches Nebula and Daylight; HUD colours and room colours change together |
+| H2 | Settings > Theme | Each choice applies at once and after a restart; Match the system follows the system's light or dark setting |
+| H3 | Room | Sky, grid, desk, glow, fog, lights, and cards use the theme's values |
+| H4 | Window | The window background and title bar scheme follow the theme |
+| H5 | Contrast | Text and secondary text meet WCAG AA contrast on both themes' panels and sky |
+| H6 | Page tilt | The setting re-tilts the page at once and after a restart; clicks land at 0 and 20 degrees |
+| H7 | Layers view | Its outline uses the theme's accent |
+| H8 | No leftovers | No hard-coded colours remain in the shell's styles |
+| H9 | Look and feel | Owner review of both themes; screenshots saved |
+| C to G | Regression | Still pass |
+
+### Done when
+
+H1 to H8 and the regression checks pass, the owner accepts H9, the docs
+and screenshots are updated, and the owner approves the milestone.
