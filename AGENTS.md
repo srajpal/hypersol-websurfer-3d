@@ -63,9 +63,11 @@ plus HoloML, a 3D markup language kept in its own repository.
 10. Mark run and test steps "not checked yet" until they have actually
     been executed in this project. Record commands only after they ran.
 11. Commit after each completed, approved change, with a clear message
-    that says what changed and why. Do not push unless asked. When five
-    or more commits are waiting to be pushed, remind the owner at the end
-    of the reply. Never rewrite published history.
+    that says what changed and why. Push before starting a milestone and
+    after finishing one (owner instruction, 2026-09-26, prompt 37);
+    otherwise push only when asked. When five or more commits are
+    waiting to be pushed, remind the owner at the end of the reply.
+    Never rewrite published history.
 12. One active agent session per working tree at a time. If two sessions
     must run at once, they work in different folders. Before appending to
     PROMPTS.md, read its last heading and use the next number. Every
@@ -175,7 +177,8 @@ milestone; the current milestone's checks are defined in TODO.md):
 - Milestone 7 checks I1 to I9 (same command): the instrument panel on
   and off, page readouts, certificates, console, network list, browser
   gauges, the settings per part, DevTools, efficiency.
-- Later milestones add: per-OS installers (8).
+- Later milestones add: everyday browser features (8), passwords (9),
+  per-OS installers (10).
 
 Rules for tests: a failing test is reported, not deleted. A test is
 changed only when the requirement it checks has changed, and the doc that

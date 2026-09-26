@@ -69,13 +69,14 @@ browser repo for rules and the prompt log.
 - First result: open any normal site in a 3D interface on Windows, macOS,
   Linux, with tabs, address bar, bookmarks, history, two themes, and
   privacy on by default. Desktop only. Mouse, keyboard, touch. Milestones
-  1 to 8 in TODO.md make up the first result (the instrument panel
-  became milestone 7 on 2026-09-26; the first release is 8).
+  1 to 10 in TODO.md make up the first result (the instrument panel
+  became milestone 7 and the everyday features and passwords 8 and 9 on
+  2026-09-26; the first release is 10).
 - Stack: Electron (current supported stable line, 44 as of 2026-09-24),
   TypeScript, Three.js, Lit, SQLite (node:sqlite, built into
   Electron's Node), @ghostery/adblocker-electron (milestone 4),
   electron-vite, Vitest, Playwright; planned and not yet installed:
-  electron-builder (milestone 8). Reasons in ARCHITECTURE.md section 4.
+  electron-builder (milestone 10). Reasons in ARCHITECTURE.md section 4.
   Toolchain: Node 22.13 or newer, pnpm 12.4.1 pinned.
 - Focused page is a live Chromium view (an Electron `<webview>`) placed
   with CSS 3D transforms; background tabs are snapshot textures;
@@ -115,10 +116,10 @@ These are recommendations that survived adversarial verification but
 change scope, add a service, or cost money. None is applied.
 
 - Three-OS continuous integration (GitHub Actions) as a milestone 1 task,
-  so macOS and Linux get signal before milestone 8. Needs approval as a
+  so macOS and Linux get signal before milestone 10. Needs approval as a
   service under rule 3.
 - Code signing and notarisation: Apple Developer Program and a Windows
-  signing route. Paid accounts with lead time; start before milestone 8.
+  signing route. Paid accounts with lead time; start before milestone 10.
 - An update channel (for example a version check against GitHub
   Releases) so Chromium security fixes reach users. Needs a privacy
   statement amendment.
@@ -159,10 +160,10 @@ Electron 44.4.5 is installed in the repo (not globally).
    below.
 2. Do only what the prompt approves. Milestones 4 to 6 are done (accepted
    2026-09-26, prompt 33); the smaller tab cards are in. Milestone 7
-   (Instrument panel) is done (accepted, prompt 36). The owner's newer
-   requests (zoom, a password manager) are tracked in TODO.md, "Requests
-   waiting for a milestone", with a proposed order; the next milestone
-   awaits that choice. Tick tasks and record check results in
+   (Instrument panel) is done (accepted, prompt 36). Milestone 8 (Everyday
+   browser features: zoom, find, downloads, printing, private tabs) is
+   approved and being built; milestone 9 is Passwords; the first release
+   is 10. Push before and after each milestone (AGENTS.md rule 11). Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The
@@ -170,8 +171,9 @@ Electron 44.4.5 is installed in the repo (not globally).
 4. Update README.md, ARCHITECTURE.md, TODO.md, and this file whenever a
    decision or the project state changes. Update the Testing section of
    AGENTS.md only with commands that have actually run.
-5. Commit after each completed change. Push only when the owner asks,
-   and remind them when five or more commits are waiting.
+5. Commit after each completed change. Push before and after each
+   milestone, otherwise only when the owner asks; remind them when five
+   or more commits are waiting.
 6. One active session per working tree. A second session works in the
    other folder or waits.
 
@@ -207,7 +209,7 @@ repo's PROMPTS.md.
   to build.
 - No code in the holoml repo yet.
 - Nothing owed from earlier milestones.
-- No SPEC.md in holoml (outline is part of milestone 8).
+- No SPEC.md in holoml (outline is part of milestone 10).
 - No git tags, branches, CI, issue templates, SECURITY.md, CONTRIBUTING.md,
   or GitHub settings.
 - No memory files saved outside the repo; everything is in these docs.

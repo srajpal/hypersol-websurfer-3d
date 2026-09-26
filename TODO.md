@@ -16,20 +16,23 @@ Plan approved 2026-09-24.
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
 | 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Done (accepted 2026-09-26) |
-| 8 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
-| 9 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
-| 10 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
-| 11 | Car showroom demo | Demo site with walk-around 3D cars | Later |
-| 12 | Free camera and room navigation | Move freely around the room | Later |
-| 13 | Lift to 3D | Images and 3D models on 2D pages become objects | Later |
-| 14 | Everyday browser features | Downloads panel, find in page, zoom, print, private window | Later |
-| 15 | Polish | Custom font, sound design, theme editor, motion tuning | Later |
+| 8 | Everyday browser features | Zoom (buttons, shortcuts, per site), find in page, downloads panel, printing, private tabs | Current (plan and build approved 2026-09-26) |
+| 9 | Passwords | A password manager: offer to save on sign-in, fill on return, view and delete; encrypted with the system's keychain | Later |
+| 10 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
+| 11 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
+| 12 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
+| 13 | Car showroom demo | Demo site with walk-around 3D cars | Later |
+| 14 | Free camera and room navigation | Move freely around the room | Later |
+| 15 | Lift to 3D | Images and 3D models on 2D pages become objects | Later |
+| 16 | Polish | Custom font, sound design, theme editor, motion tuning | Later |
 | — | Further out | HoloML scripting, extensions, sync, theme marketplace, Tor or VPN, VR, iOS and Android | Later |
 
-Milestones 1 to 8 make up the first useful result in BRIEF.md. The
-instrument panel was added as milestone 7 on 2026-09-26 (prompt 35); the
-first release and everything after it moved down by one. Earlier
-entries below that say "milestone 7" for the release now mean 8.
+Milestones 1 to 10 make up the first useful result in BRIEF.md. The
+instrument panel was added as milestone 7 on 2026-09-26 (prompt 35), and
+on the same day (prompt 37) the everyday browser features moved ahead
+of the first release as milestone 8, with a new Passwords milestone 9;
+the first release is now milestone 10. Earlier entries below that say
+"milestone 7" or "milestone 8" for the release now mean 10.
 
 ### Where design work belongs
 
@@ -521,11 +524,11 @@ merged refreshes) and #5 (toolchain pinned and documented).
 Follow-ups, proposed and not approved to build:
 - #4: move database work to a worker off the main process; indexed
   search and history aggregation; latency benchmarks with budgets.
-  Proposed as a task in milestone 8 (first release), before real users
+  Proposed as a task in milestone 10 (first release), before real users
   build up large histories.
 - #5: continuous integration for build, lint, types, and tests needs the
   owner's approval of a service (AGENTS.md rule 3, for example GitHub
-  Actions). Windows, macOS, and Linux coverage belongs with milestone 8's
+  Actions). Windows, macOS, and Linux coverage belongs with milestone 10's
   per-OS checks.
 
 New checks added with the fixes: D13 (favicon limits); E6 (tabs saved
@@ -888,7 +891,7 @@ for sharper text.
   systems; the theme now sets its light or dark scheme.
 - Small labels (section headings, counters) use a monospace face, the
   one typographic retro touch; body text stays the system font (a custom
-  font is milestone 15).
+  font is milestone 16).
 
 ### Tasks
 
@@ -1125,6 +1128,72 @@ just keep track if it is not time yet."
 
 | Request | Best place | Why |
 |---|---|---|
-| Zoom the page in and out, with buttons | Milestone 14, Everyday browser features (zoom is already listed there) | Recommended: move that milestone ahead of the first release, so version 0.1 has zoom, find in page, downloads, and printing |
-| A password manager (a password was not saved) | A new milestone, Passwords | Security-sensitive work of its own: passwords encrypted with the system's keychain (Electron's safeStorage), an offer to save on sign-in, filling on return, and a place to view and delete them; recommended right after the everyday features and before the first release |
+| Zoom the page in and out, with buttons | Milestone 8, Everyday browser features | Placed (prompt 37, Q1 a) |
+| A password manager (a password was not saved) | Milestone 9, Passwords | Placed (prompt 37, Q1 a); plan and questions when milestone 8 is done |
+
+## Milestone 8 — Everyday browser features
+
+Status: Current. Plan and build approved 2026-09-26 (prompt 37), with
+the owner's answers Q1 a (this milestone next, then Passwords, then the
+first release), Q2 a (downloads), Q3 a (private tabs).
+
+Goal: the everyday tools a daily browser needs before its first
+release: zoom, find in page, downloads, printing, and private tabs.
+
+### Decisions (2026-09-26, prompts 36 and 37)
+
+- Zoom (owner request, prompt 36): minus, the percentage, and plus
+  buttons in the top bar (the percentage resets to 100%); Ctrl/Cmd with
+  plus, minus, and 0; remembered per site (as Chrome does), in
+  settings.json; steps from 25% to 500%.
+- Find in page: Ctrl/Cmd+F opens a find bar under the top bar with the
+  match count, next and previous (Enter and Shift+Enter), and Escape to
+  close.
+- Downloads (Q2 a): saved straight to the system's Downloads folder
+  (a number is added to a name that is taken); a Downloads panel slides
+  in from the right (like the Library) with progress, open, show in
+  folder, cancel, and clear the list; a badge on the menu while one is
+  running. The list is kept for the session only.
+- Printing: Ctrl/Cmd+P and Print in the menu open the system's print
+  dialog for the page.
+- Private tabs (Q3 a): a private tab in the same window (menu item and
+  Ctrl/Cmd+Shift+N), clearly marked on its card and in the top bar; it
+  uses a separate in-memory session, so no history, cookies, cache, or
+  site data are kept, and all of it is gone when the last private tab
+  closes. Private tabs are never saved in the tab list for "reopen your
+  tabs". The shield, encrypted DNS, and element hiding apply as usual.
+
+### Tasks
+
+- [ ] 1. Zoom: buttons, shortcuts, per-site memory, the webview's zoom.
+- [ ] 2. Find in page: the find bar, count, next and previous.
+- [ ] 3. Downloads: the main process saves to the Downloads folder and
+      reports progress; the Downloads panel; badge.
+- [ ] 4. Printing from the shortcut and the menu.
+- [ ] 5. Private tabs: an in-memory session with the same protections;
+      marking; no history or saved tabs; menu and shortcut.
+- [ ] 6. docs/privacy.md: downloads and private tabs.
+- [ ] 7. Tests: unit (zoom steps, file names, settings); end-to-end J1 to
+      J8; C to I as regression.
+- [ ] 8. Docs and screenshots (MILESTONE=m8).
+
+### Checks
+
+| # | Check | Expected result |
+|---|---|---|
+| J1 | Zoom | Buttons and shortcuts zoom the page; the percentage shows; remembered per site after a restart; reset works |
+| J2 | Find in page | Ctrl+F finds text with a count; next and previous move; Escape closes |
+| J3 | Downloads | A test file downloads to the chosen folder (a temporary one in tests) with progress; open folder, cancel, and clear work; a taken name gets a number |
+| J4 | Print | The shortcut and the menu open printing for the page (checked through a test hook; no printer needed) |
+| J5 | Private tabs | A private tab is marked; its visits are not in history; its cookies are not in normal tabs and are gone after it closes |
+| J6 | Private and saved tabs | Private tabs are not reopened after a restart |
+| J7 | Protections in private tabs | The shield blocks the test tracker in a private tab |
+| J8 | Keyboard | Every new control is reachable by keyboard; Escape closes the find bar and the panel |
+| J9 | Look and feel | Owner review; screenshots saved |
+| C to I | Regression | Still pass |
+
+### Done when
+
+J1 to J8 and the regression checks pass, the owner accepts J9, the docs
+and screenshots are updated, and the owner approves the milestone.
 
