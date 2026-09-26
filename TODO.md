@@ -13,7 +13,7 @@ Plan approved 2026-09-24.
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Built; awaiting owner acceptance (F11) |
-| 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Later |
+| 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Current (plan and build approved 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Later |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 8 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
@@ -719,3 +719,83 @@ from inside the app (L1).
 F1 to F10 and the regression checks pass, the owner accepts F11 (and L1
 if run), the docs and screenshots are updated, and the owner approves
 the milestone.
+
+## Milestone 5 — Depth layering
+
+Status: Current. Plan and build approved 2026-09-26 (prompt 31), with
+the owner's answers Q1 b ("to start"), Q2 (on by default for now, with a
+per-site and a global setting), Q3 a. Electron security check: done the
+same day for milestone 4 (ARCHITECTURE.md section 3). Milestone 4 still
+awaits the owner's acceptance (F11).
+
+Goal: everyday pages gain visible depth. A layers view breaks a page's
+main sections and images apart into separate layers at different
+depths; the page stays usable, and image positions are reported for
+the later lift-to-3D milestone.
+
+### Decisions (2026-09-26, prompt 31)
+
+Already settled in ARCHITECTURE.md: depth comes from the trusted page
+preload styling top-level sections and images (no pixel copying, so
+input keeps working), and the preload reports image rectangles.
+
+New, from the owner's answers:
+- Q1 b, to start: a layers view on demand (a toolbar button and a
+  shortcut) that spreads sections and images into separate layers.
+  Subtle always-on depth is not built now.
+- Q2: the layers view is on by default when a page opens, for now.
+  Settings has a global switch for it (default on). Switching the view
+  on or off on a page is remembered for that site and wins over the
+  global switch; Settings can clear the per-site choices. (Agent's
+  reading of the answer, stated when saving the plan.)
+- Q3 a: image rectangles are reported to the shell and visible to the
+  tests only; no user-facing feature yet.
+- Technical approach: each lifted element gets its own CSS perspective
+  transform around one shared vanishing point, so no ancestor gains a
+  transform and pinned (fixed or sticky) page parts keep working;
+  elements that are pinned or contain pinned parts are skipped, and the
+  number of layers is capped. The page's layers cannot share the room's
+  3D space, so the view happens inside the page panel; the vanishing
+  point follows the room's parallax.
+
+### Tasks
+
+- [ ] 1. Trial: the layering approach on the test pages and a variety
+      of layouts: pinned headers, click accuracy, text sharpness, frame
+      rate. Report before building on it.
+- [ ] 2. Page preload: find the top-level sections and images, lift them
+      into layers, keep them current as the page changes, scrolls, and
+      resizes; skip risky elements; cap the count; animate in and out
+      (instant with reduced motion).
+- [ ] 3. Shell: the layers button in the top bar and a shortcut; the
+      view per tab; sent to the page, and the vanishing point with the
+      room's parallax.
+- [ ] 4. Settings: "Open pages in the layers view" (default on), the
+      per-site choices (remembered when the view is switched on a page),
+      and clearing them.
+- [ ] 5. Image rectangles reported from the page to the shell, checked
+      there, kept per tab; exposed to the tests.
+- [ ] 6. Tests: unit (section choice, settings); end-to-end G1 to G9; C,
+      D, E, F as regression.
+- [ ] 7. Docs and screenshots (MILESTONE=m5 pnpm screenshots).
+
+### Checks
+
+| # | Check | Expected result |
+|---|---|---|
+| G1 | Layers view | Sections and images of a test page are lifted into separate depths; switching it off restores the page exactly |
+| G2 | Input | Clicks, typing, and scrolling land where they should in the layers view |
+| G3 | Pinned parts | A fixed header stays in place in the layers view |
+| G4 | Button and shortcut | Both switch the view for the tab in front only |
+| G5 | Settings | The global switch sets how pages open; a per-site choice wins; both survive a restart; clearing the choices works |
+| G6 | Image rectangles | Reported for the page's images, and updated after scrolling and resizing |
+| G7 | Changing pages | Sections added later by the page are layered; nothing is left behind when switching off |
+| G8 | Reduced motion | The view switches without animation |
+| G9 | Efficiency | Idle and scrolling stay within the milestone 1 budget with the view on |
+| G10 | Look and feel | Owner review; screenshots saved |
+| C, D, E, F | Regression | Still pass |
+
+### Done when
+
+G1 to G9 and the regression checks pass, the owner accepts G10, the
+docs and screenshots are updated, and the owner approves the milestone.

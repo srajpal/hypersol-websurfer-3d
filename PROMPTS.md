@@ -346,3 +346,14 @@ Sent while milestone 4 was being built.
 ```text
 do some tests and then continue to the next milestone
 ```
+
+## 31 — 2026-09-26
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b35 · Tokens: not captured
+
+```text
+Q1 -b to start
+Q2 - on by default for now but definitely a per site and global setting for on or off on start
+Q3 - a
+Approved to build
+```

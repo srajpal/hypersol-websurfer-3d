@@ -146,8 +146,8 @@ Electron 44.4.5 is installed in the repo (not globally).
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
 2. Do only what the prompt approves. Milestone 4 (Private by default)
-   is built and awaits acceptance; milestone 5 (depth layering) has no
-   approved plan yet; see TODO.md. Tick tasks and record check results in
+   is built and awaits acceptance; milestone 5 (depth layering) is
+   approved and being built; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The
