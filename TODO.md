@@ -954,3 +954,25 @@ under the room's lights; it is lighter now, with more ambient light.
 
 H1 to H8 and the regression checks pass, the owner accepts H9, the docs
 and screenshots are updated, and the owner approves the milestone.
+
+### After acceptance: smaller tab cards (2026-09-26, prompt 33)
+
+Owner request: the tab cards took too much of the screen. Done:
+- Cards are two-thirds of their first size (136 by 102 world units),
+  drawn at full resolution with larger type.
+- The rail shows only with two or more tabs; with one tab the page
+  widens into the space. A "+" button at the left of the top bar (and
+  Ctrl/Cmd+T) opens another tab; the pinned "+" card stays at the end
+  of the rail when it shows.
+- Checks changed with the requirement: D2 now opens the second tab with
+  the top-bar button and checks the rail hides with one tab and appears
+  with two; the last-tab check closes it with Ctrl+W (there is no card
+  to close); D3 and D4 open the second tab with the button. D4 now
+  compares a card's own size with twelve tabs and with two, instead of
+  the spacing between the first two cards: the arc's curve depends on
+  the number of cards, which moves them a few pixels without resizing
+  them.
+- Results: 164 unit tests; 117 of 117 end-to-end checks (D8 included,
+  the clipboard works again). Screenshots in docs/screenshots/m6
+  retaken.
+

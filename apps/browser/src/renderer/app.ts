@@ -551,6 +551,7 @@ export class App {
     t.addEventListener('hs-forward', () => this.focusedView?.goForward());
     t.addEventListener('hs-reload', () => this.focusedView?.reload());
     t.addEventListener('hs-bookmark', () => void this.toggleBookmark());
+    t.addEventListener('hs-new-tab', () => this.store.open());
     t.addEventListener('hs-layers', () => void this.toggleLayers());
     t.addEventListener('hs-menu', (e) => this.onMenu((e as CustomEvent<MenuAction>).detail));
   }

@@ -1,14 +1,17 @@
 import { CanvasTexture, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace } from 'three';
 import type { Theme } from '@hypersol/themes';
 
-export const CARD_WIDTH = 200;
-export const CARD_HEIGHT = 150;
-const SCALE = 2; // canvas pixels per world unit, for sharp text
-const W = CARD_WIDTH * SCALE;
-const H = CARD_HEIGHT * SCALE;
-const SNAP = { x: 8, y: 8, w: W - 16, h: 228 };
-const BAR_Y = 244;
-const CLOSE = { cx: 366, cy: 268, r: 17 };
+// Two-thirds of the milestone 2 size (owner, prompt 33: the cards took too
+// much of the screen). The drawing keeps its full resolution, with larger
+// type, so the smaller card stays readable.
+export const CARD_WIDTH = 136;
+export const CARD_HEIGHT = 102;
+const W = 400; // canvas pixels
+const H = 300;
+const SCALE = W / CARD_WIDTH; // canvas pixels per world unit, for sharp text
+const SNAP = { x: 8, y: 8, w: W - 16, h: 214 };
+const BAR_Y = 228;
+const CLOSE = { cx: 360, cy: 264, r: 24 };
 
 export type CardPart = 'body' | 'close';
 
@@ -174,12 +177,12 @@ export class TabCard {
 
     if (this.model.key === 'plus') {
       ctx.fillStyle = this.hovered ? c.accent : c.text;
-      ctx.font = '300 110px system-ui, sans-serif';
+      ctx.font = '300 140px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('+', W / 2, 118);
-      ctx.font = '600 24px system-ui, sans-serif';
-      ctx.fillText('New tab', W / 2, 238);
+      ctx.font = '600 38px system-ui, sans-serif';
+      ctx.fillText('New tab', W / 2, 246);
       this.texture.needsUpdate = true;
       return;
     }
@@ -216,16 +219,16 @@ export class TabCard {
     // Label bar: favicon, title, close button.
     let textX = 18;
     if (this.favicon) {
-      ctx.drawImage(this.favicon, 16, BAR_Y + 8, 32, 32);
-      textX = 58;
+      ctx.drawImage(this.favicon, 14, BAR_Y + 14, 44, 44);
+      textX = 68;
     }
     const showsClose = this.hovered || focused;
     const maxText = (showsClose ? CLOSE.cx - CLOSE.r - 10 : W - 16) - textX;
     ctx.fillStyle = c.text;
-    ctx.font = '500 22px system-ui, sans-serif';
+    ctx.font = '600 32px system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(fit(ctx, this.model.title || 'Untitled', maxText), textX, BAR_Y + 24);
+    ctx.fillText(fit(ctx, this.model.title || 'Untitled', maxText), textX, BAR_Y + 36);
 
     if (showsClose) {
       ctx.beginPath();
@@ -234,7 +237,7 @@ export class TabCard {
       ctx.fill();
       ctx.strokeStyle = this.hoverClose ? c.backgroundBottom : c.text;
       ctx.lineWidth = 3;
-      const d = 6;
+      const d = 8;
       ctx.beginPath();
       ctx.moveTo(CLOSE.cx - d, CLOSE.cy - d);
       ctx.lineTo(CLOSE.cx + d, CLOSE.cy + d);

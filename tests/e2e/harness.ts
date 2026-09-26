@@ -189,6 +189,7 @@ export interface ShellHooks {
   focusedTabId(): number;
   cardPoint(key: number | 'plus', part: 'body' | 'close'): Point | null;
   rail(): { scroll: number; maxScroll: number; fits: number };
+  railVisible(): boolean;
   animating(): boolean;
   webContentsIdOf(tabId: number): number | null;
   shield(): { count: number; disabled: boolean; open: boolean };

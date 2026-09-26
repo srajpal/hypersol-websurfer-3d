@@ -44,8 +44,10 @@ import type { TabView } from './tab-view';
 export const HUD_HEIGHT = 64;
 // The rail starts well inside the window: cards sit nearer the camera than
 // the page, so perspective pushes them outward.
-const RAIL = { left: 52, width: CARD_WIDTH, bottomMargin: 24, gap: 16 };
-const PAGE_INSETS: Insets = { top: HUD_HEIGHT, right: 36, bottom: 36, left: RAIL.left + RAIL.width + 40 };
+const RAIL = { left: 40, width: CARD_WIDTH, bottomMargin: 24, gap: 12 };
+/** Room for the page. The tab rail only shows with two or more tabs (owner, prompt 33). */
+const PAGE_INSETS: Insets = { top: HUD_HEIGHT, right: 36, bottom: 36, left: RAIL.left + RAIL.width + 32 };
+const PAGE_INSETS_NO_RAIL: Insets = { ...PAGE_INSETS, left: 36 };
 const GLOW_MARGIN = 64;
 const DESK_DEPTH = 360;
 const SWITCH_MS = 250;
@@ -122,6 +124,8 @@ export class Room {
   private framePending = false;
   private lastFrameTime = 0;
   private hoveredCard: TabCard | null = null;
+  /** Whether the tab rail shows: only with two or more tabs. */
+  private railShown = false;
   /** The last few parallax decisions, for diagnosing test failures. */
   readonly pointerLog: { x: number; y: number; target: string; overPage: boolean }[] = [];
   private readonly raycaster = new Raycaster();
@@ -260,8 +264,20 @@ export class Room {
       }
     }
     this.order = all.map((m) => m.key);
-    this.layoutCards();
+    const shown = models.length >= 2;
+    if (shown !== this.railShown) {
+      this.railShown = shown;
+      if (!shown && this.hoveredCard) this.setHovered(null);
+      this.layout(); // the page widens or makes room for the rail
+    } else {
+      this.layoutCards();
+    }
     this.requestRender();
+  }
+
+  /** Whether the tab rail is showing (two or more tabs). */
+  get railVisible(): boolean {
+    return this.railShown;
   }
 
   setSnapshot(tabId: number, dataUrl: string): void {
@@ -329,7 +345,7 @@ export class Room {
       viewportHeight: h,
       fovDeg: this.options.fovDeg ?? 40,
       tiltDeg: this.options.tiltDeg,
-      insets: PAGE_INSETS,
+      insets: this.railShown ? PAGE_INSETS : PAGE_INSETS_NO_RAIL,
     });
     const layout = this.currentLayout;
 
@@ -394,7 +410,7 @@ export class Room {
       if (!card || !place) return;
       card.mesh.position.set(place.position.x, place.position.y, place.position.z);
       card.mesh.rotation.set(place.rotationX, place.rotationY, 0);
-      card.setOpacity(place.opacity);
+      card.setOpacity(this.railShown ? place.opacity : 0);
     });
   }
 
@@ -666,7 +682,7 @@ export class Room {
     canvas.addEventListener(
       'wheel',
       (e) => {
-        if (e.clientX > RAIL.left + RAIL.width + 24) return;
+        if (!this.railShown || e.clientX > RAIL.left + RAIL.width + 24) return;
         const before = this.railScroll;
         this.railScroll = clampScroll(this.arcInput(), this.railScroll + e.deltaY);
         if (this.railScroll === before) return;

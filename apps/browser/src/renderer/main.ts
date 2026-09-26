@@ -80,6 +80,7 @@ if (params.get('test') === '1') {
       focusedTabId: () => store.focusedId,
       cardPoint: (key: number | 'plus', part: CardPart) => room.cardPoint(key, part),
       rail: () => room.rail,
+      railVisible: () => room.railVisible,
       animating: () => room.animating,
       webContentsIdOf: (tabId: number) => app.viewOf(tabId)?.webContentsId ?? null,
       layersOf: (tabId: number) => app.layersState(tabId),

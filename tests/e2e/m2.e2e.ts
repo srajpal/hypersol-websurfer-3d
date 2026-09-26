@@ -42,6 +42,7 @@ afterAll(async () => {
 const FOCUSED = '[data-testid="page-panel"][aria-hidden="false"]';
 const OVERLAY = `${FOCUSED} [data-testid="page-overlay"]`;
 const bar = (id: string) => `hs-toolbar [data-testid="${id}"]`;
+const NEW_TAB = bar('new-tab');
 
 async function tabCount(h: Harness, n: number): Promise<void> {
   await waitFor(`${n} tabs`, () => tabs(h), (t) => t.length === n);
@@ -121,9 +122,13 @@ describe('D2 tabs', () => {
     expect(await count(server.url('link-a.html'))).toBe(1);
   });
 
-  it('the "+" card opens a start tab with the address field ready', async () => {
-    await clickCard(h, 'plus');
+  it('with one tab the rail is hidden; the new-tab button opens a start tab, the address field ready, and the rail appears', async () => {
+    // Owner, prompt 33: the cards show only with two or more tabs.
+    expect(await shellCall(h, 'railVisible')).toBe(false);
+    expect(await shellCall(h, 'cardPoint', 'plus', 'body')).toBeNull();
+    await h.shell.click(NEW_TAB);
     await tabCount(h, 2);
+    await waitFor('rail shown', () => shellCall(h, 'railVisible'), (v) => v);
     const tab = await focusedTab(h);
     expect(tab.state).toBe('start');
     expect(await h.shell.locator(`${FOCUSED} [data-testid="start-panel"]`).isVisible()).toBe(true);
@@ -174,9 +179,10 @@ describe('D2 tabs', () => {
     expect((await tabs(h))[0]!.url).toContain('form.html');
   });
 
-  it('closing the last tab leaves a start tab', async () => {
+  it('closing the last tab leaves a start tab, and the rail hides', async () => {
+    expect(await shellCall(h, 'railVisible')).toBe(false); // one tab left
     const before = (await tabs(h))[0]!.id;
-    await clickCard(h, before, 'close');
+    await pressInShell(h, 'W', ['control']);
     await waitFor('a fresh start tab', () => tabs(h), (t) => t.length === 1 && t[0]!.id !== before);
     expect((await focusedTab(h)).state).toBe('start');
   });
@@ -192,7 +198,7 @@ describe('D3 snapshots and favicons', () => {
 
   it('shows the page on its card and the favicon, then stops drawing', async () => {
     await waitFor('favicon', () => focusedTab(h), (t) => t.hasFavicon);
-    await clickCard(h, 'plus');
+    await h.shell.click(NEW_TAB);
     await navigateTo(h, server.url('long.html'));
     await waitForPage(h, 'long');
     const all = await waitFor('snapshots on both cards', () => tabs(h), (t) => t.every((x) => x.hasSnapshot));
@@ -214,13 +220,17 @@ describe('D4 many tabs', () => {
   afterAll(async () => h?.close());
 
   it('scrolls the arc and keeps cards at full size', async () => {
-    await clickCard(h, 'plus');
+    await h.shell.click(NEW_TAB);
     await tabCount(h, 2);
     await settled(h);
-    const [a, b] = await tabs(h);
-    const pa = (await shellCall(h, 'cardPoint', a!.id, 'body'))!;
-    const pb = (await shellCall(h, 'cardPoint', b!.id, 'body'))!;
-    const spacing = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+    const [a] = await tabs(h);
+    // A card's size on screen: from its middle to its close button.
+    const size = async (id: number) => {
+      const body = (await shellCall(h, 'cardPoint', id, 'body'))!;
+      const close = (await shellCall(h, 'cardPoint', id, 'close'))!;
+      return Math.hypot(close.x - body.x, close.y - body.y);
+    };
+    const before = await size(a!.id);
 
     for (let i = 0; i < 10; i++) await pressInShell(h, 'T', ['control']);
     await tabCount(h, 12);
@@ -238,9 +248,12 @@ describe('D4 many tabs', () => {
     for (let i = 0; i < 20; i++) await h.shell.mouse.wheel(0, -400);
     await waitFor('rail at the top', () => shellCall(h, 'rail'), (r) => r.scroll === 0);
     const all = await tabs(h);
-    const qa = (await shellCall(h, 'cardPoint', all[0]!.id, 'body'))!;
-    const qb = (await shellCall(h, 'cardPoint', all[1]!.id, 'body'))!;
-    expect(Math.abs(Math.hypot(qb.x - qa.x, qb.y - qa.y) - spacing)).toBeLessThan(1.5);
+    // The same card is the same size with twelve tabs as with two. (Until
+    // 2026-09-26 this compared the spacing of the first two cards; the
+    // arc's curve depends on the number of cards, which moves them a few
+    // pixels without resizing them, and with the smaller cards that
+    // crossed the tolerance.)
+    expect(Math.abs((await size(all[0]!.id)) - before)).toBeLessThan(1.5);
     expect(await shellCall(h, 'cardPoint', all[11]!.id, 'body')).toBeNull(); // scrolled out of view
     expect(await shellCall(h, 'cardPoint', 'plus', 'body')).not.toBeNull(); // still in view at the top
     await clickCard(h, 'plus');

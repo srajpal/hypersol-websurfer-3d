@@ -3,6 +3,7 @@ import { LitElement, css, html, nothing, type PropertyValues } from 'lit';
 export type MenuAction = 'new-tab' | 'close-tab' | 'library' | 'settings' | 'about';
 
 const icon = {
+  plus: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>`,
   back: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>`,
   forward: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>`,
   reload: html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" /></svg>`,
@@ -21,7 +22,7 @@ const icon = {
  * controller does the work.
  *
  * Events (bubbling, composed): hs-navigate (detail: typed text), hs-back,
- * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-menu (detail: MenuAction).
+ * hs-forward, hs-reload, hs-bookmark, hs-layers, hs-new-tab, hs-menu (detail: MenuAction).
  */
 export class HsToolbar extends LitElement {
   static override properties = {
@@ -278,6 +279,9 @@ export class HsToolbar extends LitElement {
     const mod = navigator.platform.startsWith('Mac') ? 'Cmd' : 'Ctrl';
     return html`
       <div class="bar">
+        <button data-testid="new-tab" aria-label="New tab" title=${`New tab (${mod}+T)`} @click=${() => this.fire('hs-new-tab')}>
+          ${icon.plus}
+        </button>
         <button data-testid="back" aria-label="Back" title="Back" ?disabled=${!this.canGoBack} @click=${() => this.fire('hs-back')}>
           ${icon.back}
         </button>

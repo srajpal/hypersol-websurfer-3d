@@ -305,8 +305,12 @@ The window uses the standard OS title bar.
 - Left rail: tab cards, stacked in a shallow arc, each a snapshot with
   title and favicon. Click to focus; the cards animate as the focused
   page slides into the centre. Close on hover. "+" card at the end.
-- Top HUD (2D overlay, always sharp): back, forward, reload, address and
-  search bar, layers view button, bookmark star, menu button. Loading progress is a thin strip under the bar.
+  Since 2026-09-26 (owner, prompt 33) the cards are two-thirds of their
+  first size, and the rail shows only with two or more tabs; with one
+  tab the page takes the space, and a "+" button at the left of the top
+  bar (or Ctrl/Cmd+T) opens another.
+- Top HUD (2D overlay, always sharp): new tab, back, forward, reload,
+  address and search bar, layers view button, bookmark star, menu button. Loading progress is a thin strip under the bar.
 - Right side, on demand: a slide-in Library panel (bookmarks, history) or
   Settings panel. Only one open at a time. Escape closes it.
 - Bottom-right: theme switch and privacy shield (count of blocked
