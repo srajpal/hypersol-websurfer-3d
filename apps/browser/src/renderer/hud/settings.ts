@@ -1,7 +1,17 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { live } from 'lit/directives/live.js';
 import type { DnsStatus, FilterStatus } from '../../shared/privacy';
-import { defaults, SEARCH_ENGINES, type DnsMode, type SearchEngineId, type Settings, type StartupMode } from '../../shared/settings';
+import {
+  defaults,
+  MAX_TILT,
+  MIN_TILT,
+  SEARCH_ENGINES,
+  type DnsMode,
+  type SearchEngineId,
+  type Settings,
+  type StartupMode,
+  type ThemeChoice,
+} from '../../shared/settings';
 import type { DataClient, PrivacyClient } from '../data';
 import { panelStyles } from './panel-styles';
 
@@ -66,6 +76,7 @@ export class HsSettings extends LitElement {
       legend {
         padding: 0;
         margin: 6px 0 8px;
+        font-family: var(--hs-font-mono);
         font-size: 12px;
         font-weight: 600;
         letter-spacing: 0.08em;
@@ -85,6 +96,15 @@ export class HsSettings extends LitElement {
         width: 16px;
         height: 16px;
         margin: 0;
+      }
+      .tilt input {
+        flex: 1;
+        accent-color: var(--hs-accent);
+      }
+      .tilt output {
+        min-width: 3ch;
+        font-family: var(--hs-font-mono);
+        text-align: right;
       }
       .note {
         margin: 4px 0 0 26px;
@@ -154,6 +174,26 @@ export class HsSettings extends LitElement {
         </header>
         <div class="body">
           ${this.problem ? html`<p class="error" role="alert" data-testid="set-problem">${this.problem}</p>` : nothing}
+          <fieldset>
+            <legend>Look</legend>
+            ${this.themeChoice('nebula', 'Nebula: a synthwave night')}
+            ${this.themeChoice('daylight', 'Daylight: a pastel day')}
+            ${this.themeChoice('system', "Match the system's light or dark setting")}
+            <label class="tilt">
+              Page tilt
+              <input
+                type="range"
+                data-testid="set-tilt"
+                min=${MIN_TILT}
+                max=${MAX_TILT}
+                step="1"
+                .value=${live(String(this.settings.pageTilt))}
+                @change=${(e: Event) => this.save({ pageTilt: Number((e.target as HTMLInputElement).value) })}
+              />
+              <output data-testid="set-tilt-value">${this.settings.pageTilt}°</output>
+            </label>
+            <p class="note">Less tilt gives sharper text.</p>
+          </fieldset>
           <fieldset>
             <legend>Search engine</legend>
             ${(Object.keys(SEARCH_ENGINES) as SearchEngineId[]).map(
@@ -262,6 +302,19 @@ export class HsSettings extends LitElement {
         data-testid=${`set-startup-${mode}`}
         .checked=${live(this.settings.onStartup === mode)}
         @change=${() => this.save({ onStartup: mode })}
+      />
+      ${label}
+    </label>`;
+  }
+
+  private themeChoice(choice: ThemeChoice, label: string) {
+    return html`<label>
+      <input
+        type="radio"
+        name="theme"
+        data-testid=${`set-theme-${choice}`}
+        .checked=${live(this.settings.theme === choice)}
+        @change=${() => this.save({ theme: choice })}
       />
       ${label}
     </label>`;

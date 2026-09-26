@@ -38,7 +38,7 @@ export const panelStyles = css`
     background: color-mix(in srgb, var(--hs-panel-glass) 94%, transparent);
     color: var(--hs-text);
     box-shadow:
-      0 12px 40px rgb(0 0 0 / 50%),
+      0 12px 40px var(--hs-shadow),
       0 0 calc(30px * var(--hs-glow-strength)) color-mix(in srgb, var(--hs-accent) 25%, transparent);
     font-size: 14px;
   }
@@ -55,6 +55,7 @@ export const panelStyles = css`
   }
   h3 {
     margin: 16px 0 6px;
+    font-family: var(--hs-font-mono);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -93,7 +94,7 @@ export const panelStyles = css`
     line-height: 1;
   }
   .danger {
-    border-color: #ff8a65;
+    border-color: var(--hs-warning);
   }
   .muted {
     color: var(--hs-text-muted);
@@ -104,7 +105,7 @@ export const panelStyles = css`
   }
   .error {
     margin: 18px 0;
-    color: #ffb199;
+    color: var(--hs-warning);
   }
   .confirm {
     display: flex;
@@ -113,7 +114,7 @@ export const panelStyles = css`
     gap: 8px;
     padding: 10px;
     border-radius: 10px;
-    background: color-mix(in srgb, #ff8a65 12%, transparent);
+    background: color-mix(in srgb, var(--hs-warning) 12%, transparent);
   }
   .confirm p {
     margin: 0;

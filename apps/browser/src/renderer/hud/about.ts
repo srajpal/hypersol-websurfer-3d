@@ -32,7 +32,7 @@ export class HsAbout extends LitElement {
     :host([open]) {
       display: grid;
       place-items: center;
-      background: rgb(0 0 0 / 45%);
+      background: color-mix(in srgb, var(--hs-background-bottom) 65%, transparent);
     }
     section {
       width: min(440px, calc(100vw - 48px));

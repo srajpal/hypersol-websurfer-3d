@@ -126,10 +126,10 @@ after they ran; macOS and Linux not checked yet). Counts are as of the
 date given and grow with each milestone; TODO.md has the latest.
 - Toolchain: Node 22.13 or newer; pnpm 12.4.1, pinned in package.json.
 - Install: `pnpm install --frozen-lockfile`
-- Unit: `pnpm test` (Vitest; 159 tests passed on 2026-09-26)
+- Unit: `pnpm test` (Vitest; 164 tests passed on 2026-09-26)
 - Lint and type check: `pnpm lint` and `pnpm typecheck` (both clean)
 - End-to-end: `pnpm test:e2e` builds the app, then runs Playwright
-  against it (about three minutes; 111 checks on 2026-09-26). Needs openssl on PATH for
+  against it (about three minutes; 117 checks on 2026-09-26). Needs openssl on PATH for
   the certificate-error check (Git for Windows includes one). Every
   host except 127.0.0.1 is blocked during the run, and the test windows
   ignore the real mouse, so a resting cursor cannot disturb results. See
@@ -168,7 +168,11 @@ milestone; the current milestone's checks are defined in TODO.md):
   check runs with it on.
 - Filter lists: `pnpm filters:update` rebuilds the starter copy from the
   internet (run before a release; first run 2026-09-26).
-- Later milestones add: theme switch (6), per-OS installers (7).
+- Milestone 6 checks H1 to H7 (same command): theme switch, Settings >
+  Theme with "Match the system", the room and window following the
+  theme, page tilt, the layers view's outline; H5 (contrast) and H8 (no
+  hard-coded colours) are unit tests.
+- Later milestones add: per-OS installers (7).
 
 Rules for tests: a failing test is reported, not deleted. A test is
 changed only when the requirement it checks has changed, and the doc that

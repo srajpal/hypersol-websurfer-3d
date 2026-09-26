@@ -110,6 +110,23 @@ it('captures the main screens', async () => {
       body?.querySelector('[data-testid="set-layers-on-open"]')?.scrollIntoView({ block: 'start' });
     });
     await capture(h, '11-settings-layers');
+    await pressInShell(h, 'Escape');
+
+    // Daylight (milestone 6): the same screens in the light theme.
+    await h.shell.click('hs-theme-button [data-testid="theme"]');
+    await waitFor('Daylight', () => h.shell.evaluate(() => document.documentElement.style.colorScheme), (s) => s === 'light');
+    await sleep(400);
+    await capture(h, '12-daylight-layers');
+    await navigateTo(h, server.url('link-a.html'));
+    await waitForPage(h, 'link-a');
+    await capture(h, '13-daylight-tabs');
+    await pressInShell(h, ',', ['control']);
+    await capture(h, '14-daylight-settings');
+    await pressInShell(h, 'Escape');
+    await navigateTo(h, server.url('shield.html').replace('127.0.0.1', 'shop.test'));
+    await waitForPage(h, 'shield.html');
+    await h.shell.click('hs-shield [data-testid="shield"]');
+    await capture(h, '15-daylight-shield');
   } finally {
     await h.close();
     await server.close();

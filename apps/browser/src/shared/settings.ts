@@ -19,6 +19,10 @@ export type StartupMode = 'new-tab' | 'last-tabs';
  * network's own DNS.
  */
 export type DnsMode = 'secure' | 'automatic';
+/** A built-in theme, or follow the system's light or dark setting (milestone 6). */
+export type ThemeChoice = 'nebula' | 'daylight' | 'system';
+export const MIN_TILT = 0;
+export const MAX_TILT = 20;
 
 export interface Settings {
   searchEngine: SearchEngineId;
@@ -32,6 +36,9 @@ export interface Settings {
   layersOnOpen: boolean;
   /** Per-site choice for the layers view, by host name; set when the view is switched on a page. */
   layersSites: Record<string, boolean>;
+  theme: ThemeChoice;
+  /** How far the page leans back, in whole degrees (less tilt, sharper text). */
+  pageTilt: number;
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -42,9 +49,11 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   pausedSites: Object.freeze([]) as unknown as string[],
   layersOnOpen: true,
   layersSites: Object.freeze({}) as Record<string, boolean>,
+  theme: 'nebula',
+  pageTilt: 10,
 });
 
-const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites', 'layersOnOpen', 'layersSites'] as const;
+const SETTING_KEYS = ['searchEngine', 'onStartup', 'dnsMode', 'filterRefresh', 'pausedSites', 'layersOnOpen', 'layersSites', 'theme', 'pageTilt'] as const;
 export const MAX_PAUSED_SITES = 1000;
 export const MAX_LAYERS_SITES = 1000;
 
@@ -83,6 +92,14 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
         return { error: 'pausedSites must be a list of host names' };
       }
       next.pausedSites = [...new Set(value.map((h: string) => h.toLowerCase()))];
+    } else if (key === 'theme') {
+      if (value !== 'nebula' && value !== 'daylight' && value !== 'system') return { error: `Unknown theme: ${String(value)}` };
+      next.theme = value;
+    } else if (key === 'pageTilt') {
+      if (!Number.isInteger(value) || (value as number) < MIN_TILT || (value as number) > MAX_TILT) {
+        return { error: `pageTilt must be a whole number from ${MIN_TILT} to ${MAX_TILT}` };
+      }
+      next.pageTilt = value as number;
     } else if (key === 'layersOnOpen') {
       if (typeof value !== 'boolean') return { error: 'layersOnOpen must be true or false' };
       next.layersOnOpen = value;

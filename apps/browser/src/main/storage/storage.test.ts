@@ -65,6 +65,15 @@ describe('settings', () => {
     });
   });
 
+  it('reads and checks the theme and page tilt settings (milestone 6)', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ theme: 'nebula', pageTilt: 10 });
+    expect(parseSettings('{"theme":"system","pageTilt":0}').settings).toMatchObject({ theme: 'system', pageTilt: 0 });
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { theme: 'vaporwave' })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { pageTilt: 21 })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { pageTilt: 2.5 })).toHaveProperty('error');
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { pageTilt: 20 })).toMatchObject({ settings: { pageTilt: 20 } });
+  });
+
   it('reads and checks the layers view settings (milestone 5)', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({ layersOnOpen: true, layersSites: {} });
     expect(parseSettings('{"layersOnOpen":false,"layersSites":{"News.Example":true}}').settings).toMatchObject({
@@ -102,7 +111,7 @@ describe('settings', () => {
 
   it('refuses bad changes', () => {
     expect(applySettingsPatch(DEFAULT_SETTINGS, { onStartup: 'sometimes' })).toHaveProperty('error');
-    expect(applySettingsPatch(DEFAULT_SETTINGS, { theme: 'x' })).toEqual({ error: 'Unknown setting: theme' });
+    expect(applySettingsPatch(DEFAULT_SETTINGS, { wallpaper: 'x' })).toEqual({ error: 'Unknown setting: wallpaper' });
     expect(applySettingsPatch(DEFAULT_SETTINGS, null)).toHaveProperty('error');
   });
 

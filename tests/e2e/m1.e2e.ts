@@ -155,9 +155,11 @@ describe('C1 app launches', () => {
         accent: s.getPropertyValue('--hs-accent').trim(),
         desk: s.getPropertyValue('--hs-desk').trim(),
         floorGrid: s.getPropertyValue('--hs-floor-grid').trim(),
+        horizon: s.getPropertyValue('--hs-horizon').trim(),
       };
     });
-    expect(colors).toEqual(css);
+    // The room also reports colours with no CSS twin (lights, fog); compare the shared ones.
+    expect({ accent: colors['accent'], desk: colors['desk'], floorGrid: colors['floorGrid'], horizon: colors['horizon'] }).toEqual(css);
   });
 });
 

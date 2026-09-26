@@ -41,7 +41,7 @@ export class TabCard {
 
   constructor(
     model: CardModel,
-    private readonly theme: Theme,
+    private theme: Theme,
     private readonly onRedraw: () => void,
   ) {
     this.model = model;
@@ -147,6 +147,12 @@ export class TabCard {
       this.onRedraw();
     };
     img.src = src;
+  }
+
+  /** Redraws the card in another theme's colours. */
+  setTheme(theme: Theme): void {
+    this.theme = theme;
+    this.draw();
   }
 
   private draw(): void {

@@ -4,6 +4,7 @@ import './hud/about';
 import './hud/library';
 import './hud/settings';
 import './hud/shield';
+import './hud/theme-button';
 import { DEFAULT_TILT_DEG, clampTilt } from '@hypersol/scene-core';
 import { defaultTheme } from '@hypersol/themes';
 import type { ShellBridge } from '../shared/commands';
@@ -27,6 +28,8 @@ about.addEventListener('hs-about-closed', () => app.focusedView?.focusContent())
 const app = new App({
   startUrl: params.get('startUrl') ?? '',
   tiltDeg: tiltParam === null ? DEFAULT_TILT_DEG : clampTilt(Number(tiltParam)),
+  // A tilt from the command line wins over Settings > Page tilt.
+  tiltFixed: tiltParam !== null,
   ...(params.get('searchUrl') ? { searchUrlOverride: params.get('searchUrl')! } : {}),
   theme: defaultTheme,
   bridge,
@@ -36,6 +39,7 @@ const app = new App({
   library: document.querySelector('hs-library')!,
   settingsPanel: document.querySelector('hs-settings')!,
   shield: document.querySelector('hs-shield')!,
+  themeButton: document.querySelector('hs-theme-button')!,
   tabList: document.getElementById('tab-list') as HTMLElement,
 });
 void app.start();
@@ -79,6 +83,8 @@ if (params.get('test') === '1') {
       animating: () => room.animating,
       webContentsIdOf: (tabId: number) => app.viewOf(tabId)?.webContentsId ?? null,
       layersOf: (tabId: number) => app.layersState(tabId),
+      theme: () => app.theme.id,
+      tilt: () => room.tiltDeg,
       layers: () => {
         const id = store.focusedId;
         return { on: app.layersState(id), images: app.focusedView?.images ?? [] };

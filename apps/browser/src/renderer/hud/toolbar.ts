@@ -211,7 +211,7 @@ export class HsToolbar extends LitElement {
       border-radius: 10px;
       border: 1px solid color-mix(in srgb, var(--hs-accent) 35%, transparent);
       background: var(--hs-panel-glass);
-      box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+      box-shadow: 0 8px 28px var(--hs-shadow);
     }
     [role='menuitem'] {
       display: flex;

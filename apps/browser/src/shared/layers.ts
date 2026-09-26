@@ -16,6 +16,8 @@ export interface LayersState {
   animate: boolean;
   /** The room's parallax, each axis -1 to 1: the layers' vanishing point follows it. */
   parallax: { x: number; y: number };
+  /** The theme's accent, for the layers' outline (#rrggbb). */
+  accent: string;
 }
 
 /** One image on the page, in CSS pixels relative to the page's view, without the layers view's lift. */
@@ -42,7 +44,8 @@ export function parseLayersState(raw: unknown): LayersState | null {
   if (typeof r['on'] !== 'boolean' || typeof r['animate'] !== 'boolean' || !p || !isNum(p['x']) || !isNum(p['y'])) {
     return null;
   }
-  return { on: r['on'], animate: r['animate'], parallax: { x: p['x'], y: p['y'] } };
+  const accent = typeof r['accent'] === 'string' && /^#[0-9a-f]{6}$/i.test(r['accent']) ? r['accent'] : '#39e6ff';
+  return { on: r['on'], animate: r['animate'], parallax: { x: p['x'], y: p['y'] }, accent };
 }
 
 /** Checks an image report from a page. Anything malformed is refused whole. */

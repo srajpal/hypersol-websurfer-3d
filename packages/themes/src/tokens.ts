@@ -31,6 +31,9 @@ export function toCssVariables(theme: Theme): Record<string, string> {
     vars[cssVarName(token)] = hex.toLowerCase();
   }
   vars['--hs-glow-strength'] = String(theme.glowStrength);
+  vars['--hs-scanlines'] = String(theme.room.scanlines);
+  // Shadows: deep on dark themes, a light tinted shade on light ones.
+  vars['--hs-shadow'] = theme.scheme === 'dark' ? 'rgb(0 0 0 / 50%)' : 'rgb(40 30 90 / 22%)';
   return vars;
 }
 
@@ -52,5 +55,24 @@ export function validateTheme(theme: Theme): string[] {
   if (!(theme.glowStrength >= 0 && theme.glowStrength <= 1)) {
     problems.push('glowStrength must be between 0 and 1');
   }
+  if (!(theme.room.scanlines >= 0 && theme.room.scanlines <= 0.3)) {
+    problems.push('room.scanlines must be between 0 and 0.3');
+  }
   return problems;
+}
+
+/** WCAG relative luminance of a #rrggbb colour. */
+export function luminance(hex: string): number {
+  const n = hexToNumber(hex);
+  const channel = (v: number) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+}
+
+/** WCAG contrast ratio between two colours, 1 to 21. */
+export function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
 }

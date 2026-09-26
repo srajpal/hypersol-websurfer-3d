@@ -109,7 +109,7 @@ export class HsShield extends LitElement {
     /* An LCD-style readout, a nod to 1980s and 1990s hardware. */
     .count {
       min-width: 3ch;
-      font-family: 'Consolas', 'Menlo', 'DejaVu Sans Mono', monospace;
+      font-family: var(--hs-font-mono);
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.08em;
       text-align: right;
@@ -130,7 +130,7 @@ export class HsShield extends LitElement {
       border: 1px solid color-mix(in srgb, var(--hs-accent) 45%, transparent);
       background: color-mix(in srgb, var(--hs-panel-glass) 96%, transparent);
       box-shadow:
-        0 12px 40px rgb(0 0 0 / 50%),
+        0 12px 40px var(--hs-shadow),
         0 0 calc(30px * var(--hs-glow-strength)) color-mix(in srgb, var(--hs-accent) 25%, transparent);
     }
     header {
@@ -176,7 +176,7 @@ export class HsShield extends LitElement {
       color: var(--hs-text-muted);
     }
     .error {
-      color: #ffb199;
+      color: var(--hs-warning);
     }
     ul {
       list-style: none;

@@ -104,6 +104,9 @@ touchpad, no touch screen.
 | Closing and quitting | Before the window closes, the shell saves the open tabs and confirms (at most 2 s); a requested quit is then resumed, while an ordinary window close stays a close | Keeps the latest tabs; Quit still quits on macOS, where closing the last window keeps the app running (GitHub issue #3, PR #7 review). |
 | Damaged saved data | A damaged settings.json is renamed aside and defaults are used; if the database cannot open, browsing continues and nothing is recorded | The app always starts. |
 | Settings | JSON file in the app data folder | Simple, human-readable, easy to back up. |
+| Themes | Nebula (dark, default) and Daylight (light) in packages/themes; each sets the HUD's CSS variables, the room (sky decorations, grid, desk, glow, fog, lights), the cards, and the layers view's outline, and switches at run time. Settings > Theme: Nebula, Daylight, or Match the system; a button at the bottom right switches the two. The window's background and title-bar scheme (nativeTheme) follow | Milestone 6 (agent's design, prompt 32; owner direction prompt 29: 1980s and 1990s). Contrast is unit tested against WCAG AA. |
+| Page tilt | Settings > Page tilt, 0 to 20 degrees, default 10; a --tilt on the command line wins | Less tilt gives sharper text (milestone 1 note). |
+| Window frame, reconsidered | Standard OS frame kept | Considered in milestone 6: a custom frame would lose native dragging, snapping, and accessibility; the theme now sets the frame's light or dark scheme. |
 | Bookmarks and history | SQLite through Node's built-in node:sqlite (owner decision 2026-09-25, prompt 20) | Fast search over thousands of rows; standard for browsers. Built into Electron's Node, so no native module and no extra package. |
 | UI widgets (address bar, menus) | Lit web components | Tiny, standards-based, no framework lock-in; themed with CSS variables. |
 | Build | electron-vite (Vite) now; electron-builder planned for milestone 7 (not yet installed) | Fast dev reload; installers for Windows, macOS, Linux. |
@@ -172,7 +175,8 @@ hypersol-websurfer-3d/
           hud/                 Lit components: toolbar.ts (nav buttons,
                                address bar, bookmark star, menu, loading
                                strip), library.ts, settings.ts, about.ts,
-                               shield.ts (count and popover).
+                               shield.ts (count and popover),
+                               theme-button.ts (theme switch).
                                Tabs are 3D cards under scene/, not a 2D strip.
           state/               tabs.ts: the tab list and focus
           url.ts, load-errors.ts
@@ -189,8 +193,9 @@ hypersol-websurfer-3d/
                                PagePanel interface, camera rig. No Electron
                                imports, so it can be unit tested and reused
                                by HoloML rendering later.
-    themes/                    @hypersol/themes: theme schema and the two
-                               built-in themes
+    themes/                    @hypersol/themes: theme schema, the two
+                               built-in themes (nebula.ts, daylight.ts),
+                               contrast helpers
     holoml-renderer/           (planned) @hypersol/holoml-renderer: maps
                                HoloML nodes to Three.js objects. Skeleton in
                                milestone 7; real work in a later milestone.
@@ -199,7 +204,7 @@ hypersol-websurfer-3d/
     screenshots/               progress screenshots, one folder per milestone
     privacy.md                 what is blocked, what is stored, what is fetched
   tests/
-    e2e/                       Playwright drives the built app (m1 to m5 checks)
+    e2e/                       Playwright drives the built app (m1 to m6 checks)
     fixtures/                  sample pages served from 127.0.0.1
     screenshots/               progress screenshots (pnpm screenshots)
 ```
@@ -275,6 +280,7 @@ filter list changes as commands.
 | Filter lists | filters/engine.bin and engine.json in the app data folder (the last refresh); the starter copy in the app otherwise | Refreshed daily; switchable in Settings; "Update now" |
 | Paused sites, DNS mode, list updates switch | settings.json | Changed in the shield popover and Settings |
 | Layers view: global switch and per-site choices | settings.json | Changed in Settings and by switching the view on a page |
+| Theme and page tilt | settings.json | Changed in Settings and with the theme button |
 | Image rectangles of the page in front | Memory only, in the shell | Not saved or sent anywhere |
 
 Nothing leaves the machine except user-initiated page loads (including
@@ -304,7 +310,7 @@ The window uses the standard OS title bar.
 - Right side, on demand: a slide-in Library panel (bookmarks, history) or
   Settings panel. Only one open at a time. Escape closes it.
 - Bottom-right: theme switch and privacy shield (count of blocked
-  requests on the current page).
+  requests on the current page). Both built (milestones 4 and 6).
 
 Movement: standard browser shortcuts (Ctrl/Cmd+T new tab, Ctrl/Cmd+W
 close, Ctrl/Cmd+L address bar, Ctrl+Tab next tab on every platform since
@@ -358,9 +364,11 @@ fonts, sound design, VR.
 
 ## 10. Open questions
 
-1. Theme look: Nebula (dark) default and Daylight (light) are the working
-   proposal. Exact colours, accent, and any owner sketches are still to
-   be confirmed in the theme milestone. Owner direction (2026-09-26,
+1. Theme look: built in milestone 6 (agent's design, awaiting the owner's
+   review): Nebula, a synthwave night (indigo sky, magenta horizon,
+   striped retro sun, violet grid, cyan accent, faint scanlines), and
+   Daylight, a pastel 1990s day (pale blue sky, pink horizon, teal
+   accent, lavender grid). Values in packages/themes. Owner direction (2026-09-26,
    prompt 29): lean further into the 1980s and 1990s aesthetic; the
    owner will review the look more fully once themes and depth layering
    are in.

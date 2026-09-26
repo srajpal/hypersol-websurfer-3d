@@ -10,8 +10,14 @@ export interface ThemeColors {
   backgroundBottom: string;
   /** Tint of glass surfaces (panels, bars). */
   panelGlass: string;
-  /** The theme's single accent colour: glow edges, focus rings. */
+  /** The theme's main accent colour: glow edges, focus rings, buttons. */
   accent: string;
+  /** A second accent for highlights and the floor grid's glow (milestone 6). */
+  accent2: string;
+  /** The glow along the horizon, behind the room. */
+  horizon: string;
+  /** Warnings and errors (error text, destructive buttons). */
+  warning: string;
   /** Main text colour. */
   text: string;
   /** Secondary text colour. */
@@ -40,5 +46,12 @@ export interface Theme {
   lighting: {
     ambient: LightSetting;
     key: LightSetting;
+  };
+  /** Room decorations. */
+  room: {
+    /** A striped retro sun low on the horizon behind the page. */
+    sun: boolean;
+    /** Strength of faint scanlines over the room (never over pages), 0 to 0.3. */
+    scanlines: number;
   };
 }

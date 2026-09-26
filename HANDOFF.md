@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-26 (milestones 4 and 5 built, awaiting acceptance).
+Last updated 2026-09-26 (milestones 4 to 6 built, awaiting acceptance).
 
 ## Where things stand
 
@@ -29,7 +29,12 @@ sections and images into separate depths (preload/layers.ts), with a
 top-bar button, Ctrl/Cmd+Shift+L, a global switch in Settings, and a
 choice remembered per site; image rectangles are reported to the shell
 for a later lift-to-3D milestone. G1 to G9 pass; waiting for the owner's
-look (G10) on real sites and acceptance. Progress
+look (G10) on real sites and acceptance. Milestone 6 (Themes and look) is
+built without a question round, at the owner's request (prompt 32):
+Nebula (synthwave night) and Daylight (pastel day), a theme button and
+Settings > Theme (with Match the system), the room and window following
+the theme, and Settings > Page tilt; the standard window frame is kept.
+H1 to H8 pass; the design awaits the owner's review (H9). Progress
 screenshots live in docs/screenshots/<milestone>/; capture them with
 `MILESTONE=mN pnpm screenshots` when a milestone is finished.
 
@@ -151,9 +156,9 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestones 4 (Private by default)
-   and 5 (Depth layering) are built and await acceptance; milestone 6
-   (Themes and look) has no plan yet; see TODO.md. Tick tasks and record check results in
+2. Do only what the prompt approves. Milestones 4 to 6 are built and await
+   the owner's review and acceptance; milestone 7 (First release) has no
+   plan yet; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

@@ -7,13 +7,14 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestones 4 (private by default) and 5 (depth layering) built,
-awaiting review.** A browser in a 3D room that remembers and protects:
+**Status: milestones 4 (private by default), 5 (depth layering), and 6
+(themes and look) built, awaiting review.** A browser in a 3D room that remembers and protects:
 tabs as cards on an arc, a top bar with address, search, and a bookmark
 star, bookmarks and history in a Library panel, a Settings panel, a
 start panel with your data, error cards, a right-click menu, ad and
 tracker blocking with a shield, encrypted DNS, and a layers view that
-breaks pages apart into depth. See [Progress](#progress), TODO.md, and
+breaks pages apart into depth, in two themes: Nebula, a synthwave
+night, and Daylight, a pastel 1990s day. See [Progress](#progress), TODO.md, and
 [Project documents](#project-documents).
 
 ## The story
@@ -132,6 +133,18 @@ later.
 ![The same page with the layers view off](docs/screenshots/m5/10-layers-off.png)
 
 ![Settings: the layers view switch and per-site choices](docs/screenshots/m5/11-settings-layers.png)
+
+**Milestone 6: themes and look.** Two finished themes leaning into the
+1980s and 1990s, switched with the button at the bottom right or in
+Settings (which can also follow the system's light or dark setting). The
+room, cards, panels, and window all follow the theme. Settings > Page
+tilt trades the lean for sharper text.
+
+![Nebula: synthwave sky, striped sun, neon grid](docs/screenshots/m6/1-tabs.png)
+
+![Daylight: pastel sky and grid, with the layers view](docs/screenshots/m6/12-daylight-layers.png)
+
+![Daylight: Settings with the theme choice and page tilt](docs/screenshots/m6/14-daylight-settings.png)
 
 ## HoloML
 

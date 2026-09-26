@@ -14,7 +14,7 @@ Plan approved 2026-09-24.
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Built; awaiting owner acceptance (F11) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Built; awaiting owner acceptance (G10) |
-| 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Current (approved 2026-09-26) |
+| 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Built; awaiting owner review (H9) |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 8 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
 | 9 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
@@ -843,7 +843,9 @@ docs and screenshots are updated, and the owner approves the milestone.
 
 ## Milestone 6 — Themes and look
 
-Status: Current. Approved 2026-09-26 (prompt 32: "Go ahead with
+Status: Built 2026-09-26; waiting for the owner's review (H9) and
+acceptance. Screenshots: docs/screenshots/m6/ (1 to 11 in Nebula, 12 to
+15 in Daylight). Approved 2026-09-26 (prompt 32: "Go ahead with
 milestone 6 and then give a concise list of what to test and approve").
 The owner asked for the build without a question round, so the design
 choices below are the agent's, recorded here for the owner's review
@@ -883,21 +885,21 @@ for sharper text.
 
 ### Tasks
 
-- [ ] 1. Theme schema additions and the final Nebula and Daylight
+- [x] 1. Theme schema additions and the final Nebula and Daylight
       values; contrast tests.
-- [ ] 2. The room: sky, horizon glow, retro sun, grid, desk, glow, fog,
+- [x] 2. The room: sky, horizon glow, retro sun, grid, desk, glow, fog,
       and lights from the theme, and switchable at run time; cards
       redraw.
-- [ ] 3. The HUD: every hard-coded colour replaced by theme values;
+- [x] 3. The HUD: every hard-coded colour replaced by theme values;
       design pass over the top bar, panels, cards, start panel, error
       cards, shield, About; scanlines.
-- [ ] 4. Theme switch button and Settings > Theme (with Match the
+- [x] 4. Theme switch button and Settings > Theme (with Match the
       system); saved; the title bar and window background follow.
-- [ ] 5. Settings > Page tilt; applied at once.
-- [ ] 6. The layers view's outline uses the theme's accent.
-- [ ] 7. Tests: unit (tokens, contrast, settings); end-to-end H1 to H8;
+- [x] 5. Settings > Page tilt; applied at once.
+- [x] 6. The layers view's outline uses the theme's accent.
+- [x] 7. Tests: unit (tokens, contrast, settings); end-to-end H1 to H8;
       C, D, E, F, G as regression.
-- [ ] 8. Docs and screenshots in both themes (MILESTONE=m6).
+- [x] 8. Docs and screenshots in both themes (MILESTONE=m6).
 
 ### Checks
 
@@ -913,6 +915,37 @@ for sharper text.
 | H8 | No leftovers | No hard-coded colours remain in the shell's styles |
 | H9 | Look and feel | Owner review of both themes; screenshots saved |
 | C to G | Regression | Still pass |
+
+### Check results (Windows 11, 2026-09-26)
+
+Unit: 164 tests pass, including WCAG AA contrast for both themes (text
+and secondary text at least 4.5:1 on panels, sky, and desk; warnings
+4.5:1; accent 3:1) and a scan of the shell's styles for hard-coded
+colours. Lint and type check clean.
+
+End-to-end (`pnpm test:e2e`, 117 checks): H1 to H7 (6 checks) pass.
+Full suite: 113 of 117 in the first run; the failures were the three D8
+clipboard checks (the machine's clipboard is still unavailable to every
+program) and C1, whose colour comparison expected the room to report
+exactly three colours; the room now reports more (lights, fog, horizon,
+sun), so C1 compares the colours that have a CSS twin, now including the
+horizon. C1 passes again.
+
+| # | Result |
+|---|---|
+| H1 | Pass |
+| H2 | Pass ("Match the system" checked by asking the shell for dark, then light) |
+| H3 | Pass: accent, desk, grid, horizon, fog, both lights, and the sun follow the theme |
+| H4 | Pass |
+| H5 | Pass (unit test) |
+| H6 | Pass: 0 and 20 degrees, kept after a restart; a --tilt on the command line wins |
+| H7 | Pass |
+| H8 | Pass (unit test): only a page's default white and the scanlines' black remain, by design |
+| H9 | Not checked yet (owner) |
+| C to G | Pass except D8 (clipboard unavailable) |
+
+Adjusted after the first screenshots: Daylight's desk looked muddy grey
+under the room's lights; it is lighter now, with more ambient light.
 
 ### Done when
 

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, ipcMain, Menu, screen, session, webContents } from 'electron';
-import { defaultTheme } from '@hypersol/themes';
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, session, webContents } from 'electron';
+import { daylight, nebula, themeById, type Theme } from '@hypersol/themes';
+import type { ThemeChoice } from '../shared/settings';
 import { CAPTURE_TAB_CHANNEL, CLOSE_READY_CHANNEL, SHELL_COMMAND_CHANNEL, type ShellCommand } from '../shared/commands';
 import { DATA_CHANNEL } from '../shared/data';
 import { PRIVACY_CHANNEL } from '../shared/privacy';
@@ -59,6 +60,21 @@ function setAppMenu(): void {
   );
 }
 
+/**
+ * The window follows the theme (milestone 6): its background (shown while
+ * the shell loads) and the title bar's light or dark scheme. "Match the
+ * system" leaves the scheme to the system.
+ */
+function windowTheme(choice: ThemeChoice): Theme {
+  nativeTheme.themeSource = choice === 'system' ? 'system' : themeById(choice).scheme;
+  return choice === 'system' ? (nativeTheme.shouldUseDarkColors ? nebula : daylight) : themeById(choice);
+}
+
+function applyWindowTheme(): void {
+  const theme = windowTheme(storage?.settingsFile.settings.theme ?? 'nebula');
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setBackgroundColor(theme.colors.backgroundBottom);
+}
+
 /** A spot to the right of every display, for background test windows. */
 function offScreenPosition(): { x: number; y: number } {
   const right = Math.max(...screen.getAllDisplays().map((d) => d.bounds.x + d.bounds.width));
@@ -74,7 +90,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     title: 'HyperSol WebSurfer 3D',
-    backgroundColor: defaultTheme.colors.backgroundBottom,
+    backgroundColor: windowTheme(storage?.settingsFile.settings.theme ?? 'nebula').colors.backgroundBottom,
     autoHideMenuBar: true,
     webPreferences: {
       preload: SHELL_PRELOAD,
@@ -107,9 +123,10 @@ function createWindow(): void {
 
   const query: Record<string, string> = {
     startUrl: options.startUrl,
-    tilt: String(options.tiltDeg),
     appVersion: app.getVersion(),
   };
+  // A tilt given on the command line wins over Settings > Page tilt (tests, development).
+  if (process.argv.some((a) => a.startsWith('--tilt='))) query['tilt'] = String(options.tiltDeg);
   if (options.testMode) query['test'] = '1';
   if (options.searchUrl) query['searchUrl'] = options.searchUrl;
 
@@ -232,6 +249,7 @@ if (!app.requestSingleInstanceLock()) {
       return storage!.handle(request);
     });
     storage.onChange((what) => {
+      if (what === 'settings') applyWindowTheme();
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send(SHELL_COMMAND_CHANNEL, { type: 'data-changed', what } satisfies ShellCommand);
       }

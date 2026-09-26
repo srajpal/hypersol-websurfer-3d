@@ -1,5 +1,5 @@
 import type { PageStatus } from '@hypersol/scene-core';
-import type { Theme } from '@hypersol/themes';
+import { daylight, nebula, themeById, type Theme } from '@hypersol/themes';
 import type { ShellBridge, ShellCommand, ShortcutName } from '../shared/commands';
 import { DEFAULT_SETTINGS, defaults, searchUrlFor, type Settings } from '../shared/settings';
 import { DataClient, PrivacyClient } from './data';
@@ -7,6 +7,9 @@ import type { HsAbout } from './hud/about';
 import type { HsLibrary } from './hud/library';
 import type { HsSettings } from './hud/settings';
 import type { HsShield } from './hud/shield';
+import type { HsThemeButton } from './hud/theme-button';
+import { applyThemeCss } from './themes/apply';
+import type { LayersState } from '../shared/layers';
 import type { HsToolbar, MenuAction } from './hud/toolbar';
 import { Room } from './scene/room';
 import type { StartData } from './scene/start-panel';
@@ -17,6 +20,8 @@ import { resolveInput } from './url';
 export interface AppOptions {
   startUrl: string;
   tiltDeg: number;
+  /** The tilt came from the command line, so Settings > Page tilt does not change it. */
+  tiltFixed?: boolean;
   /** Test runs only: replaces DuckDuckGo's address with a local stand-in. */
   searchUrlOverride?: string;
   theme: Theme;
@@ -27,6 +32,7 @@ export interface AppOptions {
   library: HsLibrary;
   settingsPanel: HsSettings;
   shield: HsShield;
+  themeButton: HsThemeButton;
   tabList: HTMLElement;
 }
 
@@ -61,6 +67,9 @@ export class App {
   readonly privacy: PrivacyClient;
   /** True once saved settings and tabs have been loaded. */
   ready = false;
+  /** The theme in use (Settings > Theme, resolved for "Match the system"). */
+  theme: Theme;
+  private readonly systemDark = window.matchMedia('(prefers-color-scheme: dark)');
   /** Test runs only: ignore prepare-close, to test the main process's timeout. */
   testIgnorePrepareClose = false;
   private settings: Settings = defaults();
@@ -84,6 +93,7 @@ export class App {
   private focusBeforePanel: Element | null = null;
 
   constructor(private readonly options: AppOptions) {
+    this.theme = options.theme;
     this.data = new DataClient(options.bridge);
     this.privacy = new PrivacyClient(options.bridge);
     options.library.client = this.data;
@@ -101,11 +111,14 @@ export class App {
       },
     });
     this.store.subscribe(() => this.sync());
+    options.themeButton.addEventListener('hs-theme-toggle', () => void this.toggleTheme());
+    // "Match the system" follows the system's light or dark setting as it changes.
+    this.systemDark.addEventListener('change', () => this.applyLook());
     // The layers view's vanishing point follows the room's parallax.
     this.room.onCameraMove = (offset) => {
       this.parallax = { x: offset.x, y: -offset.y };
       const id = this.store.focusedId;
-      if (this.layersOn.get(id)) this.views.get(id)?.sendLayers({ on: true, animate: false, parallax: this.parallax });
+      if (this.layersOn.get(id)) this.views.get(id)?.sendLayers(this.layersState(id, false));
     };
     document.addEventListener('keydown', (e) => e.key === 'Enter' && (this.enterDown = true), true);
     document.addEventListener('keyup', (e) => e.key === 'Enter' && (this.enterDown = false), true);
@@ -117,6 +130,7 @@ export class App {
   /** Loads settings, then opens the first tabs: the saved ones if asked, else a start tab. */
   async start(): Promise<void> {
     this.settings = await this.data.get({ op: 'settings.get' }).catch(() => defaults());
+    this.applyLook();
     const saved = this.options.startUrl === '' ? await this.data.get({ op: 'startup' }).catch(() => null) : null;
     if (saved) {
       saved.tabs.forEach((url, i) => this.store.open({ url, background: i !== saved.focused }));
@@ -138,8 +152,13 @@ export class App {
   }
 
   /** Test hook: whether a tab's page is in the layers view. */
-  layersState(tabId: number): boolean {
-    return this.layersOn.get(tabId) ?? false;
+  layersState(tabId: number): boolean;
+  /** The state to send a tab's page. */
+  layersState(tabId: number, animate: boolean): LayersState;
+  layersState(tabId: number, animate?: boolean): boolean | LayersState {
+    const on = this.layersOn.get(tabId) ?? false;
+    if (animate === undefined) return on;
+    return { on, animate, parallax: this.parallax, accent: this.theme.colors.accent };
   }
 
   viewOf(tabId: number): TabView | undefined {
@@ -428,6 +447,7 @@ export class App {
     });
     settingsPanel.addEventListener('hs-settings-changed', (e) => {
       this.settings = (e as CustomEvent<Settings>).detail;
+      this.applyLook();
     });
     // Escape closes an open panel even when the focus is elsewhere in the shell.
     document.addEventListener('keydown', (e) => {
@@ -450,6 +470,36 @@ export class App {
     t.canLayers = isWeb(tab.url) && tab.state !== 'start' && tab.state !== 'failed';
   }
 
+  // ---- Theme and tilt (milestone 6) ------------------------------------------
+
+  /** Puts the theme and page tilt from Settings into effect: HUD, room, cards, and the layers' outline. */
+  private applyLook(): void {
+    const choice = this.settings.theme;
+    const theme = choice === 'system' ? (this.systemDark.matches ? nebula : daylight) : themeById(choice);
+    if (theme !== this.theme) {
+      this.theme = theme;
+      applyThemeCss(document.documentElement, theme);
+      this.room.setTheme(theme);
+      const id = this.store.focusedId;
+      if (this.layersOn.get(id)) this.views.get(id)?.sendLayers(this.layersState(id, false));
+    }
+    this.options.themeButton.scheme = theme.scheme;
+    this.options.themeButton.themeName = theme.name;
+    if (!this.options.tiltFixed) this.room.setTilt(this.settings.pageTilt);
+  }
+
+  /** The theme button: Nebula and Daylight in turn. */
+  private async toggleTheme(): Promise<void> {
+    const next = this.theme.id === 'nebula' ? 'daylight' : 'nebula';
+    try {
+      this.settings = await this.data.get({ op: 'settings.set', patch: { theme: next } });
+    } catch (e) {
+      console.warn(e instanceof Error ? e.message : String(e));
+      return;
+    }
+    this.applyLook();
+  }
+
   // ---- Layers view (milestone 5) -------------------------------------------
 
   /** A new page opens in the layers view if its site's choice, or the global setting, says so. */
@@ -460,7 +510,7 @@ export class App {
     const site = hostOf(url);
     const on = this.settings.layersSites[site] ?? this.settings.layersOnOpen;
     this.layersOn.set(tabId, on);
-    view.sendLayers({ on, animate: false, parallax: this.parallax });
+    view.sendLayers(this.layersState(tabId, false));
     if (tabId === this.store.focusedId) this.updateToolbar();
   }
 
@@ -471,7 +521,7 @@ export class App {
     if (!tab || !view || view.isStart || !isWeb(tab.url)) return;
     const on = !(this.layersOn.get(tab.id) ?? false);
     this.layersOn.set(tab.id, on);
-    view.sendLayers({ on, animate: true, parallax: this.parallax });
+    view.sendLayers(this.layersState(tab.id, true));
     this.updateToolbar();
     const site = hostOf(tab.url);
     if (!site) return;
@@ -555,7 +605,13 @@ export class App {
         break;
       case 'data-changed':
         if (command.what === 'settings') {
-          void this.data.get({ op: 'settings.get' }).then((s) => (this.settings = s)).catch(() => undefined);
+          void this.data
+            .get({ op: 'settings.get' })
+            .then((s) => {
+              this.settings = s;
+              this.applyLook();
+            })
+            .catch(() => undefined);
           break;
         }
         // Visits and title changes come in bursts; answer once per burst.

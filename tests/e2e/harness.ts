@@ -193,6 +193,8 @@ export interface ShellHooks {
   webContentsIdOf(tabId: number): number | null;
   shield(): { count: number; disabled: boolean; open: boolean };
   layersOf(tabId: number): boolean;
+  theme(): string;
+  tilt(): number;
   layers(): { on: boolean; images: { x: number; y: number; width: number; height: number; src: string; alt: string; kind: string }[] };
 }
 

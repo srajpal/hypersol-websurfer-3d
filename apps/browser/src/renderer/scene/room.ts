@@ -104,7 +104,13 @@ export class Room {
   private readonly camera: PerspectiveCamera;
   private readonly glow: Mesh<PlaneGeometry, MeshBasicMaterial>;
   private readonly desk: Mesh<BoxGeometry, MeshStandardMaterial>;
-  private readonly grid: GridHelper;
+  private grid: GridHelper;
+  private readonly ambient: AmbientLight;
+  private readonly key: DirectionalLight;
+  /** A glow band along the horizon, far behind the page (milestone 6). */
+  private readonly horizon: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  /** A striped retro sun on the horizon, for themes that have one. */
+  private readonly sun: Mesh<PlaneGeometry, MeshBasicMaterial>;
   private readonly views = new Map<number, ViewEntry>();
   private readonly cards = new Map<number | 'plus', TabCard>();
   private order: (number | 'plus')[] = [];
@@ -123,7 +129,7 @@ export class Room {
 
   constructor(
     container: HTMLElement,
-    private readonly theme: Theme,
+    private theme: Theme,
     private readonly options: RoomOptions,
   ) {
     this.webgl = new WebGLRenderer({ antialias: true, alpha: true });
@@ -144,13 +150,27 @@ export class Room {
 
     const c = theme.colors;
     this.scene.fog = new Fog(new Color(c.backgroundBottom), 1500, 6000);
-    const ambient = new AmbientLight(new Color(theme.lighting.ambient.color), theme.lighting.ambient.intensity);
-    const key = new DirectionalLight(new Color(theme.lighting.key.color), theme.lighting.key.intensity);
-    key.position.set(-400, 900, 800);
-    this.scene.add(ambient, key);
+    this.ambient = new AmbientLight(new Color(theme.lighting.ambient.color), theme.lighting.ambient.intensity);
+    this.key = new DirectionalLight(new Color(theme.lighting.key.color), theme.lighting.key.intensity);
+    this.key.position.set(-400, 900, 800);
+    this.scene.add(this.ambient, this.key);
 
     this.grid = new GridHelper(8000, 80, new Color(c.floorGrid), new Color(c.floorGrid));
     this.scene.add(this.grid);
+
+    this.horizon = new Mesh(
+      new PlaneGeometry(1, 1),
+      new MeshBasicMaterial({ color: new Color(c.horizon), map: makeBandTexture(), transparent: true, depthWrite: false, fog: false }),
+    );
+    this.sun = new Mesh(
+      new PlaneGeometry(1, 1),
+      new MeshBasicMaterial({ map: makeSunTexture(), transparent: true, depthWrite: false, fog: false }),
+    );
+    this.sun.visible = theme.room.sun;
+    // Drawn first, behind everything else in the room.
+    this.horizon.renderOrder = -2;
+    this.sun.renderOrder = -1;
+    this.scene.add(this.horizon, this.sun);
 
     this.desk = new Mesh(
       new BoxGeometry(1, 1, 1),
@@ -288,6 +308,18 @@ export class Room {
 
   // ---- Layout -------------------------------------------------------------
 
+  get tiltDeg(): number {
+    return this.options.tiltDeg;
+  }
+
+  /** Leans the page back by another angle (Settings > Page tilt). */
+  setTilt(deg: number): void {
+    if (deg === this.options.tiltDeg) return;
+    this.options.tiltDeg = deg;
+    this.layout();
+    this.requestRender();
+  }
+
   /** Recomputes sizes after a resize or tilt change. */
   layout(): void {
     const w = window.innerWidth;
@@ -319,6 +351,16 @@ export class Room {
     this.desk.rotation.set(0, layout.rotationY, 0);
     this.desk.position.set(layout.position.x, bottom - 22, layout.position.z + DESK_DEPTH / 2 - 60);
     this.grid.position.set(0, bottom - 120, 0);
+
+    // The horizon is at the camera's height, far away; the glow and sun sit on it.
+    const far = 7000;
+    const halfWidth = Math.tan(((layout.fovDeg / 2) * Math.PI) / 180) * far * (w / h);
+    this.horizon.scale.set(halfWidth * 4, far * 0.22, 1);
+    this.horizon.position.set(0, 0, -far);
+    const r = far * 0.16;
+    this.sun.scale.set(r * 2, r * 2, 1);
+    // To the right of the page, half risen, where the room shows around it.
+    this.sun.position.set(halfWidth * 0.78, r * 0.25, -far + 10);
 
     this.layoutCards();
   }
@@ -517,7 +559,36 @@ export class Room {
       accent: `#${this.glow.material.color.getHexString()}`,
       desk: `#${this.desk.material.color.getHexString()}`,
       floorGrid: `#${gridColor.getHexString()}`,
+      horizon: `#${this.horizon.material.color.getHexString()}`,
+      fog: `#${(this.scene.fog as Fog).color.getHexString()}`,
+      ambient: `#${this.ambient.color.getHexString()}`,
+      key: `#${this.key.color.getHexString()}`,
+      sun: this.sun.visible ? 'shown' : 'hidden',
     };
+  }
+
+  /** Switches the room to another theme at once: sky decorations, grid, desk, glow, fog, lights, and cards. */
+  setTheme(theme: Theme): void {
+    this.theme = theme;
+    const c = theme.colors;
+    (this.scene.fog as Fog).color.set(c.backgroundBottom);
+    this.ambient.color.set(theme.lighting.ambient.color);
+    this.ambient.intensity = theme.lighting.ambient.intensity;
+    this.key.color.set(theme.lighting.key.color);
+    this.key.intensity = theme.lighting.key.intensity;
+    const position = this.grid.position.clone();
+    this.scene.remove(this.grid);
+    this.grid.dispose();
+    this.grid = new GridHelper(8000, 80, new Color(c.floorGrid), new Color(c.floorGrid));
+    this.grid.position.copy(position);
+    this.scene.add(this.grid);
+    this.desk.material.color.set(c.desk);
+    this.glow.material.color.set(c.accent);
+    this.glow.material.opacity = theme.glowStrength;
+    this.horizon.material.color.set(c.horizon);
+    this.sun.visible = theme.room.sun;
+    for (const card of this.cards.values()) card.setTheme(theme);
+    this.requestRender();
   }
 
   // ---- Pointer ------------------------------------------------------------
@@ -609,6 +680,48 @@ export class Room {
 }
 
 /** A soft rectangle that fades to transparent at the edges, for the glow. */
+/** A soft horizontal band: clear at the top and bottom, strongest in the middle. */
+function makeBandTexture(): CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.5, 'rgba(255,255,255,0.75)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 4, 256);
+  }
+  return new CanvasTexture(canvas);
+}
+
+/** The 1980s sun: a disc fading from gold to magenta, its lower half cut by widening stripes. */
+function makeSunTexture(): CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const g = ctx.createLinearGradient(0, 0, 0, size);
+    g.addColorStop(0, '#ffe36b');
+    g.addColorStop(0.55, '#ff8a4c');
+    g.addColorStop(1, '#ff2f92');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 7; i++) {
+      const y = size * 0.52 + i * i * 4.5 + i * 22;
+      ctx.fillRect(0, y, size, 3 + i * 2.2);
+    }
+  }
+  return new CanvasTexture(canvas);
+}
+
 function makeGlowTexture(): CanvasTexture {
   const size = 256;
   const canvas = document.createElement('canvas');

@@ -2,6 +2,8 @@
 
 :root {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, sans-serif;
+  /* Small labels and counters: the one typographic nod to 1980s and 1990s screens. */
+  --hs-font-mono: 'Consolas', 'Menlo', 'DejaVu Sans Mono', monospace;
 }
 
 html,
@@ -16,6 +18,19 @@ body {
 #room {
   position: fixed;
   inset: 0;
+}
+
+/* Faint scanlines over the sky (behind the room's canvas, so never over pages). */
+#room::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0 2px,
+    rgb(0 0 0 / calc(var(--hs-scanlines) * 100%)) 2px 3px
+  );
 }
 
 #room canvas {
@@ -33,6 +48,7 @@ body {
 
 .hs-panel {
   pointer-events: auto;
+  /* A web page's own default background (pages assume white), not a theme colour. */
   background: #ffffff;
   /* Outline, not border, so page pixel (0, 0) is the panel's top-left corner. */
   outline: 1px solid var(--hs-accent);
@@ -102,7 +118,7 @@ body {
 }
 
 .hs-error-card[data-kind='certificate'] {
-  border-color: #ff8a65;
+  border-color: var(--hs-warning);
 }
 
 .hs-error-card h2 {

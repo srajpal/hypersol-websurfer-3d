@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   builtInThemes,
+  contrastRatio,
+  daylight,
+  themeById,
   cssVarName,
   hexToNumber,
   nebula,
@@ -41,6 +44,33 @@ describe('theme tokens', () => {
   it('built-in themes are valid', () => {
     for (const theme of builtInThemes) {
       expect(validateTheme(theme)).toEqual([]);
+    }
+  });
+
+  it('has Nebula (dark, the default) and Daylight (light)', () => {
+    expect(builtInThemes.map((t) => [t.id, t.scheme])).toEqual([
+      ['nebula', 'dark'],
+      ['daylight', 'light'],
+    ]);
+    expect(themeById('daylight')).toBe(daylight);
+    expect(themeById('nope')).toBe(nebula);
+  });
+
+  it('computes WCAG contrast', () => {
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(contrastRatio('#777777', '#777777')).toBe(1);
+  });
+
+  it('meets WCAG AA contrast on both themes (H5)', () => {
+    for (const t of builtInThemes) {
+      const c = t.colors;
+      for (const surface of [c.panelGlass, c.backgroundTop, c.desk]) {
+        expect(contrastRatio(c.text, surface), `${t.id} text on ${surface}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(c.textMuted, surface), `${t.id} muted text on ${surface}`).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(contrastRatio(c.warning, c.panelGlass), `${t.id} warning`).toBeGreaterThanOrEqual(4.5);
+      // Buttons and focus rings are user-interface parts: 3:1.
+      expect(contrastRatio(c.accent, c.panelGlass), `${t.id} accent`).toBeGreaterThanOrEqual(3);
     }
   });
 

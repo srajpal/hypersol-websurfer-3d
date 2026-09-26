@@ -71,11 +71,13 @@ describe('largest', () => {
 
 describe('layers messages', () => {
   it('checks the state the shell sends', () => {
-    expect(parseLayersState({ on: true, animate: false, parallax: { x: 0.5, y: -1 } })).toEqual({
+    expect(parseLayersState({ on: true, animate: false, parallax: { x: 0.5, y: -1 }, accent: '#007c83' })).toEqual({
       on: true,
       animate: false,
       parallax: { x: 0.5, y: -1 },
+      accent: '#007c83',
     });
+    expect(parseLayersState({ on: true, animate: false, parallax: { x: 0, y: 0 }, accent: 'red; x' })?.accent).toBe('#39e6ff');
     expect(parseLayersState({ on: 'yes', animate: false, parallax: { x: 0, y: 0 } })).toBeNull();
     expect(parseLayersState({ on: true, animate: false, parallax: { x: Infinity, y: 0 } })).toBeNull();
   });

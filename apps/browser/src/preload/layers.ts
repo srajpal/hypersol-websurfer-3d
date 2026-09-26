@@ -21,7 +21,7 @@ const REPORT_MS = 150;
 
 const CSS = `
 [${ATTR}] { transform: var(--hs-lift) !important; transform-origin: 0 0 !important; will-change: transform; }
-[${ATTR}='section'] { box-shadow: 0 18px 40px rgb(0 0 0 / 30%), 0 0 0 1px rgb(90 200 255 / 45%) !important; }
+[${ATTR}='section'] { box-shadow: 0 18px 40px rgb(0 0 0 / 30%), 0 0 0 1px var(--hs-layer-accent, #39e6ff) !important; }
 [${ATTR}='image'] { box-shadow: 0 14px 30px rgb(0 0 0 / 38%) !important; }
 html[${ANIMATING}] [${ATTR}] { transition: transform ${ANIMATION_MS}ms ease !important; }
 @media (prefers-reduced-motion: reduce) { html[${ANIMATING}] [${ATTR}] { transition: none !important; } }
@@ -253,6 +253,8 @@ if (window === window.top) {
     if (!state) return;
     const moved = state.parallax.x !== parallax.x || state.parallax.y !== parallax.y;
     parallax = state.parallax;
+    // The theme's accent outlines the lifted sections.
+    document.documentElement?.style.setProperty('--hs-layer-accent', `${state.accent}99`);
     const run = () => {
       if (state.on !== on) setOn(state.on, state.animate);
       else if (on && moved) apply(true);
