@@ -1,7 +1,7 @@
 # HANDOFF.md
 
 State of the project for whoever picks it up next, human or agent.
-Last updated 2026-09-26 (milestones 4 to 6 built, awaiting acceptance).
+Last updated 2026-09-26 (milestones 4 to 6 accepted).
 
 ## Where things stand
 
@@ -156,9 +156,9 @@ Electron 44.4.5 is installed in the repo (not globally).
    work, with a session tag. Read the last heading first and use the
    next number. If CLAUDE.local.md is missing, recreate it from the copy
    below.
-2. Do only what the prompt approves. Milestones 4 to 6 are built and await
-   the owner's review and acceptance; milestone 7 (First release) has no
-   plan yet; see TODO.md. Tick tasks and record check results in
+2. Do only what the prompt approves. Milestones 4 to 6 are done (accepted
+   2026-09-26, prompt 33). Next: smaller tab cards (owner request) and a
+   plan for the instrument-panel UI upgrade; see TODO.md. Tick tasks and record check results in
    TODO.md as they actually run. At the end of each milestone, save
    screenshots (owner request, prompt 20).
 3. Any new package needs approval first (rule 4 in AGENTS.md). The

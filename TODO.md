@@ -12,9 +12,9 @@ Plan approved 2026-09-24.
 | 1 | Live page in the 3D room | One real site on a tilted live panel in the 3D room; click, type, scroll work; build and test tooling runs | Done (accepted 2026-09-25 with C2 as a known issue) |
 | 2 | Browsing basics | Tabs as cards in the left arc, top HUD (back, forward, reload, address and search), progress strip, shortcuts, new-tab start panel (empty state), error cards, right-click menu | Done (accepted 2026-09-25) |
 | 3 | Memory and Settings | Bookmarks and history in SQLite, Library panel, Settings panel, start panel with your data, all intact after restart | Done (accepted 2026-09-26; E11 "so far so good", fuller look review after themes and depth) |
-| 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Built; awaiting owner acceptance (F11) |
-| 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Built; awaiting owner acceptance (G10) |
-| 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Built; awaiting owner review (H9) |
+| 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Done (accepted 2026-09-26) |
+| 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
+| 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
 | 7 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 8 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
 | 9 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
@@ -559,7 +559,8 @@ Pull request #7 review (prompt 26), two findings, both fixed:
 
 ## Milestone 4 — Private by default
 
-Status: Built 2026-09-26. Plan and build approved 2026-09-26 (prompt 29),
+Status: Done. Accepted by the owner 2026-09-26 (prompt 33), after
+testing it on real sites. Plan and build approved 2026-09-26 (prompt 29),
 with the owner's answers Q1 a, Q2 a, Q3 a. Electron security check done
 at the start (ARCHITECTURE.md section 3). All tasks done; waiting for
 the owner's look-and-feel check (F11), the optional live check (L1), and
@@ -686,9 +687,9 @@ checked for this milestone yet; rerun it when the clipboard works.
 | F8 | Pass, with a local stand-in resolver and a captive-portal page |
 | F9 | Pass: starter copy, "Update now" from a local server (15 downloads, nothing else), kept after restart, failed refresh, damaged saved copy, scheduled refresh |
 | F10 | Pass |
-| F11 | Not checked yet (owner) |
-| L1 | Not run (needs the owner's yes to use the real internet) |
-| C, D, E | Pass except D8 (clipboard unavailable, see above) |
+| F11 | Pass (owner, 2026-09-26, prompt 33) |
+| L1 | Not run by the agent; the owner tested on real sites (prompt 33) |
+| C, D, E | Pass; D8 passed on 2026-09-26 once the clipboard worked again |
 
 Found and fixed during the build:
 - Electron drops a page load the shield cancels without any failure
@@ -722,8 +723,8 @@ the milestone.
 
 ## Milestone 5 — Depth layering
 
-Status: Built 2026-09-26; waiting for the owner's look-and-feel check
-(G10) and acceptance. Screenshots: docs/screenshots/m5/. Plan and build
+Status: Done. Accepted by the owner 2026-09-26 (prompt 33: "image
+flattening works"). Screenshots: docs/screenshots/m5/. Plan and build
 approved 2026-09-26 (prompt 31), with
 the owner's answers Q1 b ("to start"), Q2 (on by default for now, with a
 per-site and a global setting), Q3 a. Electron security check: done the
@@ -828,8 +829,8 @@ program on the machine (see milestone 4).
 | G7 | Pass |
 | G8 | Pass (reduced motion requested through Chromium's media emulation) |
 | G9 | Pass: no frames drawn while idle; scrolling under 20 ms per frame on average |
-| G10 | Not checked yet (owner) |
-| C, D, E, F | Pass except D8 (clipboard unavailable) |
+| G10 | Pass (owner, 2026-09-26, prompt 33) |
+| C, D, E, F | Pass; D8 passed once the clipboard worked again |
 
 Changed while building: the checks first read the page before the
 switch-off animation had finished (G4) and compared whole-pixel offsets
@@ -843,8 +844,10 @@ docs and screenshots are updated, and the owner approves the milestone.
 
 ## Milestone 6 — Themes and look
 
-Status: Built 2026-09-26; waiting for the owner's review (H9) and
-acceptance. Screenshots: docs/screenshots/m6/ (1 to 11 in Nebula, 12 to
+Status: Done. Accepted by the owner 2026-09-26 (prompt 33), with one
+look-and-feel change: the tab cards are too large; they should be
+smaller and hidden while there is only one tab, with a small button to
+open another (or Ctrl+T). Screenshots: docs/screenshots/m6/ (1 to 11 in Nebula, 12 to
 15 in Daylight). Approved 2026-09-26 (prompt 32: "Go ahead with
 milestone 6 and then give a concise list of what to test and approve").
 The owner asked for the build without a question round, so the design
@@ -941,8 +944,8 @@ horizon. C1 passes again.
 | H6 | Pass: 0 and 20 degrees, kept after a restart; a --tilt on the command line wins |
 | H7 | Pass |
 | H8 | Pass (unit test): only a page's default white and the scanlines' black remain, by design |
-| H9 | Not checked yet (owner) |
-| C to G | Pass except D8 (clipboard unavailable) |
+| H9 | Pass (owner, 2026-09-26, prompt 33), tab cards to shrink |
+| C to G | Pass; D8 passed once the clipboard worked again |
 
 Adjusted after the first screenshots: Daylight's desk looked muddy grey
 under the room's lights; it is lighter now, with more ambient light.
