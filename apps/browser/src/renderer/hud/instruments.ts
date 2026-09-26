@@ -70,6 +70,7 @@ export class HsInstruments extends LitElement {
     netKind: { state: true },
     netText: { state: true },
     consoleText: { state: true },
+    maximized: { type: String, reflect: true },
   };
 
   declare open: boolean;
@@ -86,6 +87,8 @@ export class HsInstruments extends LitElement {
   declare netKind: NetKind;
   declare netText: string;
   declare consoleText: string;
+  /** The console or network list shown large, for reading (owner, prompt 36); '' for neither. */
+  declare maximized: '' | 'console' | 'network';
 
   constructor() {
     super();
@@ -102,6 +105,15 @@ export class HsInstruments extends LitElement {
     this.netKind = 'all';
     this.netText = '';
     this.consoleText = '';
+    this.maximized = '';
+  }
+
+  /** Shows the console or the network list large, or back in the strip. */
+  maximize(which: '' | 'console' | 'network'): void {
+    this.maximized = which;
+    void this.updateComplete.then(() =>
+      (this.renderRoot.querySelector(which ? '.max [data-max]' : '[data-max]') as HTMLElement | null)?.focus(),
+    );
   }
 
   /** Space the page must leave free, in CSS pixels. */
@@ -323,6 +335,45 @@ export class HsInstruments extends LitElement {
       margin: 6px 0;
       color: var(--hs-text-muted);
     }
+    /* A panel shown large: flat, over the room and the page, for reading. */
+    .max {
+      position: fixed;
+      inset: 72px 24px 70px 24px;
+      z-index: 2;
+      font-size: 13px;
+    }
+    .max .panel {
+      position: absolute;
+      inset: 0;
+    }
+    .max .log {
+      font-size: 12px;
+    }
+    .max .net li {
+      grid-template-columns: 70px 56px 56px minmax(0, 1fr) 80px 70px;
+    }
+    .max .console li {
+      grid-template-columns: 70px 50px 1fr;
+    }
+    .max .console .message {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .max .log span.url {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: auto;
+      background: color-mix(in srgb, var(--hs-background-bottom) 55%, transparent);
+    }
+    .max-button {
+      width: 26px;
+      padding: 2px 0;
+    }
   `;
 
   override updated(): void {
@@ -336,7 +387,12 @@ export class HsInstruments extends LitElement {
     const { readouts, gauges, console: showConsole, network } = this.parts;
     const stripLeft = this.railShown ? 216 : 24;
     const stripRight = readouts || gauges ? RIGHT_COLUMN + 36 : 170;
+    const max = this.maximized;
     return html`
+      ${max
+        ? html`<div class="backdrop" @click=${() => this.maximize('')}></div>
+            <div class="max" @keydown=${this.onMaxKey}>${max === 'console' ? this.consolePanel(true) : this.networkPanel(true)}</div>`
+        : nothing}
       ${readouts || gauges
         ? html`<div class="column" data-testid="inst-column">
             ${readouts ? this.pagePanel() : nothing} ${gauges ? this.browserPanel() : nothing}
@@ -403,12 +459,26 @@ export class HsInstruments extends LitElement {
     </section>`;
   }
 
-  private consolePanel() {
+  private maxButton(which: 'console' | 'network', big: boolean) {
+    const name = which === 'console' ? 'console' : 'network list';
+    const label = big ? `Shrink the ${name}` : `Maximize the ${name}`;
+    return html`<button class="max-button" data-max data-testid=${`inst-max-${which}`} aria-label=${label} title=${label}
+      aria-pressed=${big ? 'true' : 'false'} @click=${() => this.maximize(big ? '' : which)}>${big ? '⤡' : '⤢'}</button>`;
+  }
+
+  private readonly onMaxKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      this.maximize('');
+    }
+  };
+
+  private consolePanel(big = false) {
     const q = this.consoleText.trim().toLowerCase();
     const shown = this.consoleEntries.filter(
       (e) => levelShown(this.consoleLevel, e.level) && (q === '' || e.message.toLowerCase().includes(q)),
     );
-    return html`<section class="panel" aria-label="Console" data-testid="inst-console">
+    return html`<section class="panel" aria-label="Console" data-testid=${big ? 'inst-console-max' : 'inst-console'}>
       <header>
         <h2>Console</h2>
         <input aria-label="Filter the console" placeholder="Filter" .value=${this.consoleText}
@@ -420,8 +490,9 @@ export class HsInstruments extends LitElement {
           <option value="errors">Errors</option>
         </select>
         <button data-testid="inst-clear" @click=${() => this.fire('hs-inspect-clear')}>Clear</button>
+        ${this.maxButton('console', big)}
       </header>
-      <ul class="log console" data-testid="inst-console-list">
+      <ul class="log console" data-testid=${big ? 'inst-console-list-max' : 'inst-console-list'}>
         ${shown.map(
           (e) => html`<li data-level=${e.level}>
             <span class="muted">${new Date(e.at).toLocaleTimeString(undefined, { hour12: false })}</span>
@@ -435,15 +506,16 @@ export class HsInstruments extends LitElement {
     </section>`;
   }
 
-  private networkPanel() {
+  private networkPanel(big = false) {
     const rows = filterNet(this.net, this.netKind, this.netText);
     const bytes = rows.reduce((s, e) => s + Math.max(0, e.bytes), 0);
     const blocked = rows.filter((e) => e.blocked).length;
-    return html`<section class="panel" aria-label="Network" data-testid="inst-network">
+    return html`<section class="panel" aria-label="Network" data-testid=${big ? 'inst-network-max' : 'inst-network'}>
       <header>
         <h2>Network</h2>
         <input aria-label="Filter requests" placeholder="Filter" data-testid="inst-net-filter" .value=${this.netText}
           @input=${(e: Event) => (this.netText = (e.target as HTMLInputElement).value)} />
+        ${this.maxButton('network', big)}
       </header>
       <div class="chips" role="group" aria-label="Request types">
         ${KINDS.map(
@@ -451,12 +523,12 @@ export class HsInstruments extends LitElement {
             @click=${() => (this.netKind = k.kind)}>${k.label}</button>`,
         )}
       </div>
-      <ul class="log net" data-testid="inst-net-list">
+      <ul class="log net" data-testid=${big ? 'inst-net-list-max' : 'inst-net-list'}>
         ${rows.map(
           (e) => html`<li>
             <span data-state=${e.blocked ? 'blocked' : e.error || e.status >= 400 ? 'bad' : ''}>${netStatus(e)}</span>
             <span class="muted">${netKind(e.type)}</span>
-            <span title=${e.url}>${shortName(e.url)}</span>
+            ${big ? html`<span class="muted">${e.method}</span><span class="url">${e.url}</span>` : html`<span title=${e.url}>${shortName(e.url)}</span>`}
             <span class="muted">${e.fromCache ? 'cache' : formatBytes(e.bytes)}</span>
             <span class="muted">${formatMs(e.ms)}</span>
           </li>`,

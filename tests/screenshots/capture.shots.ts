@@ -145,6 +145,10 @@ it('captures the main screens', async () => {
       body?.querySelector('[data-testid="set-instruments"]')?.scrollIntoView({ block: 'start' });
     });
     await capture(h, '18-settings-instruments');
+    await pressInShell(h, 'Escape');
+    await h.shell.click('hs-instruments [data-testid="inst-max-network"]');
+    await sleep(500);
+    await capture(h, '19-network-maximized');
   } finally {
     await h.close();
     await server.close();

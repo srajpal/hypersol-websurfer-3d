@@ -399,3 +399,23 @@ Q3 - floating panels along the sides and bottom if needed
 Your other assumptions are good.
 Save and build
 ```
+
+## 36 — 2026-09-26
+
+Model: Claude Opus 5.5 (claude-opus-5-5) · Effort: low · Session: opus-6ff60b35 · Tokens: not captured
+
+```text
+there should be a button to maximize the console and network so you can read it better. also we need buttons to zoom the web page in and out. we need a password manager as well as it did not save my password. let me know what milestone is best for these things. just keep track if it is not time yet. everything else is approved. 
+
+clipboard checks passed
+ 
+
+Test Files  7 passed (7)
+      Tests  126 passed (126)
+   Start at  11:20:22
+   Duration  185.75s (tests 98%, import 1%)
+
+continue to next milestone
+```
+
+Note: the test output above was pasted by the owner from their own run.

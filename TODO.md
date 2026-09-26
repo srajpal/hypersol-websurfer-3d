@@ -15,7 +15,7 @@ Plan approved 2026-09-24.
 | 4 | Private by default | Ad and tracker blocking, DNS over HTTPS in secure mode, shield count and popover, "blocked" card with "open anyway", filter-refresh switch, docs/privacy.md | Done (accepted 2026-09-26) |
 | 5 | Depth layering | Page sections and images lifted into layered depth; image rectangles reported | Done (accepted 2026-09-26) |
 | 6 | Themes and look (design) | Final Nebula and Daylight, theme switch, matching room lighting, design pass over all screens, custom window frame considered | Done (accepted 2026-09-26; tab cards to shrink, see below) |
-| 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Built; awaiting owner review (I10) |
+| 7 | Instrument panel | Floating panels with live readouts about the page and the browser: dials, meters, a console, and a network list, like a light DevTools; each part switchable in Settings | Done (accepted 2026-09-26) |
 | 8 | First release v0.1 | Installers for Windows, macOS, Linux; per-OS checks; holoml first-result scope (SPEC.md outline, parser package with one test); full regression pass | Later |
 | 9 | HoloML v0.1 language | Spec, schema, parser, conformance samples | Later |
 | 10 | HoloML in the browser | `.holo` page mode: models, orbit and walk, labels, links, lights, materials, animation | Later |
@@ -982,8 +982,9 @@ Owner request: the tab cards took too much of the screen. Done:
 
 ## Milestone 7 — Instrument panel
 
-Status: Built 2026-09-26; waiting for the owner's review (I10) and
-acceptance. Screenshots: docs/screenshots/m7/ (16 to 18 show the panel).
+Status: Done. Accepted by the owner 2026-09-26 (prompt 36: "everything
+else is approved"), with the full suite, 126 of 126, passing on the
+owner's machine (clipboard checks included). Screenshots: docs/screenshots/m7/ (16 to 18 show the panel).
 Electron security check at the start: 44.4.5 still newest. Plan and
 build approved 2026-09-26 (prompts 33 to 35),
 with the owner's answers Q1 a (a new milestone before the first
@@ -1090,8 +1091,8 @@ failed too); D8 passed earlier the same day when it worked.
 | I7 | Pass, including after a restart |
 | I8 | Pass |
 | I9 | Pass: nothing asked while off; about once a second while on; no 3D frames while idle; clicks on the page land |
-| I10 | Not checked yet (owner) |
-| C to H | Pass except D8 (clipboard unavailable during the run) |
+| I10 | Pass (owner, 2026-09-26, prompt 36) |
+| C to H | Pass: the owner's run, 126 of 126 (prompt 36) |
 
 Known limits: the data readout adds up the sizes servers declare
 (content-length); responses without one count as unknown ("—"). The
@@ -1108,4 +1109,22 @@ ERR, WARN, INFO, DBG; the network list no longer scrolls sideways.
 
 I1 to I9 and the regression checks pass, the owner accepts I10, the
 docs and screenshots are updated, and the owner approves the milestone.
+
+### After acceptance: maximize the console and network list (2026-09-26, prompt 36)
+
+Owner request, done: each of the console and the network list has a
+maximize button; the panel then fills most of the window, flat and over
+the page, with wrapped messages and full request addresses (plus the
+method); Escape, the button again, or a click outside restores it. New
+check I5b. Results: 10 of 10 milestone 7 checks.
+
+## Requests waiting for a milestone (tracked, not yet approved to build)
+
+Owner, prompt 36: "let me know what milestone is best for these things.
+just keep track if it is not time yet."
+
+| Request | Best place | Why |
+|---|---|---|
+| Zoom the page in and out, with buttons | Milestone 14, Everyday browser features (zoom is already listed there) | Recommended: move that milestone ahead of the first release, so version 0.1 has zoom, find in page, downloads, and printing |
+| A password manager (a password was not saved) | A new milestone, Passwords | Security-sensitive work of its own: passwords encrypted with the system's keychain (Electron's safeStorage), an offer to save on sign-in, filling on return, and a place to view and delete them; recommended right after the everyday features and before the first release |
 

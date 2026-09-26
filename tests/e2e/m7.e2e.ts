@@ -192,6 +192,20 @@ describe('I2, I4 to I6, I8: the readouts on a test page', () => {
     await h.shell.fill(INST('inst-net-filter'), '');
   });
 
+  it('I5b the console and network list maximize for reading, and Escape restores them (owner, prompt 36)', async () => {
+    await h.shell.click(INST('inst-max-network'));
+    const big = () => h.shell.locator(`${INST('inst-net-list-max')} li`).allTextContents();
+    const rows = await waitFor('network list large', big, (l) => l.length === 4);
+    expect(rows.join(' ')).toContain(server.url(PAGE)); // full addresses when large
+    expect(await h.shell.locator('hs-instruments').getAttribute('maximized')).toBe('network');
+    await pressInShell(h, 'Escape');
+    await waitFor('restored', () => h.shell.locator('hs-instruments').getAttribute('maximized'), (m) => m === null || m === '');
+    await h.shell.click(INST('inst-max-console'));
+    await waitFor('console large', () => h.shell.locator(INST('inst-console-max')).count(), (n) => n === 1);
+    await h.shell.click(INST('inst-console-max') + ' [data-testid="inst-max-console"]');
+    await waitFor('console back in the strip', () => h.shell.locator(INST('inst-console-max')).count(), (n) => n === 0);
+  });
+
   it('I6 the browser gauges show tabs, memory, filter lists, and DNS', async () => {
     const s = await waitFor('gauges', () => inst(h), (x) => x.gauges.dns !== '' && x.gauges.filtersAge !== '');
     expect(s.gauges.tabs).toBe((await shellCall(h, 'tabs')).length);

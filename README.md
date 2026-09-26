@@ -7,8 +7,7 @@ anyone publish a fully 3D website as easily as writing HTML.
 
 Windows, macOS, and Linux. Apache 2.0. No telemetry.
 
-**Status: milestones 1 to 6 done; milestone 7 (instrument panel) built,
-awaiting review.** A browser in a 3D room that remembers and protects:
+**Status: milestones 1 to 7 done.** A browser in a 3D room that remembers and protects:
 tabs as cards on an arc, a top bar with address, search, and a bookmark
 star, bookmarks and history in a Library panel, a Settings panel, a
 start panel with your data, error cards, a right-click menu, ad and
@@ -152,7 +151,8 @@ front (load time, requests, data, blocked, CPU, memory, connection and
 certificate) and for the browser (tabs, memory, frame rate, filter
 lists, encrypted DNS, clock), plus the page's console and network list.
 Off by default: Ctrl+Shift+I, the gauge button in the top bar, or
-Settings, where each part can be switched on its own.
+Settings, where each part can be switched on its own. The console and
+network list maximize for reading.
 
 ![The instrument panel in Nebula](docs/screenshots/m7/17-nebula-instruments.png)
 
