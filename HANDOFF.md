@@ -795,7 +795,10 @@ to this repository for rules and the prompt log.
    sleep and then look), #80 (the budgets with a graphics card in the
    automatic builds), #81 (macOS), #82 (C9 and L9 on the owner's
    computer; I8 and m17's development-run check to watch too), and #84
-   (the browser's own full screen, F11). In holoml, open on 2026-10-10:
+   (the browser's own full screen, F11), and #87 (closing a tab in full
+   screen once left the window full screen on GitHub's Windows; not
+   reproduced here, the check made to say which way it fails; TODO.md,
+   "Issue #87"). In holoml, open on 2026-10-10:
    enhancements #46 to #52 (forms and richer controls, reusable
    components and styles, object descriptions and states, pointer and
    drag events, more of the scene API, adaptive detail and loading

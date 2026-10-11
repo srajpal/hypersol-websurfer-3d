@@ -6345,6 +6345,31 @@ so and how to leave, where no page can hide it.
 - The automatic builds of pull request #83: every part passed; #83
   merged, closing #75, and the owner accepted the issue (2026-10-10).
 
+## Issue #87: closing a tab in full screen (open)
+
+Status: open; the check made clearer (owner, 2026-10-10: a better
+check first, a fix once the cause is known). FS2's check that closing
+a tab in full screen leaves failed once, in the Windows build of #86
+(part 1; its run again passed): the window was still in full screen 15
+seconds after Ctrl+W, which was pressed 2 ms after the window said it
+was full screen. Whether the tab closed is not in the log.
+
+- Not reproduced here: 24 runs of 24 passed (12 with the graphics card,
+  12 in software), and Electron brought the window back in each of three
+  ways tried of forcing it to stay (the leaving script run a second
+  late, so the page was gone first; the window put back into full
+  screen 150 and 600 ms after the request, and at once). The first
+  reading in the issue (the page gone before its leaving script ran) is
+  not confirmed, and a fix for it was not kept, as no check could show
+  it doing anything.
+- The check now waits in steps (tests/e2e/issue-75.e2e.ts, FS2,
+  closing the tab): first the page gone, then the window back, nothing
+  held, and laid out again. A failure now says which: the key lost (the
+  tab still open; checked by sending another key in its place, which
+  times out at "the page gone"), or the window left in full screen.
+  The issue-75 file passes here (7 checks, FS5 skipped in hidden
+  windows), and the closing check 5 runs of 5 more.
+
 ## Issues and advisories of 2026-10-09 (prompts 188 and 189)
 
 Five new issues (#66 to #68 here, #42 and #43 in holoml) and three

@@ -51,6 +51,12 @@ const windowState = (h: Harness) =>
     return { full: w.isFullScreen(), bounds: w.getBounds(), content: w.getContentBounds() };
   });
 const site = () => new URL(server.base).host;
+/** How many web pages on an address are still open. */
+const livePages = (h: Harness, url: string) =>
+  h.app.evaluate(
+    ({ webContents }, url) => webContents.getAllWebContents().filter((w) => !w.isDestroyed() && w.getType() === 'webview' && w.getURL().includes(url)).length,
+    url,
+  );
 
 /** The window's size and place before the last full screen: leaving must bring them back exactly (FS2). */
 let windowBefore: { x: number; y: number; width: number; height: number } | null = null;
@@ -199,6 +205,9 @@ describe('FS2: closing the tab', () => {
       await waitForPage(h, 'fullscreen.html');
       await goFull(h);
       await pressInPage(h, 'W', ['control'], 'fullscreen.html');
+      // In steps, so a failure says which (issue #87, once in GitHub's Windows build): the tab did not close (the key
+      // was lost), or it closed and the window stayed in full screen.
+      await waitFor('closing the tab: the page gone', () => livePages(h, 'fullscreen.html'), (n) => n === 0);
       await outOfFull(h, 'closing the tab');
       await waitForPage(h, 'link-a');
     } finally {
