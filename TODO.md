@@ -6368,7 +6368,19 @@ was full screen. Whether the tab closed is not in the log.
   tab still open; checked by sending another key in its place, which
   times out at "the page gone"), or the window left in full screen.
   The issue-75 file passes here (7 checks, FS5 skipped in hidden
-  windows), and the closing check 5 runs of 5 more.
+  windows), and the closing check 5 runs of 5 more. In the pull
+  request's automatic builds both part 1 jobs, with FS2, passed.
+- Also in its pull request (owner, 2026-10-10): W9's walk through the
+  sneaker store from the keyboard failed once in GitHub's Linux build
+  (part 3): Tab ended on "Model: Plant", not "Go to: Ember". m20's tabTo
+  pressed Tab and looked at once, and pressed again while the look came
+  before the last press had arrived, so it could go past the item. Now
+  each press is seen to move the keyboard (to another element: items
+  may share their text) before the next, and a failure says how many
+  presses and where the keyboard was. m20 passes here (10 checks with
+  the graphics card; in software 9, and 1 skipped, as before). m19's
+  and m21's tabTo look the same way; issue #79 covers checks of that
+  kind.
 
 ## Issues and advisories of 2026-10-09 (prompts 188 and 189)
 
